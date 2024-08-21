@@ -4,6 +4,7 @@ import torch.nn as nn
 import tree
 from wmpgnn.gnn.graph_network import GraphNetwork
 from wmpgnn.gnn.graphcoder import GraphIndependent
+from wmpgnn.gnn.graph_network import edge_pruning, node_pruning
 NUM_LAYERS = 4
 HIDDEN_CHANNELS=128
 
@@ -49,11 +50,13 @@ def graph_concat(input_graphs, axis):
         raise ValueError("axis is 0")
 
 
+
 class MLPGraphNetwork(nn.Module):
     def __init__(self, edge_output_size, node_output_size, global_output_size):
         super(MLPGraphNetwork, self).__init__()
 
-        self._network = GraphNetwork(edge_model=make_mlp(edge_output_size),
+        self._network = GraphNetwork(
+                                     edge_model=make_mlp(edge_output_size),
                                      node_model=make_mlp(node_output_size),
                                      use_globals=True,
                                      global_model=make_mlp(node_output_size))
@@ -80,21 +83,18 @@ class EncodeProcessDecode(nn.Module):
                  mlp_output_size,
                  edge_op=None,
                  node_op=None,
-                 global_op=None):
+                 global_op=None,
+                 num_blocks=2):
         super(EncodeProcessDecode, self).__init__()
         self._encoder = MLPGraphIndependent(mlp_output_size, mlp_output_size, mlp_output_size)
-        self._core1 = MLPGraphNetwork(edge_output_size=mlp_output_size, node_output_size=mlp_output_size,
-                                      global_output_size=mlp_output_size)
-        self._core2 = MLPGraphNetwork(edge_output_size=mlp_output_size, node_output_size=mlp_output_size,
-                                      global_output_size=mlp_output_size)
-        self._core3 = MLPGraphNetwork(edge_output_size=mlp_output_size, node_output_size=mlp_output_size,
-                                      global_output_size=mlp_output_size)
-        self._core4 = MLPGraphNetwork(edge_output_size=mlp_output_size, node_output_size=mlp_output_size,
-                                      global_output_size=mlp_output_size)
-        self._core5 = MLPGraphNetwork(edge_output_size=mlp_output_size, node_output_size=mlp_output_size,
-                                      global_output_size=mlp_output_size)
-        self._core6 = MLPGraphNetwork(edge_output_size=mlp_output_size, node_output_size=mlp_output_size,
-                                      global_output_size=mlp_output_size)
+
+        self._blocks = []
+        for i in range(num_blocks):
+            self._core = MLPGraphNetwork(edge_output_size=mlp_output_size, node_output_size=mlp_output_size,
+                                     global_output_size=mlp_output_size)
+            self._blocks.append(self._core)
+        self._blocks = nn.ModuleList(self._blocks)
+
         self._decoder = MLPGraphIndependent(mlp_output_size, mlp_output_size, mlp_output_size)
 
         # Transforms the outputs into the appropriate shapes.
@@ -119,58 +119,25 @@ class EncodeProcessDecode(nn.Module):
         # print("input ", input_op.graph_globals.shape)
         latent = self._encoder(input_op)
         latent0 = latent.clone()
-        #         latent0 = latent
-        latent1 = self._core1(latent)
-        core_input = graph_concat([latent0, latent1], axis=1)
-        if self._core1._network.prune == True:
-            indices = self._core1._network.indices
-            updated_edges = latent0.edges[indices, :]
-            updated_senders = latent0.senders[indices]
-            updated_receivers = latent0.receivers[indices]
-            updated_edge_pos = latent0.edgepos[indices]
-            updated_y = latent0.y[indices]
-            latent0.update({'edges': updated_edges,
-                            'senders': updated_senders,
-                            'receivers': updated_receivers,
-                            'edgepos': updated_edge_pos,
-                            'y': updated_y})
-        latent2 = self._core2(core_input)
-        if self._core2._network.prune == True:
-            indices = self._core2._network.indices
-            updated_edges = latent0.edges[indices, :]
-            updated_senders = latent0.senders[indices]
-            updated_receivers = latent0.receivers[indices]
-            updated_edge_pos = latent0.edgepos[indices]
-            updated_y = latent0.y[indices]
-            latent0.update({'edges': updated_edges,
-                            'senders': updated_senders,
-                            'receivers': updated_receivers,
-                            'edgepos': updated_edge_pos,
-                            'y': updated_y})
-            # latent2 = self._core2(latent1)
-        core_input = graph_concat([latent0, latent2], axis=1)
-        latent3 = self._core3(core_input)
-        # latent3 = self._core3(latent2)
-        core_input = graph_concat([latent0, latent3], axis=1)
-        latent4 = self._core4(core_input)
-        core_input = graph_concat([latent0, latent4], axis=1)
-        # latent4 = self._core4(latent3)
-        latent5 = self._core5(core_input)
-        core_input = graph_concat([latent0, latent5], axis=1)
-        latent6 = self._core6(latent5)
-        # latent5 = self._core5(latent4)
-        # latent6 = self._core6(latent5)
-        # print("Laten 0 nodes ", latent0.nodes)
-        #         output_ops = []
-        #         for _ in range(num_processing_steps):
+        for b, core in enumerate(self._blocks):
+            #print("latent ", latent.edgepos)
+            latent = core(latent)
+            if core._network.edge_prune == True:
+                edge_indices = core._network.edge_indices
 
-        #         core_input = graph_concat([latent0, latent], axis=1)
-        #             if _ ==0:
-        #                 latent = self._core1(core_input)
-        #             else:
-        #                 latent = self._core2(core_input)
-        decoded_op = self._decoder(latent6)
-        # decoded_op = self._decoder(latent4)
+                edge_pruning(edge_indices, latent0)
+
+            if core._network.node_prune == True:
+                node_indices = core._network.node_indices
+                node_pruning(node_indices, latent0)
+            if b < (len(self._blocks)-1):
+                core_input = graph_concat([latent0, latent], axis=1)
+
+                latent = core_input
+
+            else:
+                pass
+        decoded_op = self._decoder(latent)
 
         output = (self._output_transform(decoded_op))
 

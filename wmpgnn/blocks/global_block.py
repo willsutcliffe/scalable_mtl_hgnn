@@ -37,13 +37,10 @@ class GlobalBlock(AbstractModule):
         if self._use_globals:
             globals_to_collect.append(graph.graph_globals)
 
-        # print("collected globals ", globals_to_collect)
-        # print("shape nodes globals ", self._nodes_aggregator(graph).shape )
-        # print("global globals ", graph.graph_globals.shape )
+
         collected_globals = torch.cat(globals_to_collect, axis=-1)
         # collected_globals = torch.unsqueeze(collected_globals, 0)
-        # print("collected globals shape ",collected_globals.shape)
-        #         print("collected globals ", collected_globals)
+
 
         updated_globals = self._global_model(collected_globals)
 
