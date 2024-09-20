@@ -4,7 +4,7 @@ import torch.nn as nn
 import tree
 from wmpgnn.gnn.graph_network import GraphNetwork
 from wmpgnn.gnn.graphcoder import GraphIndependent
-from wmpgnn.gnn.graph_network import edge_pruning, node_pruning
+from wmpgnn.gnn.graph_network import edge_pruning, node_pruning, node_pruning2
 NUM_LAYERS = 4
 HIDDEN_CHANNELS=128
 
@@ -129,7 +129,7 @@ class EncodeProcessDecode(nn.Module):
 
             if core._network.node_prune == True:
                 node_indices = core._network.node_indices
-                node_pruning(node_indices, latent0)
+                node_pruning(node_indices, latent0, core._network.device)
             if b < (len(self._blocks)-1):
                 core_input = graph_concat([latent0, latent], axis=1)
 

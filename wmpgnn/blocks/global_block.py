@@ -39,11 +39,13 @@ class GlobalBlock(AbstractModule):
 
 
         collected_globals = torch.cat(globals_to_collect, axis=-1)
-        # collected_globals = torch.unsqueeze(collected_globals, 0)
+
+
 
 
         updated_globals = self._global_model(collected_globals)
 
-        graph.update({'graph_globals': torch.squeeze(updated_globals, dim=0)})
-        #         print("global block ", graph.graph_globals.shape)
+        graph.update({'graph_globals':  updated_globals})
+        #graph.update({'graph_globals': torch.squeeze(updated_globals, dim=0)})
+
         return graph

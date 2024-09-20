@@ -2,6 +2,7 @@ from wmpgnn.blocks.abstract_module import AbstractModule
 import torch
 
 from torch_scatter import scatter_add
+from torch_scatter import scatter_mean
 
 def globals_to_nodes(graph):
     return graph.graph_globals[graph.batch]
@@ -38,11 +39,12 @@ class EdgesToNodesAggregator(AbstractModule):
 
         indices = graph.senders if self._use_sent_edges else graph.receivers
         out = graph.edges.new_zeros(num_nodes, graph.edges.shape[1])
-        # return scatter_add(graph.edges, indices, out=out, dim=0)
+        #return scatter_add(graph.edges, indices, out=out, dim=0)
         # print('edge shape ', graph.edges.shape)
         # print('edge weights ', edge_weights.shape)
         # print(indices.shape)
         return scatter_add(graph.edges * edge_weights, indices, out=out, dim=0)
+        #return scatter_mean(graph.edges * edge_weights, indices, out=out, dim=0)
 
 
 # reducer by adding edge features for corresponding nodes
@@ -70,6 +72,7 @@ class EdgesToGlobalsAggregator(AbstractModule):
             #indices = graph_index.repeat(graph.num_edges, 1)
             #out = scatter_add(graph.edges, graph.edgepos, dim=0)
             out = scatter_add(graph.edges*edge_weights, graph.edgepos, dim=0)
+            #out = scatter_mean(graph.edges * edge_weights, graph.edgepos, dim=0)
             #print("Edge -> global ", out.shape)
         return out
 
@@ -89,5 +92,6 @@ class NodesToGlobalsAggregator(AbstractModule):
             #indices = graph_index.repeat(graph.num_nodes, 1)
             #out = scatter_add(graph.nodes, graph.batch, dim=0)
             out = scatter_add(graph.nodes*node_weights, graph.batch, dim=0)
+            #out = scatter_mean(graph.nodes * node_weights, graph.batch, dim=0)
             #print("Node -> global ", out.shape)
         return out

@@ -30,22 +30,23 @@ def edge_pruning(edge_indices, graph):
                     'y': updated_y})
 
 
-def node_pruning(node_indices, graph):
+def node_pruning(node_indices, graph, device = "cuda"):
     updated_nodes = graph.nodes[node_indices, :]
     updated_batch =  graph.batch[node_indices]
 
-    b1 = torch.isin( graph.senders, torch.arange(0,  graph.nodes.shape[0]).cuda()[node_indices])
-    b2 = torch.isin( graph.receivers, torch.arange(0,  graph.nodes.shape[0]).cuda()[node_indices])
+    b1 = torch.isin( graph.senders, torch.arange(0,  graph.nodes.shape[0]).to(device)[node_indices])
+    b2 = torch.isin( graph.receivers, torch.arange(0,  graph.nodes.shape[0]).to(device)[node_indices])
     edge_index = (b1) & (b2)
     updated_edges =  graph.edges[edge_index, :]
     # need to relabel senders and receivers to reflect the pruned away nodes
+    print("How nodes should be ", graph.nodes[graph.receivers[edge_index]])
     edge_indices_concat = torch.concatenate([graph.receivers[edge_index], graph.senders[edge_index]])
     unique_elements, inverse_indices = torch.unique(edge_indices_concat, sorted=True, return_inverse=True)
     relabelled_tensor = inverse_indices
     updated_receivers = relabelled_tensor[:int(relabelled_tensor.shape[0] / 2)]
     updated_senders = relabelled_tensor[int(relabelled_tensor.shape[0] / 2):]
     updated_edge_pos =  graph.edgepos[edge_index]
-
+    print("How nodes are ", updated_nodes[updated_receivers])
     updated_y =  graph.y[edge_index]
     graph.update({
         'nodes': updated_nodes,
@@ -57,14 +58,32 @@ def node_pruning(node_indices, graph):
         'y': updated_y})
     return edge_index
 
+def node_pruning2(node_indices, graph, device = "cuda"):
+    b1 = torch.isin( graph.senders, torch.arange(0,  graph.nodes.shape[0]).to(device)[node_indices])
+    b2 = torch.isin( graph.receivers, torch.arange(0,  graph.nodes.shape[0]).to(device)[node_indices])
+    edge_index = (b1) & (b2)
+    updated_edges =  graph.edges[edge_index, :]
+    updated_senders = graph.senders[edge_index]
+    updated_receivers = graph.receivers[edge_index]
+    updated_edge_pos = graph.edgepos[edge_index]
+    updated_y =  graph.y[edge_index]
+    graph.update({
+        'edges': updated_edges,
+        'senders': updated_senders,
+        'receivers': updated_receivers,
+        'edgepos': updated_edge_pos,
+        'y': updated_y})
+    return edge_index
+
 class GraphNetwork(AbstractModule):
 
-    def __init__(self, edge_model, node_model, use_globals, global_model=None, hidden_size=8):
+    def __init__(self, edge_model, node_model, use_globals, global_model=None, hidden_size=8, device = "cuda"):
         #                  edge_block_opt=None, node_block_opt=None, global_block_opt=None):
         super(GraphNetwork, self).__init__()
         self.edge_prune = False
         self.node_prune = False
         self.prune_by_cut = False
+        self.device = device
         # self.k =4000
         self.k_edges = 20
         self.k_nodes = 70
@@ -92,22 +111,16 @@ class GraphNetwork(AbstractModule):
         node_input = self._edge_block(graph)
 
         self.edge_weights = self.sigmoid(self.edge_mlp(node_input.edges))
-        # self.edge_weights = torch.ones_like(node_input.edges).cuda()
         if self.edge_prune:
-            #out = self.select(self.edge_weights, node_input.edgepos)
             if self.prune_by_cut:
                 edge_indices = self.edge_weights > self.edge_weight_cut
-                edge_indices = torch.arange(0, graph.edges.shape[0]).cuda()[edge_indices.flatten()]
+                edge_indices = torch.arange(0, graph.edges.shape[0]).to(self.device)[edge_indices.flatten()]
 
             else:
                 out = self.select(self.edge_weights, node_input.receivers)
-                #out = self.select(self.edge_weights, node_input.edgepos)
                 edge_indices = out.node_index
             self.edge_indices = edge_indices
-            #print(self.edge_weights.shape)
             self.edge_weights = self.edge_weights[edge_indices, :]
-            #print(self.edge_weights.shape)
-            # print('initial edge shape ', node_input.edges.shape)
             edge_pruning(edge_indices, node_input)
 
         global_input = self._node_block(node_input, self.edge_weights)
@@ -116,23 +129,16 @@ class GraphNetwork(AbstractModule):
 
         self.node_weights = self.sigmoid(self.node_mlp(global_input.nodes))
         if self.node_prune:
-            # print("here")
             if self.prune_by_cut:
                 node_indices = self.node_weights > self.node_weight_cut
-                node_indices = torch.arange(0, graph.nodes.shape[0]).cuda()[node_indices.flatten()]
-               # print("node_indices ", node_indices)
+                node_indices = torch.arange(0, graph.nodes.shape[0]).to(self.device)[node_indices.flatten()]
             else:
                 out = self.select_nodes(self.node_weights, global_input.batch)
                 node_indices = out.node_index
 
             self.node_indices = node_indices
             self.node_weights = self.node_weights[node_indices]
-            #print("graph before ", global_input)
-            edge_index = node_pruning(node_indices, global_input)
-            #print("graph after ", global_input)
-           # print("node batch ", global_input.batch)
-
-
+            edge_index = node_pruning(node_indices, global_input, device = self.device)
             self.edge_node_pruning_indices = edge_index
             self.edge_weights = self.edge_weights[edge_index]
 
