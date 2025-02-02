@@ -41,7 +41,7 @@ def acc_four_class(pred, label):
     return acc
 
 
-def weight_four_class(dataset):
+def weight_four_class(dataset,hetero=False):
     true_class1 = 0
     true_class2 = 0
     true_class3 = 0
@@ -49,11 +49,15 @@ def weight_four_class(dataset):
     num_sample = 0
 
     for tdata in dataset:
-        true_class1 += (tdata.y.argmax(dim=1) == 0).sum()
-        true_class2 += (tdata.y.argmax(dim=1) == 1).sum()
-        true_class3 += (tdata.y.argmax(dim=1) == 2).sum()
-        true_class4 += (tdata.y.argmax(dim=1) == 3).sum()
-        num_sample += len(tdata.y)
+        if hetero:
+            y = tdata[('tracks','to','tracks')].y
+        else:
+            y = tdata.y
+        true_class1 += (y.argmax(dim=1) == 0).sum()
+        true_class2 += (y.argmax(dim=1) == 1).sum()
+        true_class3 += (y.argmax(dim=1) == 2).sum()
+        true_class4 += (y.argmax(dim=1) == 3).sum()
+        num_sample += len(y)
 
 
     weight_class1 = num_sample / (4 * true_class1)

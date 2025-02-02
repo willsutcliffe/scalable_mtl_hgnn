@@ -4,6 +4,13 @@ Implementation of a weighted message passing GNN in pytorch
 ## To Do
 
 ## TODO
+- [] Modularize dataloading, training, eval with configs, classes and scripts
+- [] Perform ablation trainings
+- [] Perform 
+- [] 
+- [] Quantify inclusive reconstruction performance.
+
+## OLDTO
 - [x] Quantify inclusive reconstruction performance.
 - [] Incorporate model in LCA evaluation script.
 - [] Quantify exclusive reconstruction performance.
@@ -11,6 +18,7 @@ Implementation of a weighted message passing GNN in pytorch
 - [] Investigate applicability of model to edge classification tasks like for CORA, OGB datasets etc
 - [] Pruning performance vs speedup systematic study.
 - [] Write paper
+
 
 
 ## Installation:

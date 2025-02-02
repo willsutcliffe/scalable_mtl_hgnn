@@ -32,7 +32,7 @@ class CustomDataset(Dataset):
             r = np.array([remapping[x] for x in graph["receivers"]])
             # new_nodes = np.take(graph["nodes"][indices], [0, 1, 2, 3, 4, 5,9], axis=1)
             # new_edges = np.take(graph["edges"], [1, 2, 3], axis=1)
-            new_nodes = graph["nodes"][indices][:, :-6]
+            new_nodes = graph["nodes"][indices]  #[:, :-6]
             new_edges = graph['edges']
             data = Data(nodes=torch.from_numpy(new_nodes),  # node features
                         #             data = Data(nodes=torch.from_numpy(graph["nodes"][indices]), #node features

@@ -2,12 +2,15 @@ from wmpgnn.blocks.abstract_module import AbstractModule
 from wmpgnn.blocks.aggregators import EdgesToGlobalsAggregator
 from wmpgnn.blocks.aggregators import NodesToGlobalsAggregator
 import torch
-
+from torch_scatter import scatter_add
+from torch_scatter import scatter_mean
+from torch_scatter import scatter_max
+from torch_scatter import scatter_std
 
 class GlobalBlock(AbstractModule):
 
 
-    def __init__(self, global_model_fn, use_edges=True, use_nodes=True, use_globals=True):
+    def __init__(self, global_model_fn, use_edges=True, use_nodes=True, use_globals=True, weighted_mp=False):
         super(GlobalBlock, self).__init__()
 
         self._use_edges = use_edges
@@ -17,9 +20,11 @@ class GlobalBlock(AbstractModule):
         with self._enter_variable_scope():
             self._global_model = global_model_fn()
             if self._use_edges:
-                self._edges_aggregator = EdgesToGlobalsAggregator()
+                self._edges_aggregator = EdgesToGlobalsAggregator(weighted=weighted_mp)
+
             if self._use_nodes:
-                self._nodes_aggregator = NodesToGlobalsAggregator()
+                self._nodes_aggregator = NodesToGlobalsAggregator(weighted=weighted_mp)
+
 
 
     def forward(self, graph, edge_weights, node_weights, global_model_kwargs=None):
@@ -30,6 +35,10 @@ class GlobalBlock(AbstractModule):
 
         if self._use_edges:
             globals_to_collect.append(self._edges_aggregator(graph, edge_weights))
+            #globals_to_collect.append(self._edges_aggregator_max(graph, edge_weights)[0])
+            #globals_to_collect.append(self._edges_aggregator_mean(graph, edge_weights))
+            #globals_to_collect.append(self._edges_aggregator_std(graph, edge_weights))
+
 
         if self._use_nodes:
             globals_to_collect.append(self._nodes_aggregator(graph, node_weights))

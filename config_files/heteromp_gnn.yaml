@@ -1,0 +1,31 @@
+model:
+  type: "heterognn"
+  gnn_layers: 6
+  mlp_output_size: 16
+  mlp_layers: 4
+  mlp_channels: 128
+  weight_mlp_layers: 4
+  weight_mlp_channels: 16
+  weighted_mp: False
+  use_edge_weights: True
+  use_node_weights: True
+  node_types: ['tracks', 'PVs']
+  edge_types: ["tracks_tracks","tracks_PVs"]
+loss:
+  edge_node_bce_constraints: True
+  pv_bce_constraints: True
+  alpha_edge_bce : 0.2
+  alpha_node_bce : 0.2
+  alpha_pv_bce : 0.2
+dataset:
+  data_type: "heterogeneous"
+  data_dir: "/home/sutclw/Work/Zurich/LHCb/GNNs/cached_hetero_data"
+training:
+  train: True
+  starting_learning_rate: 0.001
+  batch_size: 32
+
+inference:
+  inference: True
+  learning_rate: 0.001
+  batch_size: 32
