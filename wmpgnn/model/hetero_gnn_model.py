@@ -76,7 +76,7 @@ class HeteroGNN(nn.Module):
 
         edge_models = {('tracks',
                         'to',
-                        'PVs'): lambda: nn.Linear(mlp_output_size, 1), ('tracks',
+                        'pvs'): lambda: nn.Linear(mlp_output_size, 1), ('tracks',
                                                                         'to',
                                                                         'tracks'): lambda: nn.Linear(mlp_output_size,
                                                                                                      4)}

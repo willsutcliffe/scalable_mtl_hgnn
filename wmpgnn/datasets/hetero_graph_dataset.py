@@ -90,14 +90,14 @@ class CustomHeteroDataset(Dataset):
             data = HeteroData()
             data['tracks'].x = new_nodes
 
-            data['PVs'].x = recoPVs
+            data['pvs'].x = recoPVs
             data['globals'].x = torch.hstack(
                 [torch.from_numpy(graph["globals"]), torch.tensor(nPVs, dtype=torch.float32)]).unsqueeze(0)
 
 
-            data['tracks', 'PVs'].edge_index = permutations.T
-            data['tracks', 'PVs'].y = y_one_hot.flatten().unsqueeze(-1)
-            data['tracks', 'PVs'].edges = IPs.flatten().unsqueeze(-1)
+            data['tracks', 'pvs'].edge_index = permutations.T
+            data['tracks', 'pvs'].y = y_one_hot.flatten().unsqueeze(-1)
+            data['tracks', 'pvs'].edges = IPs.flatten().unsqueeze(-1)
             # data['tracks', 'PVs'].edge_index = permutations.T
             data['tracks', 'tracks'].edge_index = torch.vstack([senders, receivers])
             data['tracks', 'tracks'].y = torch.from_numpy(labels)

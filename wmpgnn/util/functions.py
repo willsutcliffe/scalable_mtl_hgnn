@@ -1,4 +1,47 @@
 import torch
+from torch_scatter import scatter_add
+
+def hetero_positive_edge_weight(loader):
+    sum_edges = 0
+    sum_pos = 0
+    for data in loader:
+        sum_edges += data[('tracks','to','tracks')].edges.shape[0]
+        sum_pos  += torch.sum(data[('tracks','to','tracks')].y[:,0]==0).item()
+    return sum_edges/(2*sum_pos)
+
+def hetero_positive_node_weight(loader):
+    sum_nodes = 0
+    sum_pos = 0
+    for data in loader:
+        num_nodes=data['tracks'].x.shape[0]
+        #out = data.edges.new_zeros(num_nodes, 4)
+        node_sum = scatter_add(data[('tracks','to','tracks')].y, data[('tracks','to','tracks')].edge_index[0],dim=0)
+        ynodes = (1.*(torch.sum(node_sum[:,1:],1)>0)).unsqueeze(1)
+        sum_nodes += num_nodes
+        sum_pos  += torch.sum(ynodes==1).item()
+    return sum_nodes/(2*sum_pos)
+
+
+def positive_edge_weight(loader):
+    sum_edges = 0
+    sum_pos = 0
+    for data in loader:
+        sum_edges += data.edges.shape[0]
+        sum_pos  += torch.sum(data.y[:,0]==0).item()
+    return sum_edges/(2*sum_pos)
+
+def positive_node_weight(loader):
+    sum_nodes = 0
+    sum_pos = 0
+    for data in loader:
+        num_nodes=data.nodes.shape[0]
+        #out = data.edges.new_zeros(num_nodes, 4)
+        node_sum = scatter_add(data.y,data.senders,dim=0)
+        ynodes = (1.*(torch.sum(node_sum[:,1:],1)>0)).unsqueeze(1)
+        sum_nodes += num_nodes
+        sum_pos  += torch.sum(ynodes==1).item()
+    return sum_nodes/(2*sum_pos)
+
 
 def acc_four_class(pred, label):
     #     print("pred", pred)
