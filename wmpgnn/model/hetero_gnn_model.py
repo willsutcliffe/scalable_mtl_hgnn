@@ -5,7 +5,7 @@ import torch.nn as nn
 import tree
 from wmpgnn.gnn.hetero_graph_network import HeteroGraphNetwork
 from wmpgnn.gnn.hetero_graphcoder import HeteroGraphCoder
-from wmpgnn.gnn.hetero_graph_network import edge_pruning
+from wmpgnn.gnn.hetero_graph_network import edge_pruning, node_pruning
 
 def make_mlp(output_size, hidden_channels=128, num_layers=4):
     return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
@@ -38,6 +38,9 @@ class HeteroGNN(nn.Module):
                  weight_mlp_layers=4,
                  weighted_mp=False):
         super(HeteroGNN, self).__init__()
+
+        self.edge_types = edge_types
+        self.node_types = node_types
         mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers)
         self._encoder = HeteroGraphCoder(node_types, edge_types,
                                          edge_models={edge_type: mlp for edge_type in edge_types},
@@ -96,8 +99,15 @@ class HeteroGNN(nn.Module):
         for b, core in enumerate(self._blocks):
             latent = core(latent)
             if core.edge_prune == True:
-                edge_indices = core.edge_indices[('tracks', 'to', 'tracks')]
-                edge_pruning(edge_indices, latent0, ('tracks', 'to', 'tracks'))
+                for edge_type in self.edge_types:
+                    if edge_type == ('tracks', 'to', 'tracks'):
+                        edge_indices = core.edge_indices[edge_type]
+                        edge_pruning(edge_indices, latent0, edge_type)
+            if core.node_prune == True:
+                for node_type in self.node_types:
+                    if node_type == "tracks":
+                        node_indices = core.node_indices['tracks']
+                        node_pruning(node_indices, latent0, node_type, [('tracks', 'to', 'tracks')], device=core.device)
             if b < (len(self._blocks) - 1):
                 core_input = hetero_graph_concat(latent0, latent)
                 latent = core_input

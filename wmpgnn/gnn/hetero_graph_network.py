@@ -21,12 +21,33 @@ def ones(device):
 
 
 def edge_pruning(edge_indices, graph, edge_type):
-    graph[('tracks', 'to', 'tracks')].edges = graph[('tracks', 'to', 'tracks')].edges[edge_indices]
-    graph[('tracks', 'to', 'tracks')].edge_index = torch.vstack(
-        [graph[('tracks', 'to', 'tracks')].edge_index[0][edge_indices],
-         graph[('tracks', 'to', 'tracks')].edge_index[1][edge_indices]])
-    graph[('tracks', 'to', 'tracks')].y = graph[('tracks', 'to', 'tracks')].y[edge_indices]
+    graph[edge_type].edges = graph[edge_type].edges[edge_indices]
+    graph[edge_type].edge_index = torch.vstack(
+        [graph[edge_type].edge_index[0][edge_indices],
+         graph[edge_type].edge_index[1][edge_indices]])
+    graph[edge_type].y = graph[edge_type].y[edge_indices]
 
+
+def node_pruning(node_indices, graph, node_type, edge_types, device = "cuda"):
+    edge_node_indices = {}
+    for edge_type in edge_types:
+        if edge_type[0] == node_type and edge_type[1] == node_type:
+            mask1 = torch.isin( graph[edge_type].edge_index[0], torch.arange(0,  graph[node_type].x.shape[0]).to(device)[node_indices])
+            mask2 = torch.isin( graph[edge_type].edge_index[1], torch.arange(0,  graph[node_type].x.shape[0]).to(device)[node_indices])
+            edge_index = (mask1) & (mask2)
+
+        if edge_type[0] == node_type:
+            edge_index =  torch.isin( graph[edge_type].edge_index[0], torch.arange(0,  graph[node_type].x.shape[0]).to(device)[node_indices])
+
+        else:
+            edge_index =  torch.isin( graph[edge_type].edge_index[1], torch.arange(0,  graph[node_type].x.shape[0]).to(device)[node_indices])
+
+
+        graph[edge_type].edge_index = graph[edge_type].edge_index[:,edge_index]
+        graph[edge_type].edges =  graph[edge_type].edges[edge_index, :]
+        graph[edge_type].y =  graph[edge_type].y[edge_index]
+        edge_node_indices[edge_type] = edge_index
+    return edge_node_indices
 
 class HeteroGraphNetwork(AbstractModule):
 
@@ -59,14 +80,14 @@ class HeteroGraphNetwork(AbstractModule):
                 self._global_block = HeteroGlobalBlock(node_types, edge_types, global_model_fn=global_model, weighted_mp = weighted_mp)
         self._node_mlps = {}
         self._edge_mlps = {}
-        for node_type in node_types:
-            self._node_mlps[node_type] = weight_mlp(1, hidden_channels=weight_mlp_channels, num_layers=weight_mlp_layers)()
+        # for node_type in node_types:
+        #      self._node_mlps[node_type] = weight_mlp(1, hidden_channels=weight_mlp_channels, num_layers=weight_mlp_layers)()
 
         for edge_type in edge_types:
             self._edge_mlps[edge_type] = weight_mlp(1)()
         # self._node_mlp = weight_mlp(1)()
-        # self._node_mlps['tracks'] = self._node_mlp
-        # self._node_mlps['PVs'] = ones(device)
+        self._node_mlps['tracks'] = weight_mlp(1, hidden_channels=weight_mlp_channels, num_layers=weight_mlp_layers)()
+        #self._node_mlps['pvs'] = ones(device)
         # self._edge_mlp = weight_mlp(1)()
         # self._edge_mlps[('tracks','to','tracks')] = self._edge_mlp
         # self._edge_mlps[('tracks','to','PVs')] = ones(device)
@@ -82,16 +103,17 @@ class HeteroGraphNetwork(AbstractModule):
         self.node_logits = {}
         self.edge_indices = {}
         self.node_indices = {}
+        self.edge_node_pruning_indices = {}
 
     def forward(self, graph):
         node_input = self._edge_block(graph)
-        # if self._use_edge_weights:
+
         for edge_type in self.edge_types:
-            self.edge_logits[edge_type] = self._edge_mlps[edge_type](node_input[edge_type].edges)
-            self.edge_weights[edge_type] = self._sigmoid(self.edge_logits[edge_type])
-        # self.edge_weights[('tracks','to','tracks')] = self._sigmoid(self._edge_mlps[('tracks','to','tracks')](node_input[('tracks','to','tracks')].edges))
-        # self.edge_weights[('tracks','to','PVs')] = self._edge_mlps[('tracks','to','PVs')](node_input[('tracks','to','PVs')].edges)
-        # self.pv_edge_weights = self._sigmoid(self._pv_edge_mlp(node_input[('tracks', 'to', 'PVs')].edges))
+            if self._use_edge_weights:
+                self.edge_logits[edge_type] = self._edge_mlps[edge_type](node_input[edge_type].edges)
+                self.edge_weights[edge_type] = self._sigmoid(self.edge_logits[edge_type])
+            else:
+                self.edge_weights[edge_type] = torch.ones((graph[edge_type].edges.shape[0], 1)).to(self.device)
 
         if self.edge_prune:
             for edge_type in self.edge_types:
@@ -107,8 +129,25 @@ class HeteroGraphNetwork(AbstractModule):
         # if self._use_node_weights:
         #     self.node_weights = self._sigmoid(self._edge_mlp(global_input['tracks'].x) )
         for node_type in self.node_types:
-            self.node_logits[node_type] = self._node_mlps[node_type](global_input[node_type].x)
-            self.node_weights[node_type] = self._sigmoid(self.node_logits[node_type])
+            if self._use_node_weights and node_type != "pvs":
+                self.node_logits[node_type] = self._node_mlps[node_type](global_input[node_type].x)
+                self.node_weights[node_type] = self._sigmoid(self.node_logits[node_type])
+            else:
+                self.node_weights[node_type] = torch.ones((graph[node_type].x.shape[0], 1)).to(self.device)
+
+        if self.node_prune:
+            for node_type in self.node_types:
+                if node_type == "tracks":
+                    node_indices = self.node_weights[node_type] > self.node_weight_cut
+                    node_indices = torch.arange(0, graph[node_type].x.shape[0]).to(self.device)[node_indices.flatten()]
+                    self.node_indices[node_type] = node_indices
+                    edge_index = node_pruning(node_indices, global_input, node_type,
+                                              [('tracks', 'to', 'tracks')],
+                                              device = self.device)
+                    self.edge_node_pruning_indices[node_type] = edge_index
+                    for key in edge_index.keys():
+                        self.edge_weights[key] = self.edge_weights[key][edge_index[key]]
+
         # self.node_weights["tracks"] = self._sigmoid(self._node_mlps["tracks"](global_input["tracks"].x))
         # self.node_weights["PVs"] = self._node_mlps["PVs"](global_input["PVs"].x)
         if self._use_globals:
