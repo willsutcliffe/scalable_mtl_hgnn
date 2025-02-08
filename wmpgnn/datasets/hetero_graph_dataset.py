@@ -32,9 +32,10 @@ def find_row_indices(t1, t2):
     return indices, one_hot_encoded
 
 class CustomHeteroDataset(Dataset):
-    def __init__(self, filenames_input, filenames_target):
+    def __init__(self, filenames_input, filenames_target, performance_mode=False):
         self.filenames_input = filenames_input
         self.filenames_target = filenames_target
+        self.performance_mode = performance_mode
 
     # No. of graphs
     def __len__(self):
@@ -56,21 +57,21 @@ class CustomHeteroDataset(Dataset):
             labels = np.array(graph_target["edges"])
             indices = np.unique(graph['receivers'])
             remapping = {a: i for a, i in zip(indices, list(range(0, len(indices))))}
+            old_senders = graph["senders"]
+            old_receivers = graph["receivers"]
             senders = np.array([remapping[x] for x in graph["senders"]])
             receivers = np.array([remapping[x] for x in graph["receivers"]])
             senders = torch.from_numpy(senders).long()
             receivers = torch.from_numpy(receivers).long()
-            # new_nodes = np.take(graph["nodes"][indices], [0, 1, 2, 3, 4, 5,9], axis=1)
-            # new_edges = np.take(graph["edges"], [1, 2, 3], axis=1)
-            new_nodes = graph["nodes"][indices]  # [:, :-6]
+            new_nodes = graph["nodes"][indices]
             new_edges = graph['edges']
             new_nodes = torch.from_numpy(new_nodes)
             new_edges = torch.from_numpy(new_edges)
 
-            recoPVs = torch.unique(new_nodes[:, -6:-3], dim=0)
+            recoPVs = torch.unique(new_nodes[:, 10:13], dim=0)
             nPVs = recoPVs.shape[0]
            # nodes_PVs = new_nodes[:, -10:-7]
-            true_nodes_PVs = new_nodes[:, -6:-3]
+            true_nodes_PVs = new_nodes[:, 10:13]
             # print(torch.sum(torch.sum(nodes_PVs == true_nodes_PVs,dim=-1)==3)/nodes_PVs.shape[0])
             y, y_one_hot = find_row_indices(true_nodes_PVs, recoPVs)
 
@@ -88,6 +89,7 @@ class CustomHeteroDataset(Dataset):
 
             permutations = torch.cartesian_prod(torch.arange(true_nodes_PVs.shape[0]), torch.arange(recoPVs.shape[0]))
             data = HeteroData()
+            new_nodes = torch.hstack([new_nodes[:, :6], new_nodes[:, 9:10]])
             data['tracks'].x = new_nodes
 
             data['pvs'].x = recoPVs
@@ -98,10 +100,30 @@ class CustomHeteroDataset(Dataset):
             data['tracks', 'pvs'].edge_index = permutations.T
             data['tracks', 'pvs'].y = y_one_hot.flatten().unsqueeze(-1)
             data['tracks', 'pvs'].edges = IPs.flatten().unsqueeze(-1)
-            # data['tracks', 'PVs'].edge_index = permutations.T
+
             data['tracks', 'tracks'].edge_index = torch.vstack([senders, receivers])
             data['tracks', 'tracks'].y = torch.from_numpy(labels)
             data['tracks', 'tracks'].edges = new_edges
+
+            if self.performance_mode:
+                data['init_senders'] = torch.from_numpy(graph["init_y"]["senders"]).long()
+                data['init_receivers'] = torch.from_numpy(graph["init_y"]["receivers"]).long()
+                data['init_y'] = torch.from_numpy(graph["init_y"]["edges"])
+                data['init_keys'] = torch.from_numpy(graph["init_keys"])
+                data['init_moth_ids'] = torch.from_numpy(graph["init_ids"])
+                data['init_partids'] = torch.from_numpy(graph["init_part_ids"])
+                data['final_keys'] = torch.from_numpy(graph["keys"])
+                data['moth_ids'] = torch.from_numpy(graph["ids"])
+                data['part_ids'] = torch.from_numpy(graph["part_ids"])
+                data['lca_chain'] = torch.from_numpy(graph["lca_chain"])
+                init_senders = data.init_keys[data.init_senders]
+                init_receivers = data.init_keys[data.init_receivers]
+                senders =  data.final_keys[torch.from_numpy(old_senders).long()]
+                receivers =  data.final_keys[torch.from_numpy(old_receivers).long()]
+                init_cantor = 0.5 * (init_senders + init_receivers - 2) * (
+                            init_senders + init_receivers - 1) + init_senders
+                final_cantor = 0.5 * (senders + receivers - 2) * (senders + receivers - 1) + senders
+                data['old_y'] = data.init_y[~torch.isin(init_cantor, final_cantor)]
 
             data_set.append(data)
 

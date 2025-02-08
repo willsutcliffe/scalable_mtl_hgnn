@@ -52,8 +52,8 @@ class CustomDataset(Dataset):
                         num_nodes=torch.tensor(graph["nodes"][indices].shape[0])
                         )
             if self.performance_mode:
-                data['init_senders'] = torch.from_numpy(graph["init_y"]["senders"])
-                data['init_receivers'] = torch.from_numpy(graph["init_y"]["receivers"])
+                data['init_senders'] = torch.from_numpy(graph["init_y"]["senders"]).long()
+                data['init_receivers'] = torch.from_numpy(graph["init_y"]["receivers"]).long()
                 data['init_y'] = torch.from_numpy(graph["init_y"]["edges"])
                 data['init_keys'] = torch.from_numpy(graph["init_keys"])
                 data['init_moth_ids'] = torch.from_numpy(graph["init_ids"])
@@ -64,8 +64,8 @@ class CustomDataset(Dataset):
                 data['lca_chain'] = torch.from_numpy(graph["lca_chain"])
                 init_senders = data.init_keys[data.init_senders]
                 init_receivers = data.init_keys[data.init_receivers]
-                senders = data.final_keys[data.old_senders]
-                receivers = data.final_keys[data.old_receivers]
+                senders =  data.final_keys[torch.from_numpy(old_senders).long()]
+                receivers =  data.final_keys[torch.from_numpy(old_receivers).long()]
                 init_cantor = 0.5 * (init_senders + init_receivers - 2) * (
                             init_senders + init_receivers - 1) + init_senders
                 final_cantor = 0.5 * (senders + receivers - 2) * (senders + receivers - 1) + senders
