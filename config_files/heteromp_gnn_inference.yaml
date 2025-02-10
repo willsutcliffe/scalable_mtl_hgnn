@@ -19,6 +19,7 @@ loss:
 dataset:
   data_type: "heterogeneous"
   data_dir: "/home/sutclw/weighted_MP_gnn/bdtprunedgraphs_cached_data_49193"
+  #data_dir: "/home/sutclw/weighted_MP_gnn/fullgraphs_cached_data_49193"
 training:
   train: True
   starting_learning_rate: 0.001
@@ -27,7 +28,6 @@ training:
   batch_size: 32
   model_file: "Final_hetero_8block_32_epochs_message_passing_BCE.pt"
 inference:
-
-  inference: True
-  learning_rate: 0.001
-  batch_size: 32
+  model_file: "/home/sutclw/results2/results2/Final_hetero_8block_32_epochs_weighted_message_passing_BCE.pt"
+#  model_file: "/home/sutclw/results2/results2/Final_hetero_8block_32_epochs_weighted_message_passing_pv_constraints.pt"
+  name: "hetero_8block_wmp_BCE"

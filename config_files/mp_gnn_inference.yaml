@@ -1,0 +1,29 @@
+model:
+  type: "mpgnn"
+  gnn_layers: 8
+  mlp_output_size: 16
+  mlp_layers: 4
+  mlp_channels: 128
+  weight_mlp_layers: 4
+  weight_mlp_channels: 16
+  weighted_mp: True
+  use_edge_weights: True
+  use_node_weights: True
+loss:
+  add_bce: True
+  bce_constraints: True
+  lambda_bce : 0.2
+dataset:
+  data_type : "homogeneous"
+  data_dir: /home/sutclw/weighted_MP_gnn/bdtprunedgraphs_cached_data_49193
+#  data_dir: /home/sutclw/weighted_MP_gnn/fullgraphs_cached_data_49193
+training:
+  train: True
+  starting_learning_rate: 0.001
+  batch_size: 8
+  dropped_lr_epochs: 2
+  epochs: 30
+  model_file: "Final_full_graph_8block_32_epochs_weighted_message_passing_BCE.pt"
+inference:
+  model_file: "/home/sutclw/results/Final_model_8block_32epochs_weighted_message_passing_BCE_3Feb25.pth"
+  name: "wmp_BCE"
