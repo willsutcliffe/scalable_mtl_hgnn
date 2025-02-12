@@ -111,3 +111,27 @@ def weight_four_class(dataset,hetero=False):
 
     print(weight)
     return weight
+
+def init_plot_style():
+    my_rc_params = {
+        "xtick.direction": "in",
+        "xtick.major.size": 8.0,
+        "xtick.minor.size": 4.0,
+        "xtick.minor.visible": True,
+        "xtick.major.width": 1.2,
+        "xtick.minor.width": 0.9,
+        "ytick.direction": "in",
+        "ytick.major.size": 8.0,
+        "ytick.minor.size": 4.0,
+        "ytick.minor.visible": True,
+        "ytick.major.width": 1.2,
+        "ytick.minor.width": 0.9,
+        "errorbar.capsize": 2,
+        "axes.linewidth": 1.2,
+        # "font.familiy": "serif",
+        "font.size": 14,
+        "axes.grid": False,
+        "ytick.right": True,
+        "xtick.top": True
+    }
+    return(my_rc_params)

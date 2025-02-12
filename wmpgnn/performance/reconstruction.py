@@ -258,8 +258,8 @@ def reconstruct_decay(triang_LCA_matrix, particle_keys, ax=0, particle_ids=[], t
     cluster_dict = {}
     for ic in range(len(connected_components)):
         cluster_dict[clustered_keys[ic][0]] = {
-            'node_keys': clustered_keys[ic], 'LCA_values': clustered_concatenated_LCA_values[ic]}
+            'node_keys': clustered_keys[ic], 'LCA_values': clustered_concatenated_LCA_values[ic],
+        'labels' : labels}
 
     return cluster_dict, num_clusters_per_order, max_full_chain_depth_in_event
 
-    return cluster_dict, num_clusters_per_order, max_full_chain_depth_in_event

@@ -21,7 +21,7 @@ class Performance:
     """ Class responsible for determining performance given a dataset and
     a configuration for both homogeneous and heterogeneous GNNs. """
 
-    def __init__(self, config, full_graphs=False):
+    def __init__(self, config, full_graphs=False, cuda=True):
         self.config_loader = config
         self.data_loader = DataHandler(self.config_loader, performance_mode=True)
         self.data_loader.load_data()
@@ -35,7 +35,9 @@ class Performance:
         self.model.load_state_dict(torch.load(model_weights))
         self.model.eval()
         self.name = config.get("inference.name")
-        self.model.cuda()
+        self.cuda = cuda
+        if cuda:
+            self.model.cuda()
         plt.rcParams.update(init_plot_style())
 
     def evaluate_hetero_lca_accuracy(self, prune_layer=3, bdt_pruned_data=False, batch_size=8):
@@ -143,11 +145,13 @@ class Performance:
             self.model._blocks[layer].prune_by_cut = True
             self.model._blocks[layer].device = device
 
-    def unset_edge_pruning(self, layer):
+    def unset_pruning(self, layer):
         if self.data_type == "homogeneous":
             self.model._blocks[layer]._network.edge_prune = False
+            self.model._blocks[layer]._network.node_prune = False
         elif self.data_type == "heterogeneous":
             self.model._blocks[layer].edge_prune = False
+            self.model._blocks[layer].node_prune = False
 
 
     def set_node_pruning(self, layer, cut, device='cuda'):
@@ -210,7 +214,7 @@ class Performance:
         self.signal_df = pd.DataFrame(
             columns=['EventNumber', 'NumParticlesInEvent', 'NumSignalParticles', 'PerfectSignalReconstruction',
                      'AllParticles', 'PerfectReco',
-                     'NoneIso', 'PartReco', 'NotFound'])
+                     'NoneIso', 'PartReco', 'NotFound', 'SigMatch'])
         self.signal_df = self.signal_df.astype(
             {'EventNumber': np.int32, 'NumParticlesInEvent': np.int32, 'NumSignalParticles': np.int32,
              'PerfectSignalReconstruction': np.int32,
@@ -262,7 +266,8 @@ class Performance:
         acc = running_acc / len(self.dataset)
         return acc, npvs, associated
 
-    def evaluate_homog_track_pruning_performance(self, layers=[0, 1, 2, 7], batch_size=8, edge_pruning=True):
+    def evaluate_homog_track_pruning_performance(self, layers=[0, 1, 2, 7], batch_size=8,
+                                                 edge_pruning=True, plot_roc=False):
         trues = []
         self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
 
@@ -296,11 +301,25 @@ class Performance:
         names = [f"Layer {i}" for i in layers]
 
         if edge_pruning:
-            self.plot_roc_curve(true, pred, names, file_name="hetero_edge_pruning_roc", title="Edge")
+            identifier = "edge"
         else:
-            self.plot_roc_curve(true, pred, names, file_name="hetero_node_pruning_roc", title="Node")
+            identifier = "node"
+        for i in range(len(pred)):
+            plt.hist(pred[i][true==1], bins=100,density=True, label="y=1", histtype="step")
+            plt.hist(pred[i][true==0], bins=100, density=True, label="y=0", histtype="step")
+            plt.legend()
+            plt.xlabel("Weights")
+            plt.savefig(f"{identifier}_{names[i]}_histogram.png", dpi=200)
+            plt.savefig(f"{identifier}_{names[i]}_histogram.pdf", dpi=200)
+            plt.show()
+        if plot_roc:
+            if edge_pruning:
+                self.plot_roc_curve(true, pred, names, file_name="hetero_edge_pruning_roc", title="Edge")
+            else:
+                self.plot_roc_curve(true, pred, names, file_name="hetero_node_pruning_roc", title="Node")
 
-    def evaluate_hetero_track_pruning_performance(self, layers=[0, 1, 2, 7], batch_size=8, edge_pruning=True):
+    def evaluate_hetero_track_pruning_performance(self, layers=[0, 1, 2, 7], batch_size=8,
+                                                  edge_pruning=True, plot_roc=False, pv_tr_edges = False):
         trues = []
         self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
 
@@ -312,7 +331,7 @@ class Performance:
             outputs = self.model(data)
             data = outputs
             label = data[('tracks', 'to', 'tracks')].y.argmax(dim=1)
-
+            PVlabel = torch.tensor(data[('tracks', 'to', 'pvs')].y, dtype=torch.float32)
             num_nodes = data['tracks'].x.shape[0]
             out = data[('tracks', 'to', 'tracks')].edges.new_zeros(num_nodes,
                                                                    data[('tracks', 'to', 'tracks')].y.shape[1])
@@ -322,9 +341,16 @@ class Performance:
             yBCE = 1. * (data[('tracks', 'to', 'tracks')].y[:, 0] == 0).unsqueeze(1)
 
             if edge_pruning:
-                trues.append(yBCE.cpu().detach().numpy())
+                if pv_tr_edges:
+                    trues.append(PVlabel.cpu().detach().numpy())
+                else:
+                    trues.append(yBCE.cpu().detach().numpy())
                 for layer in layers:
-                    preds[layer].append(
+                    if pv_tr_edges:
+                        preds[layer].append(
+                        self.model._blocks[layer].edge_weights[('tracks', 'to', 'pvs')].cpu().detach().numpy())
+                    else:
+                        preds[layer].append(
                         self.model._blocks[layer].edge_weights[('tracks', 'to', 'tracks')].cpu().detach().numpy())
             else:
                 trues.append(ynodes.cpu().detach().numpy())
@@ -334,11 +360,28 @@ class Performance:
         true = np.concatenate(trues)
         pred = [np.concatenate(preds[i]) for i in layers]
         names = [f"Layer {i}" for i in layers]
-
         if edge_pruning:
-            self.plot_roc_curve(true, pred, names, file_name="hetero_edge_pruning_roc", title="Edge")
+            identifier = "edge"
+            if pv_tr_edges:
+                identifier = "pv_edge"
         else:
-            self.plot_roc_curve(true, pred, names, file_name="hetero_node_pruning_roc", title="Node")
+            identifier = "node"
+        for i in range(len(pred)):
+            plt.hist(pred[i][true==1], bins=100,density=True, label="y=1", histtype="step")
+            plt.hist(pred[i][true==0], bins=100, density=True, label="y=0", histtype="step")
+            plt.legend()
+            plt.xlabel("Weights")
+            plt.savefig(f"{identifier}_{names[i]}_histogram.png", dpi=200)
+            plt.savefig(f"{identifier}_{names[i]}_histogram.pdf", dpi=200)
+            plt.show()
+        if plot_roc:
+            if edge_pruning:
+                if pv_tr_edges:
+                    self.plot_roc_curve(true, pred, names, file_name="hetero_pv_edge_pruning_roc", title="PV Edge")
+                else:
+                    self.plot_roc_curve(true, pred, names, file_name="hetero_edge_pruning_roc", title="Edge")
+            else:
+                self.plot_roc_curve(true, pred, names, file_name="hetero_node_pruning_roc", title="Node")
 
     def plot_roc_curve(self, y_true, y_scores, names, file_name="test_edge_pruning_roc", title="Edge"):
         plt.figure(figsize=(8, 6))
@@ -364,7 +407,8 @@ class Performance:
         plt.savefig(f"{file_name}_{self.name}.pdf")
         plt.show()
 
-    def evaluate_reco_performance(self, event_max=-1, plot_perfect_decaychains=2, pruning_cut=0.1):
+    def evaluate_reco_performance(self, event_max=-1, plot_perfect_decaychains=2,
+                                  pruning_cut=0.1, ref_signal = None):
         # should eventually include BDT timing and perf. in filtering when caching dataset
         self.dataset = self.data_loader.get_test_dataloader(batch_size=1)
         self.init_reco_dataframes()
@@ -393,31 +437,22 @@ class Performance:
                 vdata.edgepos = vdata.edgepos - torch.min(vdata.edgepos)
 
             count3 += 1
-
-            vdata.cuda()
-            vdata_copy = vdata.clone()
-            self.model.cuda()
-            self.set_edge_pruning(7, pruning_cut)
+            if self.cuda:
+                vdata.cuda()
+                self.model.cuda()
+                self.set_pruning(7, pruning_cut)
+            else:
+                self.set_pruning(7, pruning_cut, device="cpu")
 
             start_time = time.time()
             gout = self.model(vdata)
             end_time = time.time()
             time_model = end_time - start_time
-            # try:
-            # except:
-            #     print("Pruning looser")
-            #     self.set_pruning(7, 0.05)
-            #     try:
-            #         start_time = time.time()
-            #         gout = self.model(vdata_copy)
-            #         end_time = time.time()
-            #         time_model = end_time - start_time
-            #     except:
-            #         print("Exception occurred")
-            #         continue
-            self.model.cpu()
-            gout.cpu()
-            vdata.cpu()
+
+            if self.cuda:
+                self.model.cpu()
+                gout.cpu()
+                vdata.cpu()
             if self.data_type == "homogeneous":
                 Bparts_after = float(torch.sum(torch.argmax(vdata.y, -1) > 0))
             elif self.data_type == "heterogeneous":
@@ -472,7 +507,20 @@ class Performance:
                     perfect_event_reconstruction = 0
 
                 for tc_firstkey in truth_cluster_dict.keys():
+                    signal_match = 0
+                    if ref_signal != None:
+                        mothers = [label[3:] for label in truth_cluster_dict[tc_firstkey]['labels'] if 'c' == label[0]]
+                        match0 = np.array([mother in ref_signal['mothers'] for mother in mothers])
+                        match1 = np.array([mother in ref_signal['anti-mothers'] for mother in mothers])
+                        if int(np.sum(match0)) == len(ref_signal['mothers'] ) or int(np.sum(match1)) == len(ref_signal['anti-mothers']):
+                            signal_match = 1
+
+
+
+
                     number_of_signal_particles = len(truth_cluster_dict[tc_firstkey]['node_keys'])
+                    if number_of_signal_particles != ref_signal['ndaughters']:
+                        signal_match = 0
                     perfect_signal_reconstruction = 1
                     if reco_cluster_dict == {}:
                         perfect_signal_reconstruction = 0
@@ -521,7 +569,8 @@ class Performance:
                                                              'PerfectReco': perfect_reco,
                                                              'NoneIso': none_iso,
                                                              'PartReco': part_reco,
-                                                             'NotFound': none_associated},
+                                                             'NotFound': none_associated,
+                                                             'SigMatch': signal_match},
                                                             ignore_index=True)
                     count2 += 1
                     if perfect_signal_reconstruction and plot_perfect_decaychains > 0:

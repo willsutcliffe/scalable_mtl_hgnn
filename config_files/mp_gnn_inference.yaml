@@ -15,7 +15,8 @@ loss:
   lambda_bce : 0.2
 dataset:
   data_type : "homogeneous"
-  data_dir: /home/sutclw/weighted_MP_gnn/bdtprunedgraphs_cached_data_49193
+#  data_dir: /home/sutclw/weighted_MP_gnn/bdtprunedgraphs_cached_data_49193
+  data_dir: /home/sutclw/weighted_MP_gnn/full_graphs_B_DD
 #  data_dir: /home/sutclw/weighted_MP_gnn/fullgraphs_cached_data_49193
 training:
   train: True
@@ -25,5 +26,9 @@ training:
   epochs: 30
   model_file: "Final_full_graph_8block_32_epochs_weighted_message_passing_BCE.pt"
 inference:
-  model_file: "/home/sutclw/results/Final_model_8block_32epochs_weighted_message_passing_BCE_3Feb25.pth"
-  name: "wmp_BCE"
+#  model_file: "/home/sutclw/results/Final_model_8block_32epochs_weighted_message_passing_BCE_3Feb25.pth"
+  model_file: "/home/sutclw/full_graph_results2/Final_full_graph_8block_32_epochs_weighted_message_passing_BCE.pt"
+#  model_file: "/home/sutclw/full_graph_results2/Final_full_graph_8block_32_epochs_weighted_message_passing.pt"
+#  model_file: "/home/sutclw/logits/Final_8block_32_epochs_message_passing_BCE_logits.pt"
+  name: "wmp_BCE_full_B_DD"  
+#name: "wmp_BCE_full_graphs"
