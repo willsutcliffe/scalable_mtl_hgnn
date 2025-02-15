@@ -56,8 +56,10 @@ class GNNTrainer(Trainer):
         self.model.cuda()
 
         self.add_bce = add_bce
-        self.beta_bce_nodes = 0.2
-        self.beta_bce_edges = 0.2
+        #self.beta_bce_nodes = 3.1
+        #self.beta_bce_edges =  33.2256
+        self.beta_bce_nodes = 1
+        self.beta_bce_edges = 1
 
         self.ce_train_loss = []
         self.ce_val_loss = []
@@ -69,7 +71,7 @@ class GNNTrainer(Trainer):
     def set_beta_bce_nodes(self, beta):
         self.beta_bce_nodes = beta
 
-    def set_beta_BCE_edges(self, beta):
+    def set_beta_bce_edges(self, beta):
         self.beta_BCE_edges = beta
 
     def eval_one_epoch(self, train=True):

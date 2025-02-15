@@ -515,12 +515,11 @@ class Performance:
                         if int(np.sum(match0)) == len(ref_signal['mothers'] ) or int(np.sum(match1)) == len(ref_signal['anti-mothers']):
                             signal_match = 1
 
-
-
+                        if len(truth_cluster_dict[tc_firstkey]['node_keys'])!= ref_signal['ndaughters']:
+                            signal_match = 0
 
                     number_of_signal_particles = len(truth_cluster_dict[tc_firstkey]['node_keys'])
-                    if number_of_signal_particles != ref_signal['ndaughters']:
-                        signal_match = 0
+
                     perfect_signal_reconstruction = 1
                     if reco_cluster_dict == {}:
                         perfect_signal_reconstruction = 0
@@ -573,7 +572,8 @@ class Performance:
                                                              'SigMatch': signal_match},
                                                             ignore_index=True)
                     count2 += 1
-                    if perfect_signal_reconstruction and plot_perfect_decaychains > 0:
+                    #if perfect_signal_reconstruction and plot_perfect_decaychains > 0:
+                    if all_particles and plot_perfect_decaychains > 0:
                         plt.clf()
                         fix, axs = plt.subplots(2, figsize=(10, 10))
                         axs[0].set_title('Reco trees in event',

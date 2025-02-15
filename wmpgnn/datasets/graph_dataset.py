@@ -30,12 +30,14 @@ class CustomDataset(Dataset):
             remapping = {a: i for a, i in zip(indices, list(range(0, len(indices))))}
             old_senders = graph["senders"]
             old_receivers = graph["receivers"]
+            if len(graph["receivers"]) < 1 or len(graph["senders"]) < 1:
+                continue
             s = np.array([remapping[x] for x in graph["senders"]])
             r = np.array([remapping[x] for x in graph["receivers"]])
             # new_nodes = np.take(graph["nodes"][indices], [0, 1, 2, 3, 4, 5,9], axis=1)
             # new_edges = np.take(graph["edges"], [1, 2, 3], axis=1)
             new_nodes = graph["nodes"][indices][:, : 10]
-            
+            #new_nodes = graph["nodes"][indices]
             new_edges = graph['edges']
             data = Data(nodes=torch.from_numpy(new_nodes),  # node features
                         #             data = Data(nodes=torch.from_numpy(graph["nodes"][indices]), #node features
