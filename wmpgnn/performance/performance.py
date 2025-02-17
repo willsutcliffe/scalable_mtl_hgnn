@@ -1,6 +1,7 @@
-from wmpgnn.performance.reconstruction import reconstruct_decay
-from wmpgnn.performance.reconstruction import particle_name
-from wmpgnn.performance.reconstruction import flatten
+from IPython.core.completer import not_found
+
+from wmpgnn.performance.reconstruction import reconstruct_decay, make_decay_dict
+from wmpgnn.performance.reconstruction import particle_name, flatten, match_decays
 from wmpgnn.util.functions import init_plot_style
 from wmpgnn.util.functions import acc_four_class
 from wmpgnn.model.model_loader import ModelLoader
@@ -35,6 +36,7 @@ class Performance:
         self.model.load_state_dict(torch.load(model_weights))
         self.model.eval()
         self.name = config.get("inference.name")
+        self.results_dir = config.get("inference.results_dir")
         self.cuda = cuda
         if cuda:
             self.model.cuda()
@@ -183,6 +185,15 @@ class Performance:
         pd_matrix = pd.DataFrame(np.vstack(
             (edge_index[0], edge_index[1])).transpose(), columns=['senders', 'receivers'])
         pd_matrix["LCA_probs"] = list(edges.detach().numpy())
+        # Re-define the LCA-class probabilities, using a threshold for the bkg-like LCA class
+        # pd_matrix['LCA_prob0'] = np.vstack(
+        #     pd_matrix['LCA_probs'].values.tolist())[:, 0]
+        # pd_matrix.loc[pd_matrix['LCA_prob0'] < LCA_bkg_thrs, 'LCA_prob0'] = 0.
+        # probs_array = np.concatenate((np.vstack(pd_matrix['LCA_prob0']), np.vstack(
+        #     pd_matrix['LCA_probs'].values.tolist())[:, 1:]), axis=1)
+        # probs_array /= probs_array.sum(axis=1)[:, np.newaxis]
+        # pd_matrix['LCA_probs'] = probs_array.tolist()
+
         pd_matrix["LCA_dec"] = list(np.argmax(edges.detach().numpy(), axis=-1))
         pd_matrix.set_index(['senders', 'receivers'], inplace=True)
         pd_matrix = pd_matrix.reset_index()
@@ -304,19 +315,21 @@ class Performance:
             identifier = "edge"
         else:
             identifier = "node"
-        for i in range(len(pred)):
+        for i in preds.keys():
             plt.hist(pred[i][true==1], bins=100,density=True, label="y=1", histtype="step")
             plt.hist(pred[i][true==0], bins=100, density=True, label="y=0", histtype="step")
             plt.legend()
             plt.xlabel("Weights")
-            plt.savefig(f"{identifier}_{names[i]}_histogram.png", dpi=200)
-            plt.savefig(f"{identifier}_{names[i]}_histogram.pdf", dpi=200)
+            plt.savefig(f"{self.results_dir}/{self.name}_{identifier}_{names[i]}_histogram.png", dpi=300)
+            plt.savefig(f"{self.results_dir}/{self.name}_{identifier}_{names[i]}_histogram.pdf", dpi=300)
             plt.show()
         if plot_roc:
             if edge_pruning:
                 self.plot_roc_curve(true, pred, names, file_name="hetero_edge_pruning_roc", title="Edge")
             else:
                 self.plot_roc_curve(true, pred, names, file_name="hetero_node_pruning_roc", title="Node")
+
+        return true, pred
 
     def evaluate_hetero_track_pruning_performance(self, layers=[0, 1, 2, 7], batch_size=8,
                                                   edge_pruning=True, plot_roc=False, pv_tr_edges = False):
@@ -371,8 +384,8 @@ class Performance:
             plt.hist(pred[i][true==0], bins=100, density=True, label="y=0", histtype="step")
             plt.legend()
             plt.xlabel("Weights")
-            plt.savefig(f"{identifier}_{names[i]}_histogram.png", dpi=200)
-            plt.savefig(f"{identifier}_{names[i]}_histogram.pdf", dpi=200)
+            plt.savefig(f"{self.results_dir}/{identifier}_{names[i]}_histogram.png", dpi=300)
+            plt.savefig(f"{self.results_dir}/{identifier}_{names[i]}_histogram.pdf", dpi=300)
             plt.show()
         if plot_roc:
             if edge_pruning:
@@ -382,6 +395,7 @@ class Performance:
                     self.plot_roc_curve(true, pred, names, file_name="hetero_edge_pruning_roc", title="Edge")
             else:
                 self.plot_roc_curve(true, pred, names, file_name="hetero_node_pruning_roc", title="Node")
+        return true, pred
 
     def plot_roc_curve(self, y_true, y_scores, names, file_name="test_edge_pruning_roc", title="Edge"):
         plt.figure(figsize=(8, 6))
@@ -403,12 +417,12 @@ class Performance:
         plt.title(f'{title} Pruning Receiver Operating Characteristic (ROC) Curve')
         plt.legend()
         plt.grid()
-        plt.savefig(f"{file_name}_{self.name}.png", dpi=200)
-        plt.savefig(f"{file_name}_{self.name}.pdf")
+        plt.savefig(f"{self.results_dir}/{self.name}_{file_name}.png", dpi=300)
+        plt.savefig(f"{self.results_dir}/{self.name}_{file_name}.pdf")
         plt.show()
 
     def evaluate_reco_performance(self, event_max=-1, plot_perfect_decaychains=2,
-                                  pruning_cut=0.1, ref_signal = None):
+                                  pruning_cut=0, ref_signal = None):
         # should eventually include BDT timing and perf. in filtering when caching dataset
         self.dataset = self.data_loader.get_test_dataloader(batch_size=1)
         self.init_reco_dataframes()
@@ -421,6 +435,9 @@ class Performance:
         count3 = 0
         time_model = 0
         time_reco = 0
+        if self.cuda:
+            start = torch.cuda.Event(enable_timing=True)
+            end = torch.cuda.Event(enable_timing=True)
         for batch_i, vdata in enumerate(self.dataset):
             if batch_i == event_max:
                 print(f"Event loop for reconstruction ending at event max {event_max}")
@@ -440,14 +457,26 @@ class Performance:
             if self.cuda:
                 vdata.cuda()
                 self.model.cuda()
-                self.set_pruning(7, pruning_cut)
+                if pruning_cut > 0:
+                    self.set_pruning(7, pruning_cut)
             else:
-                self.set_pruning(7, pruning_cut, device="cpu")
+                if pruning_cut > 0:
+                    self.set_pruning(7, pruning_cut, device="cpu")
 
-            start_time = time.time()
-            gout = self.model(vdata)
-            end_time = time.time()
-            time_model = end_time - start_time
+            if self.cuda:
+                torch.cuda.synchronize()
+                start.record()
+                with torch.no_grad():
+                    gout = self.model(vdata)
+                end.record()
+                torch.cuda.synchronize()
+                time_model = start.elapsed_time(end)
+            else:
+                start_time = time.time()
+                with torch.no_grad():
+                    gout = self.model(vdata)
+                end_time = time.time()
+                time_model = end_time - start_time
 
             if self.cuda:
                 self.model.cpu()
@@ -507,16 +536,31 @@ class Performance:
                     perfect_event_reconstruction = 0
 
                 for tc_firstkey in truth_cluster_dict.keys():
-                    signal_match = 0
+                    signal_match = 1
                     if ref_signal != None:
-                        mothers = [label[3:] for label in truth_cluster_dict[tc_firstkey]['labels'] if 'c' == label[0]]
-                        match0 = np.array([mother in ref_signal['mothers'] for mother in mothers])
-                        match1 = np.array([mother in ref_signal['anti-mothers'] for mother in mothers])
-                        if int(np.sum(match0)) == len(ref_signal['mothers'] ) or int(np.sum(match1)) == len(ref_signal['anti-mothers']):
-                            signal_match = 1
+                        labels = truth_cluster_dict[tc_firstkey]['labels']
+                        mothers = [label[3:] for label in labels if 'c' == label[0]]
+                        node_keys  = truth_cluster_dict[tc_firstkey]['node_keys']
+                        daughters =  [label.split(':')[1] for label in labels if int(label.split(':')[0][1:]) in node_keys]
 
-                        if len(truth_cluster_dict[tc_firstkey]['node_keys'])!= ref_signal['ndaughters']:
+                        if match_decays(daughters, ref_signal[0]['daughters']) or match_decays(daughters, ref_signal[1]['daughters']):
+                            signal_match = 1
+                        else:
                             signal_match = 0
+
+                        if signal_match == 1:
+                            check_mothers1 = True
+                            check_mothers2 = True
+                            for i in range(len(ref_signal[0]['mothers'])):
+                                if ref_signal[0]['mothers'][i] not in mothers:
+                                    check_mothers1 = False
+                                if ref_signal[1]['mothers'][i] not in mothers:
+                                    check_mothers2 = False
+                            if check_mothers1 or check_mothers2:
+                                signal_match = 1
+                            else:
+                                signal_match = 0
+
 
                     number_of_signal_particles = len(truth_cluster_dict[tc_firstkey]['node_keys'])
 
@@ -540,6 +584,8 @@ class Performance:
                     part_reco = 0
                     none_associated = 0
                     for cluster in reco_cluster_dict.values():
+                        #print("True cluster ",true_cluster['node_keys'])
+                        #print("Reco cluster ", cluster['node_keys'])
                         true_in_reco = np.sum(np.isin(true_cluster['node_keys'], cluster['node_keys'])) / len(
                             true_cluster['node_keys'])
                         # reco_in_true = np.sum( np.isin(cluster['node_keys'],true_cluster['node_keys']))/len(true_cluster['node_keys'])
@@ -551,6 +597,7 @@ class Performance:
                             break
                         elif true_in_reco == 1 and len(cluster['node_keys']) > len(true_cluster['node_keys']):
                             none_iso = 1
+                            break
                         elif true_in_reco >= 0.2 and true_in_reco < 1:
                             part_reco = 1
                         # elif val >= 0.2 and len(cluster['node_keys']) > len(true_cluster['node_keys']):
@@ -558,6 +605,10 @@ class Performance:
                     if all_particles == 1:
                         none_iso = 0
                         part_reco = 0
+                    if none_iso == 1:
+                        part_reco = 0
+                    #print("all_particles ", all_particles)
+                    #print("none_iso ", none_iso)
                     if all_particles == 0 and none_iso == 0 and part_reco == 0:
                         none_associated = 1
                     self.signal_df = self.signal_df._append({'EventNumber': event,
@@ -573,7 +624,9 @@ class Performance:
                                                             ignore_index=True)
                     count2 += 1
                     #if perfect_signal_reconstruction and plot_perfect_decaychains > 0:
-                    if all_particles and plot_perfect_decaychains > 0:
+                    #if all_particles and plot_perfect_decaychains > 0:
+                    if (part_reco or none_associated) and plot_perfect_decaychains > 0:
+
                         plt.clf()
                         fix, axs = plt.subplots(2, figsize=(10, 10))
                         axs[0].set_title('Reco trees in event',
@@ -588,7 +641,8 @@ class Performance:
                         truth_cluster_dict, truth_num_clusters_per_order, max_full_chain_depth_in_event = reconstruct_decay(
                             true_LCA, particle_keys, axs[1], particle_ids=particle_ids, truth_level_simulation=1)
                         # plt.show()
-                        plt.savefig(f"perfect_reco_decay_chain_{plot_perfect_decaychains}.png")
+                        plt.savefig(f"{self.results_dir}/{self.name}_perfect_reco_decay_chain_{plot_perfect_decaychains}.png",dpi=300)
+                        plt.savefig(f"{self.results_dir}/{self.name}_perfect_reco_decay_chain_{plot_perfect_decaychains}.pdf")
                         plot_perfect_decaychains = plot_perfect_decaychains - 1
 
                 event += 1
@@ -632,18 +686,26 @@ class Performance:
         print("count2 ", count2)
         print("count3 ", count3)
         print("event", event)
-        self.performance_table()
+        if ref_signal != None:
+            self.performance_table(signal_match=True)
+        else:
+            self.performance_table()
+        self.signal_df.to_csv(f"{self.results_dir}/{self.name}_signal_df.csv")
+        self.event_df.to_csv(f"{self.results_dir}/{self.name}_event_df.csv")
 
 
-    def performance_table(self):
+    def performance_table(self, signal_match=False):
         perf_numbers = pd.DataFrame(columns=["Scope", "Perfect hierarchy", "Wrong hierarchy", "None isolated", "Part reco"])
 
-        sig_part_reco = 100 * len(self.signal_df.query('PartReco == 1')) / len(self.signal_df)
-        sig_perfect_reco = 100 * len(self.signal_df.query('PerfectSignalReconstruction == 1')) / len(self.signal_df)
-        sig_wrong_hierarchy = 100 * len(self.signal_df.query('AllParticles == 1')) / len(self.signal_df) - sig_perfect_reco
-        sig_none_isolated = 100 * len(self.signal_df.query('NoneIso == 1')) / len(self.signal_df)
-        sig_part_reco = 100 * (len(self.signal_df.query('PartReco == 1')) / len(self.signal_df) + len(
-            self.signal_df.query('NotFound == 1')) / len(self.signal_df))
+        if signal_match:
+            signal_df = self.signal_df.query("SigMatch == 1")
+        else:
+            signal_df = self.signal_df
+        sig_perfect_reco = 100 * len(signal_df.query('PerfectSignalReconstruction == 1')) / len(signal_df)
+        sig_wrong_hierarchy = 100 * len(signal_df.query('AllParticles == 1')) / len(signal_df) - sig_perfect_reco
+        sig_none_isolated = 100 * len(signal_df.query('NoneIso == 1')) / len(signal_df)
+        sig_part_reco = 100 * (len(signal_df.query('PartReco == 1')) / len(signal_df) + len(
+            signal_df.query('NotFound == 1')) / len(signal_df))
 
         event_perfect_reco = 100 * len(self.event_df.query('PerfectEventReconstruction == 1')) / len(self.event_df)
         event_wrong_hierarchy = 100 * len(self.event_df.query(
@@ -662,7 +724,7 @@ class Performance:
                                              "Wrong hierarchy": event_wrong_hierarchy, "None isolated": event_none_isolated,
                                              "Part reco": event_part_reco},
                                             ignore_index=True)
-        with open(f"performance_table_{self.name}.tex", "w") as f:
+        with open(f"{self.results_dir}/{self.name}_performance_table.tex", "w") as f:
             f.write(perf_numbers.to_latex(index=False, float_format="{:.1f}".format))
             print(perf_numbers.to_latex(index=False, float_format="{:.1f}".format))
 

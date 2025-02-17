@@ -15,12 +15,7 @@ loss:
   lambda_bce : 0.2
 dataset:
   data_type : "homogeneous"
-#  data_dir: /home/sutclw/weighted_MP_gnn/bdtprunedgraphs_cached_data_49193
-#  data_dir: /home/sutclw/weighted_MP_gnn/full_graphs_B_DD
-#  data_dir: /home/sutclw/weighted_MP_gnn/full_graphs_Bd_Kstmumu
-#  data_dir: /home/sutclw/weighted_MP_gnn/bdt_pruned_Bd_Kstmumu
-#  data_dir: /home/sutclw/weighted_MP_gnn/fullgraphs_cached_data_49193
-  data_dir: "/media/sutclw/WILLSSD/fullgraphs_cached_data_49193/fullgraphs_cached_data_49193"
+  data_dir: "/home/sutclw/weighted_MP_gnn/full_graphs_Bu_KKpi"
 training:
   train: True
   starting_learning_rate: 0.001
@@ -30,5 +25,5 @@ training:
   model_file: "Final_full_graph_8block_32_epochs_weighted_message_passing_BCE.pt"
 inference:
   model_file: "/home/sutclw/full_graph_results2/Final_full_graph_8block_32_epochs_weighted_message_passing_BCE.pt"
-  name: "inclusive_wmp_BCE_full_graphs"  
-  results_dir: "/home/sutclw/Work/Zurich/LHCb/GNNs/paper_results/inclusive_wmpgnn"
+  name: "Bu_KKpi_wmp_BCE_full_graphs"  
+  results_dir: "/home/sutclw/Work/Zurich/LHCb/GNNs/paper_results/Bu_KKpi_wmpgnn"

@@ -17,8 +17,34 @@ def particle_name(id_):
         return 'Chi_cc++'
     elif id_ == -4422:
         return 'Chi_cc--'
+    elif id_ == 4432:
+        return 'Omega_cc++'
+    elif id_ == -4432:
+        return 'Omega_cc--'
     else:
         return Particle.from_pdgid(id_).name
+
+def make_decay_dict(decay):
+    decay_dict ={}
+    for particle in decay:
+        if particle not in decay_dict.keys():
+            decay_dict[particle]=1
+        else:
+            decay_dict[particle]+=1
+    return decay_dict
+
+def match_decays(decay1, decay2):
+    decay_dict1 = make_decay_dict(decay1)
+    decay_dict2 = make_decay_dict(decay2)
+    if len(decay_dict1.keys()) != len(decay_dict2.keys()):
+        return False
+    decay_dict2_keys = decay_dict2.keys()
+    for key in decay_dict1.keys():
+        if key not in decay_dict2_keys:
+            return False
+        elif decay_dict1[key] != decay_dict2[key]:
+            return False
+    return True
 
 def flatten(t):
     return [item for sublist in t for item in sublist]
