@@ -202,22 +202,30 @@ class Performance:
         return pd_matrix
 
     def lca_truth_matrix(self, graph):
+        # if self.data_type == "homogeneous":
+        #     senders = graph.init_senders
+        #     receivers = graph.init_receivers
+        #     init_y = graph["init_y"]
+        # elif self.data_type == "heterogeneous":
+        #     senders = graph.init_senders
+        #     receivers = graph.init_receivers
+        #     init_y = graph["init_y"]
         if self.data_type == "homogeneous":
-            senders = graph.init_senders
-            receivers = graph.init_receivers
-            init_y = graph["init_y"]
+            senders = graph.truth_senders
+            receivers = graph.truth_receivers
+            init_y = graph["truth_y"]
         elif self.data_type == "heterogeneous":
-            senders = graph.init_senders
-            receivers = graph.init_receivers
-            init_y = graph["init_y"]
-
+            senders = graph.truth_senders
+            receivers = graph.truth_receivers
+            init_y = graph["truth_y"]
         truth_lca = pd.DataFrame(np.column_stack((senders, receivers)), columns=['senders', 'receivers'])
         truth_lca['LCA_dec'] = np.reshape(
             np.argmax(
                 np.reshape(init_y, (init_y.shape[0], 4)), axis=-1),
             (-1,))
         truth_lca = truth_lca[truth_lca['senders'] < truth_lca['receivers']]
-        truth_lca['LCA_id_label'] = list(map(particle_name, graph['init_moth_ids'].numpy()))
+        #truth_lca['LCA_id_label'] = list(map(particle_name, graph['init_moth_ids'].numpy()))
+        truth_lca['LCA_id_label'] = list(map(particle_name, graph['truth_moth_ids'].numpy()))
         truth_lca['TrueFullChainLCA'] = graph['lca_chain']
         return truth_lca
 
@@ -499,8 +507,11 @@ class Performance:
             time_reco = end_time - start_time
             start_time = time.time()
             true_LCA = self.lca_truth_matrix(vdata)
-            particle_keys = list(vdata["init_keys"].numpy())
-            particle_ids = list(map(particle_name, vdata['init_partids'].numpy()))
+
+            #particle_keys = list(vdata["init_keys"].numpy())
+            #particle_ids = list(map(particle_name, vdata['init_partids'].numpy()))
+            particle_keys = list(vdata["truth_part_keys"].numpy())
+            particle_ids = list(map(particle_name, vdata['truth_part_ids'].numpy()))
             truth_cluster_dict, truth_num_clusters_per_order, max_full_chain_depth_in_event = reconstruct_decay(
                 true_LCA, particle_keys, particle_ids=particle_ids, truth_level_simulation=1)
             end_time = time.time()
@@ -537,6 +548,7 @@ class Performance:
 
                 for tc_firstkey in truth_cluster_dict.keys():
                     signal_match = 1
+                    #print(truth_cluster_dict[tc_firstkey])
                     if ref_signal != None:
                         labels = truth_cluster_dict[tc_firstkey]['labels']
                         mothers = [label[3:] for label in labels if 'c' == label[0]]
@@ -636,8 +648,10 @@ class Performance:
                             reco_LCA, particle_keys, axs[0])
                         axs[1].set_title('Truth-level trees in event',
                                          fontweight='bold', fontsize=14)
-                        particle_keys = list(vdata["init_keys"].numpy())
-                        particle_ids = list(map(particle_name, vdata['init_partids'].numpy()))
+                        #particle_keys = list(vdata["init_keys"].numpy())
+                        #particle_ids = list(map(particle_name, vdata['init_partids'].numpy()))
+                        particle_keys = list(vdata["truth_part_keys"].numpy())
+                        particle_ids = list(map(particle_name, vdata['truth_part_ids'].numpy()))
                         truth_cluster_dict, truth_num_clusters_per_order, max_full_chain_depth_in_event = reconstruct_decay(
                             true_LCA, particle_keys, axs[1], particle_ids=particle_ids, truth_level_simulation=1)
                         # plt.show()
@@ -646,6 +660,10 @@ class Performance:
                         plot_perfect_decaychains = plot_perfect_decaychains - 1
 
                 event += 1
+                if number_of_background_particles <=0:
+                    number_of_background_particles = -1
+                if number_of_particles_from_heavy_hadron <=0:
+                    number_of_particles_from_heavy_hadron = -1
                 self.event_df = self.event_df._append({'EventNumber': event,
 
                                                        'NumParticlesInEvent': total_number_of_particles,

@@ -64,6 +64,13 @@ class CustomDataset(Dataset):
                 data['moth_ids'] = torch.from_numpy(graph["ids"])
                 data['part_ids'] = torch.from_numpy(graph["part_ids"])
                 data['lca_chain'] = torch.from_numpy(graph["lca_chain"])
+                data['truth_senders'] = torch.from_numpy(graph["truth_senders"]).long()
+                data['truth_receivers'] = torch.from_numpy(graph["truth_receivers"]).long()
+                data['truth_y'] = torch.from_numpy(graph["truth_y"])
+                data['truth_moth_ids'] = torch.from_numpy(graph["truth_ids"])
+                data['truth_part_ids'] = torch.from_numpy(graph["truth_part_ids"])
+                data['truth_part_keys'] = torch.from_numpy(graph["truth_part_keys"])
+                #data['truth_part_ids'] = torch.from_numpy(graph["truth_part_ids"])
                 init_senders = data.init_keys[data.init_senders]
                 init_receivers = data.init_keys[data.init_receivers]
                 senders =  data.final_keys[torch.from_numpy(old_senders).long()]
