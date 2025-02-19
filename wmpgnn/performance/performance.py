@@ -28,7 +28,7 @@ class Performance:
         self.data_loader.load_data()
         self.full_graphs = full_graphs
         self.data_type = config.get("dataset.data_type")
-
+        self.dataset = self.data_loader.get_test_dataloader(batch_size=8)
         model_loader = ModelLoader(self.config_loader)
         self.model = model_loader.get_model()
         self.full_graphs = full_graphs
@@ -41,6 +41,9 @@ class Performance:
         if cuda:
             self.model.cuda()
         plt.rcParams.update(init_plot_style())
+
+
+
 
     def evaluate_hetero_lca_accuracy(self, prune_layer=3, bdt_pruned_data=False, batch_size=8):
         self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
@@ -195,6 +198,7 @@ class Performance:
         # pd_matrix['LCA_probs'] = probs_array.tolist()
 
         pd_matrix["LCA_dec"] = list(np.argmax(edges.detach().numpy(), axis=-1))
+        #pd_matrix["LCA_dec"][pd_matrix["LCA_dec"]==0]=1
         pd_matrix.set_index(['senders', 'receivers'], inplace=True)
         pd_matrix = pd_matrix.reset_index()
         pd_matrix = pd_matrix[pd_matrix['senders'] < pd_matrix['receivers']]
@@ -595,9 +599,11 @@ class Performance:
                     none_iso = 0
                     part_reco = 0
                     none_associated = 0
+                    reco = []
                     for cluster in reco_cluster_dict.values():
                         #print("True cluster ",true_cluster['node_keys'])
                         #print("Reco cluster ", cluster['node_keys'])
+                        reco.append(cluster['node_keys'])
                         true_in_reco = np.sum(np.isin(true_cluster['node_keys'], cluster['node_keys'])) / len(
                             true_cluster['node_keys'])
                         # reco_in_true = np.sum( np.isin(cluster['node_keys'],true_cluster['node_keys']))/len(true_cluster['node_keys'])
@@ -623,6 +629,11 @@ class Performance:
                     #print("none_iso ", none_iso)
                     if all_particles == 0 and none_iso == 0 and part_reco == 0:
                         none_associated = 1
+
+                    # if part_reco == 1 or none_associated == 1:
+                    #     print("True ", true_cluster['node_keys'])
+                    #     print("Reco ", reco)
+
                     self.signal_df = self.signal_df._append({'EventNumber': event,
                                                              'NumParticlesInEvent': total_number_of_particles,
                                                              'NumSignalParticles': number_of_signal_particles,
