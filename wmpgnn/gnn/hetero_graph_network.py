@@ -11,9 +11,9 @@ from torch_scatter.composite import scatter_softmax
 import contextlib
 
 
-def weight_mlp(output_size, hidden_channels=16, num_layers=3):
-    return lambda: MLP(in_channels=-1, hidden_channels=16,
-                       out_channels=output_size, num_layers=3, norm=None)
+def weight_mlp(output_size, hidden_channels=16, num_layers=4, norm="batch_norm"):
+    return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
+                       out_channels=output_size, num_layers=num_layers, norm=norm)
 
 
 def ones(device):
@@ -55,7 +55,7 @@ class HeteroGraphNetwork(AbstractModule):
                  node_types, edge_types, edge_model, node_model,
                  global_model=None, use_globals=True, hidden_size=8, device="cuda",
                  use_edge_weights=True, use_node_weights=True, weight_mlp_layers=4, weight_mlp_channels=128,
-                 weighted_mp = False):
+                 weighted_mp = False, norm="batch_norm"):
         super(HeteroGraphNetwork, self).__init__()
         self._use_globals = use_globals
         self.edge_types = edge_types
@@ -84,9 +84,13 @@ class HeteroGraphNetwork(AbstractModule):
         #      self._node_mlps[node_type] = weight_mlp(1, hidden_channels=weight_mlp_channels, num_layers=weight_mlp_layers)()
 
         for edge_type in edge_types:
-            self._edge_mlps[edge_type] = weight_mlp(1)()
+            self._edge_mlps[edge_type] = weight_mlp(1, hidden_channels=weight_mlp_channels,
+                                                    num_layers=weight_mlp_layers,
+                                                    norm=norm)()
         # self._node_mlp = weight_mlp(1)()
-        self._node_mlps['tracks'] = weight_mlp(1, hidden_channels=weight_mlp_channels, num_layers=weight_mlp_layers)()
+        self._node_mlps['tracks'] = weight_mlp(1, hidden_channels=weight_mlp_channels,
+                                               num_layers=weight_mlp_layers,
+                                               norm=norm)()
         #self._node_mlps['pvs'] = ones(device)
         # self._edge_mlp = weight_mlp(1)()
         # self._edge_mlps[('tracks','to','tracks')] = self._edge_mlp
@@ -110,7 +114,8 @@ class HeteroGraphNetwork(AbstractModule):
 
         for edge_type in self.edge_types:
             if self._use_edge_weights:
-                self.edge_logits[edge_type] = self._edge_mlps[edge_type](node_input[edge_type].edges)
+                graph_batch = node_input[edge_type[0]].batch[ node_input[edge_type].edge_index[0] ]
+                self.edge_logits[edge_type] = self._edge_mlps[edge_type](node_input[edge_type].edges, graph_batch)
                 self.edge_weights[edge_type] = self._sigmoid(self.edge_logits[edge_type])
             else:
                 self.edge_weights[edge_type] = torch.ones((graph[edge_type].edges.shape[0], 1)).to(self.device)
@@ -130,7 +135,7 @@ class HeteroGraphNetwork(AbstractModule):
         #     self.node_weights = self._sigmoid(self._edge_mlp(global_input['tracks'].x) )
         for node_type in self.node_types:
             if self._use_node_weights and node_type != "pvs":
-                self.node_logits[node_type] = self._node_mlps[node_type](global_input[node_type].x)
+                self.node_logits[node_type] = self._node_mlps[node_type](global_input[node_type].x, global_input[node_type].batch)
                 self.node_weights[node_type] = self._sigmoid(self.node_logits[node_type])
             else:
                 self.node_weights[node_type] = torch.ones((graph[node_type].x.shape[0], 1)).to(self.device)

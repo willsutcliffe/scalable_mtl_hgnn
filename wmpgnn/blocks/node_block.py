@@ -46,7 +46,7 @@ class NodeBlock(AbstractModule):
 
 
         collected_nodes = torch.cat(nodes_to_collect, axis=-1)
-        updated_nodes = self._node_model(collected_nodes)
+        updated_nodes = self._node_model(collected_nodes, graph.batch)
 
         graph.update({'nodes': updated_nodes})
         return graph

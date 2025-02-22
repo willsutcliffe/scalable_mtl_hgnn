@@ -62,7 +62,7 @@ class HeteroNodeBlock(AbstractModule):
 
 
             collected_nodes = torch.cat(nodes_to_collect, axis=-1)
-            updated_nodes = self._node_models[node_type](collected_nodes)
+            updated_nodes = self._node_models[node_type](collected_nodes, graph[node_type].batch)
 
             graph[node_type].x = updated_nodes
         return graph

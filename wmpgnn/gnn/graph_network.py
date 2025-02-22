@@ -10,9 +10,9 @@ from torch_geometric.nn.pool.select import SelectTopK
 from torch_scatter.composite import scatter_softmax
 import contextlib
 
-def make_weight_mlp(output_size, hidden_channels=16, num_layers=4):
+def make_weight_mlp(output_size, hidden_channels=16, num_layers=4, norm="batch_norm"):
     return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
-                       out_channels=output_size, num_layers=num_layers, norm=None)
+                       out_channels=output_size, num_layers=num_layers, norm=norm)
 
 def edge_pruning(edge_indices, graph):
     updated_edges = graph.edges[edge_indices, :]
@@ -78,7 +78,7 @@ class GraphNetwork(AbstractModule):
 
     def __init__(self, edge_model, node_model, use_globals, global_model=None, hidden_size=8, device = "cuda",
          use_edge_weights = True, use_node_weights = True, weight_mlp_layers=4, weight_mlp_channels=128,
-                 weighted_mp = False):
+                 weighted_mp = False, norm = "batch_norm"):
         super(GraphNetwork, self).__init__()
 
         self.edge_prune = False
@@ -100,9 +100,9 @@ class GraphNetwork(AbstractModule):
 
         # add new weight matrices
         #self.edge_linear = Linear(hidden_size ,1)
-        self.edge_mlp = make_weight_mlp(1, hidden_channels=weight_mlp_channels, num_layers=weight_mlp_layers)()
+        self.edge_mlp = make_weight_mlp(1, hidden_channels=weight_mlp_channels, num_layers=weight_mlp_layers, norm=norm)()
         #self.node_linear = Linear(hidden_size ,1)
-        self.node_mlp = make_weight_mlp(1, hidden_channels=weight_mlp_channels, num_layers=weight_mlp_layers)()
+        self.node_mlp = make_weight_mlp(1, hidden_channels=weight_mlp_channels, num_layers=weight_mlp_layers, norm=norm)()
         self.sigmoid = Sigmoid()
         self.softmax = Softmax(dim=0)
         self.select = SelectTopK(1 ,self.k_edges)
@@ -116,7 +116,7 @@ class GraphNetwork(AbstractModule):
 
         self.edges = node_input.edges
         if self.use_edge_weights:
-            self.edge_logits = self.edge_mlp(node_input.edges)
+            self.edge_logits = self.edge_mlp(node_input.edges, node_input.edgepos)
             self.edge_weights = self.sigmoid(self.edge_logits)
         else:
             self.edge_weights = torch.ones( (node_input.edges.shape[0],1) ).to(self.device)
@@ -134,7 +134,7 @@ class GraphNetwork(AbstractModule):
 
         global_input = self._node_block(node_input, self.edge_weights)
         if self.use_node_weights:
-            self.node_logits = self.node_mlp(global_input.nodes)
+            self.node_logits = self.node_mlp(global_input.nodes, node_input.batch)
             self.node_weights = self.sigmoid(self.node_logits)
         else:
             self.node_weights = torch.ones( (global_input.nodes.shape[0],1) ).to(self.device)

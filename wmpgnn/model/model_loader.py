@@ -9,7 +9,7 @@ class ModelLoader:
         config_loader = config
         model_type = config_loader.get("model.type")
         if model_type == "mpgnn":
-            self.model = GNN(mlp_output_size=config_loader.get("model.mlp_output_size"), edge_op=4,
+            self.model = GNN(mlp_output_size=config_loader.get("model.mlp_output_size"), edge_op=4,#,node_op=3,
                              num_blocks=config_loader.get("model.gnn_layers"),
                              mlp_layers=config_loader.get("model.mlp_layers"),
                              mlp_channels=config_loader.get("model.mlp_channels"),
@@ -17,7 +17,8 @@ class ModelLoader:
                              weight_mlp_layers=config_loader.get("model.weight_mlp_layers"),
                              use_edge_weights=config_loader.get("model.use_edge_weights"),
                              use_node_weights=config_loader.get("model.use_node_weights"),
-                             weighted_mp=config_loader.get("model.weighted_mp")
+                             weighted_mp=config_loader.get("model.weighted_mp"),
+                             norm=config_loader.get("model.norm")
                              )
         elif model_type == "heterognn":
             nodes = config_loader.get("model")['node_types']
@@ -32,7 +33,8 @@ class ModelLoader:
                                    weight_mlp_layers=config_loader.get("model.weight_mlp_layers"),
                                    use_edge_weights=config_loader.get("model.use_edge_weights"),
                                    use_node_weights=config_loader.get("model.use_node_weights"),
-                                   weighted_mp=config_loader.get("model.weighted_mp")
+                                   weighted_mp=config_loader.get("model.weighted_mp"),
+                                   norm=config_loader.get("model.norm")
                                    )
         elif model_type == "transformer":
             pass

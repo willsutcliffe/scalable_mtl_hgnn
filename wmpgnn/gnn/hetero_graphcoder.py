@@ -17,13 +17,14 @@ class WrappedModelFnModule(AbstractModule):
 
 class HeteroGraphCoder(AbstractModule):
     def __init__(self, node_types: list, edge_types: list,
-                 edge_models=None, node_models=None, global_model=None):
+                 edge_models=None, node_models=None, global_model=None, endecoder=True):
         super(HeteroGraphCoder, self).__init__()
         with self._enter_variable_scope():
             self._edge_types = edge_types
             self._node_types = node_types
             self._edge_models = {}
             self._node_models = {}
+            self._endecoder = endecoder
 
 
             for node_type in self._node_types:
@@ -40,10 +41,15 @@ class HeteroGraphCoder(AbstractModule):
             self._node_models_model_dict = torch.nn.ModuleDict({str(i): j for i, j in self._node_models.items()})
 
     def forward(self, graph):
-        for node_type in self._node_types:
-            graph[node_type].x = self._node_models[node_type](graph[node_type].x)
-        for edge_type in self._edge_types:
-            graph[edge_type].edges = self._edge_models[edge_type](graph[edge_type].edges)
-
+        if self._endecoder:
+            for node_type in self._node_types:
+                graph[node_type].x = self._node_models[node_type](graph[node_type].x, graph[node_type].batch)
+            for edge_type in self._edge_types:
+                graph[edge_type].edges = self._edge_models[edge_type](graph[edge_type].edges, graph[edge_type[0]].batch[ graph[edge_type].edge_index[0]])
+        else:
+            for node_type in self._node_types:
+                graph[node_type].x = self._node_models[node_type](graph[node_type].x)
+            for edge_type in self._edge_types:
+                graph[edge_type].edges = self._edge_models[edge_type](graph[edge_type].edges)
         graph['globals'].x = self._global_model(graph['globals'].x)
         return graph

@@ -9,9 +9,9 @@ from wmpgnn.gnn.graph_network import edge_pruning, node_pruning, node_pruning2
 #HIDDEN_CHANNELS=128
 
 
-def make_mlp(output_size, hidden_channels=128, num_layers=4):
+def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm"):
     return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
-              out_channels=output_size, num_layers=num_layers , norm=None)
+          out_channels=output_size, num_layers=num_layers, norm=norm) # , norm='batch_norm')
 
 
 def _nested_concatenate(input_graphs, field_name, axis):
@@ -54,19 +54,24 @@ def graph_concat(input_graphs, axis):
 class MLPGraphNetwork(nn.Module):
     def __init__(self, edge_output_size, node_output_size, global_output_size,
                  use_edge_weights, use_node_weights, mlp_channels=128, mlp_layers=4,
-                 weight_mlp_channels=16, weight_mlp_layers=4, weighted_mp = False):
+                 weight_mlp_channels=16, weight_mlp_layers=4, weighted_mp = False,
+                 norm = "batch_norm"):
         super(MLPGraphNetwork, self).__init__()
-
+        if norm != "graph_norm":
+            global_norm = norm
+        else:
+            global_norm = "batch_norm"
         self._network = GraphNetwork(
-                                     edge_model=make_mlp(edge_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers),
-                                     node_model=make_mlp(node_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers),
+                                     edge_model=make_mlp(edge_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm),
+                                     node_model=make_mlp(node_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm),
                                      use_globals=True,
-                                     global_model=make_mlp(node_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers),
+                                     global_model=make_mlp(node_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=global_norm),
                                      use_edge_weights=use_edge_weights,
                                      use_node_weights=use_node_weights,
                                      weight_mlp_layers=weight_mlp_layers,
                                      weight_mlp_channels=weight_mlp_channels,
-                                    weighted_mp=weighted_mp)
+                                    weighted_mp=weighted_mp,
+                                    norm = norm)
         # global_model=make_mlp(global_output_size))
 
     def forward(self, inputs):
@@ -75,12 +80,16 @@ class MLPGraphNetwork(nn.Module):
 
 class MLPGraphIndependent(nn.Module):
     def __init__(self, edge_output_size, node_output_size, global_output_size,
-                 mlp_channels=128, mlp_layers=4):
+                 mlp_channels=128, mlp_layers=4, norm = "batch_norm", encoder=True):
         super(MLPGraphIndependent, self).__init__()
-
-        self._network = GraphIndependent(edge_model=make_mlp(edge_output_size , hidden_channels=mlp_channels, num_layers=mlp_layers),
-                                         node_model=make_mlp(node_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers),
-                                         global_model=make_mlp(node_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers))
+        if norm != "graph_norm":
+            global_norm = norm
+        else:
+            global_norm = "batch_norm"
+        self._network = GraphIndependent(edge_model=make_mlp(edge_output_size , hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm),
+                                         node_model=make_mlp(node_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm),
+                                         global_model=make_mlp(node_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=global_norm),
+                                         encoder=encoder)
 
     def forward(self, inputs):
         return self._network(inputs)
@@ -99,10 +108,11 @@ class GNN(nn.Module):
                  mlp_layers=4,
                  weight_mlp_channels=16,
                  weight_mlp_layers=4,
-                 weighted_mp = False):
+                 weighted_mp = False,
+                 norm = "batch_norm"):
         super(GNN, self).__init__()
         self._encoder = MLPGraphIndependent(mlp_output_size, mlp_output_size, mlp_output_size,
-                                            mlp_channels=mlp_channels, mlp_layers=mlp_layers)
+                                            mlp_channels=mlp_channels, mlp_layers=mlp_layers, norm = norm)
 
         self._blocks = []
         for i in range(num_blocks):
@@ -110,11 +120,12 @@ class GNN(nn.Module):
                                      global_output_size=mlp_output_size,use_edge_weights=use_edge_weights,
                                          use_node_weights=use_node_weights, mlp_channels=mlp_channels,
                                          mlp_layers=mlp_layers, weight_mlp_channels=weight_mlp_channels,
-                                         weight_mlp_layers=weight_mlp_layers, weighted_mp=weighted_mp)
+                                         weight_mlp_layers=weight_mlp_layers, weighted_mp=weighted_mp, norm = norm)
             self._blocks.append(self._core)
         self._blocks = nn.ModuleList(self._blocks)
 
-        self._decoder = MLPGraphIndependent(mlp_output_size, mlp_output_size, mlp_output_size)
+        self._decoder = MLPGraphIndependent(mlp_output_size, mlp_output_size, mlp_output_size,
+                                            mlp_channels=mlp_channels, mlp_layers=mlp_layers, norm = norm)
 
         # Transforms the outputs into the appropriate shapes.
         if edge_op is None:
@@ -130,7 +141,7 @@ class GNN(nn.Module):
         else:
             global_fn = lambda: nn.Linear(mlp_output_size, global_op)
 
-        self._output_transform = GraphIndependent(edge_fn, node_fn, global_fn)
+        self._output_transform = GraphIndependent(edge_fn, node_fn, global_fn, encoder=False)
 
 
     def forward(self, input_op):

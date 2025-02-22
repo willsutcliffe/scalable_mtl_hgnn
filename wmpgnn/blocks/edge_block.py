@@ -41,7 +41,7 @@ class EdgeBlock(AbstractModule):
 
 
         collected_edges = torch.cat(edges_to_collect, axis=-1)
-        updated_edges = self._edge_model(collected_edges)
+        updated_edges = self._edge_model(collected_edges, graph.edgepos)
 
         graph.update({'edges': updated_edges})
 
