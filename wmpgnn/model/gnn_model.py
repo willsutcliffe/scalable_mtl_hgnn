@@ -86,6 +86,7 @@ class MLPGraphIndependent(nn.Module):
             global_norm = norm
         else:
             global_norm = "batch_norm"
+
         self._network = GraphIndependent(edge_model=make_mlp(edge_output_size , hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm),
                                          node_model=make_mlp(node_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm),
                                          global_model=make_mlp(node_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=global_norm),
@@ -111,6 +112,11 @@ class GNN(nn.Module):
                  weighted_mp = False,
                  norm = "batch_norm"):
         super(GNN, self).__init__()
+
+        # if norm == None:
+        #     encoder_norm = "batch_norm"
+        # else:
+        #     encoder_norm = norm
         self._encoder = MLPGraphIndependent(mlp_output_size, mlp_output_size, mlp_output_size,
                                             mlp_channels=mlp_channels, mlp_layers=mlp_layers, norm = norm)
 

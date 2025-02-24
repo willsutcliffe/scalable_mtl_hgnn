@@ -6,16 +6,17 @@ model:
   mlp_channels: 128
   weight_mlp_layers: 4
   weight_mlp_channels: 16
-  weighted_mp: True
+  weighted_mp: False
   use_edge_weights: True
   use_node_weights: True
+  norm: "batch_norm"
 loss:
   add_bce: True
   bce_constraints: True
   lambda_bce : 0.2
 dataset:
   data_type : "homogeneous"
-  data_dir: "/home/sutclw/weighted_MP_gnn/full_graphs_Lb_Lcpi"
+  data_dir: "/home/sutclw/weighted_MP_gnn/truth_Lb_Lcpi_5k"
 training:
   train: True
   starting_learning_rate: 0.001
@@ -24,6 +25,8 @@ training:
   epochs: 30
   model_file: "Final_full_graph_8block_32_epochs_weighted_message_passing_BCE.pt"
 inference:
-  model_file: "/home/sutclw/full_graph_results2/Final_full_graph_8block_32_epochs_weighted_message_passing_BCE.pt"
+#  model_file: "/home/sutclw/full_graph_results2/Final_full_graph_8block_32_epochs_weighted_message_passing_BCE.pt"
+#  model_file: "../bn_trainings/Final_full_graph_8block_32_epochs_message_passing_BCE_batch_norm.pt"
+  model_file: "../bn_trainings/Final_full_graph_8block_32_epochs_message_passing_BCE_batch_norm.pt"
   name: "Lb_Lcpi_wmp_BCE_full_graphs"  
   results_dir: "/home/sutclw/Work/Zurich/LHCb/GNNs/paper_results/Lb_Lcpi_wmpgnn"

@@ -327,7 +327,7 @@ class Performance:
             identifier = "edge"
         else:
             identifier = "node"
-        for i in preds.keys():
+        for i in range(len(pred)):
             plt.hist(pred[i][true==1], bins=100,density=True, label="y=1", histtype="step")
             plt.hist(pred[i][true==0], bins=100, density=True, label="y=0", histtype="step")
             plt.legend()
@@ -504,7 +504,7 @@ class Performance:
             start_time = time.time()
             reco_LCA = self.lca_reco_matrix(gout)
             particle_keys = list(vdata["final_keys"].numpy())
-
+            total_number_of_particles = len(particle_keys)
             reco_cluster_dict, reco_num_clusters_per_order, _ = reconstruct_decay(
                 reco_LCA, particle_keys)
             end_time = time.time()
@@ -523,7 +523,7 @@ class Performance:
             time_node_filtering = 0
             time_edge_filtering = 0
             time_LCA_reconstruction = time_reco
-            total_number_of_particles = len(particle_keys)
+            #total_number_of_particles = len(particle_keys)
 
             if truth_cluster_dict != {}:
                 count += 1
@@ -646,10 +646,9 @@ class Performance:
                                                              'SigMatch': signal_match},
                                                             ignore_index=True)
                     count2 += 1
-                    #if perfect_signal_reconstruction and plot_perfect_decaychains > 0:
+                    if perfect_signal_reconstruction and plot_perfect_decaychains > 0:
                     #if all_particles and plot_perfect_decaychains > 0:
-                    if (part_reco or none_associated) and plot_perfect_decaychains > 0:
-
+                    #if (part_reco or none_associated) and plot_perfect_decaychains > 0:
                         plt.clf()
                         fix, axs = plt.subplots(2, figsize=(10, 10))
                         axs[0].set_title('Reco trees in event',
