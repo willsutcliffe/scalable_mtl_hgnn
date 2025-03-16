@@ -412,21 +412,23 @@ class Performance:
     def plot_roc_curve(self, y_true, y_scores, names, file_name="test_edge_pruning_roc", title="Edge"):
         plt.figure(figsize=(8, 6))
 
-        line_styles = ["dashdot", "dashed", "dotted", "--", "solid"]
+        line_styles = ["dashed", "dotted","dashdot", "solid",(0, (5, 10))]
+        colors = ['black','red', 'brown', 'blue', 'purple']
         self.roc_auc_list = []
         for i in range(0, len(y_scores)):
             name = names[i]
             y_score = y_scores[i]
             line_style = line_styles[i]
+            color = colors[i]
             fpr, tpr, _ = roc_curve(y_true, y_score)
             auc_score = roc_auc_score(y_true, y_score)
             self.roc_auc_list.append(auc_score)
-            plt.plot(fpr, tpr, label=f'{name} (AUC = {auc_score:.4f})', linestyle=line_style)
+            plt.plot(fpr, tpr, label=f'{name} (AUC = {auc_score:.4f})', linestyle=line_style, color=color)
             print(auc_score)
         plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title(f'{title} Pruning Receiver Operating Characteristic (ROC) Curve')
+        plt.xlabel('Background retention')
+        plt.ylabel('Signal efficiency')
+        plt.title(f'{title} pruning ')
         plt.legend()
         plt.grid()
         plt.savefig(f"{self.results_dir}/{self.name}_{file_name}.png", dpi=300)

@@ -22,12 +22,12 @@ dataset:
 #  data_dir: /home/sutclw/weighted_MP_gnn/full_graphs_Bd_Kstmumu
 #  data_dir: /home/sutclw/weighted_MP_gnn/bdt_pruned_Bd_Kstmumu
 #  data_dir: /home/sutclw/weighted_MP_gnn/unfiltered_cached_data_49193#
-#  data_dir: /home/sutclw/weighted_MP_gnn/truth_inclusive_10k_49193
+  data_dir: /home/sutclw/weighted_MP_gnn/truth_inclusive_10k_49193
 #  data_dir: /home/sutclw/weighted_MP_gnn/truth_Bd_Kstmumu_5k
 #  data_dir: /home/sutclw/weighted_MP_gnn/truth_Bs_Jpsiphi_5k
 #  data_dir: /home/sutclw/weighted_MP_gnn/truth_Bd_DD_5k
-  data_dir: /home/sutclw/weighted_MP_gnn/truth_Bd_Kpi_5k
-  data_dir: /home/sutclw/weighted_MP_gnn/truth_Bu_Kmumu_5k
+#  data_dir: /home/sutclw/weighted_MP_gnn/truth_Bd_Kpi_5k
+#  data_dir: /home/sutclw/weighted_MP_gnn/truth_Bu_Kmumu_5k
 
 #  data_dir: /home/sutclw/weighted_MP_gnn/truth_Lb_Lcpi_5k
 #  data_dir: /home/sutclw/weighted_MP_gnn/truth_Bs_Dspi_5k
@@ -46,7 +46,8 @@ training:
 inference:
 #  model_file: "/home/sutclw/full_graph_results2/Final_full_graph_8block_32_epochs_weighted_message_passing_BCE.pt"
 #  model_file: "../Final_full_graph_8block_32_epochs_weighted_message_passing_BCE_hadronic_cocktail.pt"
-  model_file: "../bn_trainings/Final_full_graph_8block_36_epochs_message_passing_BCE_hadronic_cocktail_shuffle_bnorm.pt"
+#  model_file: "../bn_trainings/Final_full_graph_8block_36_epochs_message_passing_BCE_hadronic_cocktail_shuffle_bnorm.pt"
+  model_file: "../bn_trainings/Final_full_graph_8block_36_epochs_message_passing_BCE_batch_norm.pt"
 
   #model_file: "../bn_trainings/Final_full_graph_8block_32_epochs_message_passing_BCE_hadronic_cocktail_shuffle_bnorm.pt"
   name: "test_wmp_BCE_full_graphs"  

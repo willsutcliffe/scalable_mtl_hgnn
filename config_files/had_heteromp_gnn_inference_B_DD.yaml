@@ -39,4 +39,4 @@ inference:
 #  model_file: "/home/sutclw/results2/results2/Final_hetero_8block_32_epochs_weighted_message_passing_pv_constraints.pt"
 #  name: "hetero_8block_wmp_BCE_full_graph"
   name: "had_B_DD_hetero_wmp_BCE_full_graphs"  
-  results_dir: "/home/sutclw/Work/Zurich/LHCb/GNNs/paper_results/B_DD_hetero_wmpgnn_had"
+  results_dir: "/home/sutclw/Work/Zurich/LHCb/GNNs/paper_results/test_B_DD_hetero_wmpgnn_had"
