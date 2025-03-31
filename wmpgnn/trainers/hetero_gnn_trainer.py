@@ -51,6 +51,7 @@ class HeteroGNNTrainer(Trainer):
         self.train_pv_acc = []
         self.val_pv_acc = []
 
+        self.LCA_classes = self.model.edge_op
         self.ce_train_loss = []
         self.ce_val_loss = []
         self.bce_nodes_train_loss = []
@@ -208,15 +209,11 @@ class HeteroGNNTrainer(Trainer):
         data =  {
             "train_loss":self.train_loss,
             "val_loss":self.val_loss,
-            "train_acc_LCA0":list(np.array(self.train_acc)[:,0]),
-            "val_acc_LCA0": list(np.array(self.val_acc)[:,0]),
-            "train_acc_LCA1":list(np.array(self.train_acc)[:,1]),
-            "val_acc_LCA1": list(np.array(self.val_acc)[:,1]),
-            "train_acc_LCA2": list(np.array(self.train_acc)[:,2]),
-            "val_acc_LCA2": list(np.array(self.val_acc)[:,2]),
-            "train_acc_LCA3":list(np.array(self.train_acc)[:,3]),
-            "val_acc_LCA3": list(np.array(self.val_acc)[:,3]),
         }
+        for nLCA in range(self.LCA_classes):
+            data[f"train_acc_LCA{nLCA}"] = list(np.array(self.train_acc)[:, nLCA])
+            data[f"val_acc_LCA{nLCA}"] = list(np.array(self.val_acc)[:, nLCA])
+            
         if self.add_bce:
             data["ce_train_loss"] = self.ce_train_loss
             data["ce_val_loss"]  = self.ce_val_loss

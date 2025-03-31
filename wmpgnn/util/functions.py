@@ -42,8 +42,32 @@ def positive_node_weight(loader):
         sum_pos  += torch.sum(ynodes==1).item()
     return sum_nodes/(2*sum_pos)
 
+def acc_n_class(pred, label, n_class=4):
+    correct = 0
+    correct_class = {i : 0 for i in range(n_class)}
+    pred_argmax = torch.argmax(pred, dim=1)
+    
+    pred_class = {i : (pred_argmax == i).sum() for i in range(n_class)}
+    true_class = {i : (label == i).sum() for i in range(n_class)}
+    
+    if len(pred) != len(label):
+        print("something goes wrong in acc_n_class")
+        print(len(pred), len(label))
+    else:
+        for i in range(n_class):
+            correct_class[i] = torch.sum(pred_argmax[label == i] == label[label == i])
+
+    correct_preds = torch.Tensor([correct_class[i] for i in range(n_class)])
+    all_preds = torch.Tensor(tuple(pred_class[i] for i in range(n_class)))
+    all_label = torch.Tensor(tuple(true_class[i] for i in range(n_class)))
+
+    acc = torch.div(correct_preds, all_label)
+
+    return acc
+    
 
 def acc_four_class(pred, label):
+    import pdb; pdb.set_trace()
     #     print("pred", pred)
     correct = 0
     correct_class1 = 0
@@ -83,6 +107,24 @@ def acc_four_class(pred, label):
 
     return acc
 
+def weight_n_class(dataset,hetero=False,n_class=4):
+    num_sample = 0
+    true_class = {i: 0 for i in range(n_class)}
+    
+    for tdata in dataset:
+        if hetero:
+            y = tdata[('tracks','to','tracks')].y
+        else:
+            y = tdata.y
+        for i in range(n_class):
+            true_class[i] += (y.argmax(dim=1) == i).sum()
+        num_sample += len(y)
+    
+    weight_class = {i: num_sample / (n_class * true_class[i]) for i in range(n_class)}
+    weight = torch.stack(tuple(weight_class[i] for i in range(n_class)))
+
+    print(weight)
+    return weight
 
 def weight_four_class(dataset,hetero=False):
     true_class1 = 0
