@@ -1,3 +1,6 @@
+import sys,os
+sys.path.append(os.getcwd())
+
 from wmpgnn.configs.config_loader import ConfigLoader
 from wmpgnn.datasets.data_handler import DataHandler
 from wmpgnn.model.model_loader import ModelLoader
@@ -58,6 +61,8 @@ model_file = config_loader.get("training.model_file")
 print(f"Training finished. Saving model in {model_file}")
 trainer.save_model(model_file)
 
+csv_file = model_file.replace(".pt", ".csv")
+trainer.save_dataframe(csv_file)
 # save dataframe with training and validation losses
-trainer.save_dataframe("Final_full_graph_8block_32_epochs_weighted_message_passing_BCE.csv")
-
+csv_file = model_file.replace(".pt", ".csv")
+trainer.save_dataframe(csv_file)
