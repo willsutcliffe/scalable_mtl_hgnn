@@ -1,5 +1,5 @@
 from wmpgnn.trainers.trainer import Trainer
-from wmpgnn.util.functions import positive_edge_weight, positive_node_weight, weight_four_class, acc_four_class
+from wmpgnn.util.functions import positive_edge_weight, positive_node_weight, weight_n_class, acc_n_class
 import torch
 from torch import nn
 from torch_scatter import scatter_add
@@ -128,7 +128,7 @@ class GNNTrainer(Trainer):
         """
         super().__init__(config, model, train_loader, val_loader)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
-        weights = weight_four_class(self.train_loader)
+        weights = weight_n_class(self.train_loader, n_class=self.LCA_classes)
         self.criterion = nn.CrossEntropyLoss(weight=weights)
 
         if use_bce_pos_weight:
@@ -154,6 +154,7 @@ class GNNTrainer(Trainer):
         self.beta_bce_edges =  33.2256
 
 
+        
         self.ce_train_loss = []
         self.ce_val_loss = []
         self.bce_nodes_train_loss = []
@@ -204,7 +205,7 @@ class GNNTrainer(Trainer):
             data.to('cuda')
             yBCE_start = 1. * (data.y[:, 0] == 0).unsqueeze(1)
             num_nodes = data.nodes.shape[0]
-            out = data.edges.new_zeros(num_nodes, data.edges.shape[1])
+            out = data.edges.new_zeros(num_nodes, data.y.shape[1])
             node_sum = scatter_add(data.y, data.senders, out=out, dim=0)
             ynodes_start = (1. * (torch.sum(node_sum[:, 1:], 1) > 0)).unsqueeze(1)
             label0 = data.y.argmax(dim=1)
@@ -214,10 +215,10 @@ class GNNTrainer(Trainer):
             data = outputs
             label = data.y.argmax(dim=1)
             num_nodes = data.nodes.shape[0]
-            out = data.edges.new_zeros(num_nodes, data.edges.shape[1])
+            out = data.edges.new_zeros(num_nodes, data.y.shape[1])
+            
             node_sum = scatter_add(data.y, data.senders, out=out, dim=0)
             ynodes = (1. * (torch.sum(node_sum[:, 1:], 1) > 0)).unsqueeze(1)
-
             loss = self.criterion(outputs.edges, label)
             running_ce_loss += loss.item()
             y_bce= 1. * (data.y[:, 0] == 0).unsqueeze(1)
@@ -233,7 +234,7 @@ class GNNTrainer(Trainer):
                     running_bce_node_loss += bce_node_loss.item()
                     loss += bce_edge_loss
                     loss += bce_node_loss
-            acc_one_batch = acc_four_class(outputs.edges, label)
+            acc_one_batch = acc_n_class(outputs.edges, label, n_class=data.y.shape[1])
             acc_one_epoch.append(acc_one_batch)
             if train:
                 loss.backward()
@@ -301,15 +302,11 @@ class GNNTrainer(Trainer):
         data =  {
             "train_loss":self.train_loss,
             "val_loss":self.val_loss,
-            "train_acc_LCA0":list(np.array(self.train_acc)[:,0]),
-            "val_acc_LCA0": list(np.array(self.val_acc)[:,0]),
-            "train_acc_LCA1":list(np.array(self.train_acc)[:,1]),
-            "val_acc_LCA1": list(np.array(self.val_acc)[:,1]),
-            "train_acc_LCA2": list(np.array(self.train_acc)[:,2]),
-            "val_acc_LCA2": list(np.array(self.val_acc)[:,2]),
-            "train_acc_LCA3":list(np.array(self.train_acc)[:,3]),
-            "val_acc_LCA3": list(np.array(self.val_acc)[:,3]),
         }
+        for nLCA in range(self.LCA_classes):
+            data[f"train_acc_LCA{nLCA}"] = list(np.array(self.train_acc)[:, nLCA])
+            data[f"val_acc_LCA{nLCA}"] = list(np.array(self.val_acc)[:, nLCA])
+            
         if self.add_bce:
             data["ce_train_loss"] = self.ce_train_loss
             data["ce_val_loss"]  = self.ce_val_loss

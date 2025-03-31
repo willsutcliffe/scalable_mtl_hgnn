@@ -44,7 +44,7 @@ class ModelLoader:
         config_loader = config
         model_type = config_loader.get("model.type")
         if model_type == "mpgnn":
-            self.model = GNN(mlp_output_size=config_loader.get("model.mlp_output_size"), edge_op=4,#,node_op=3,
+            self.model = GNN(mlp_output_size=config_loader.get("model.mlp_output_size"), edge_op=config_loader.get("model.LCA_classes"),#,node_op=3,
                              num_blocks=config_loader.get("model.gnn_layers"),
                              mlp_layers=config_loader.get("model.mlp_layers"),
                              mlp_channels=config_loader.get("model.mlp_channels"),
@@ -60,7 +60,7 @@ class ModelLoader:
             edges = config_loader.get("model")['edge_types']
             edges = [(edge.split('_')[0], 'to', edge.split('_')[1]) for edge in edges]
             self.model = HeteroGNN(node_types=nodes, edge_types=edges,
-                                   mlp_output_size=config_loader.get("model.mlp_output_size"), edge_op=4,
+                                   mlp_output_size=config_loader.get("model.mlp_output_size"), edge_op=config_loader.get("model.LCA_classes"),
                                    num_blocks=config_loader.get("model.gnn_layers"),
                                    mlp_layers=config_loader.get("model.mlp_layers"),
                                    mlp_channels=config_loader.get("model.mlp_channels"),

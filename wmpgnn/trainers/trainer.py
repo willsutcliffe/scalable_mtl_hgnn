@@ -47,6 +47,7 @@ class Trainer(ABC):
         self.train_loss = []
         self.val_loss = []
         self.epochs = []
+        self.LCA_classes = config.get('model.LCA_classes')
 
     @abstractmethod
     def eval_one_epoch(self, train=True):
@@ -140,44 +141,58 @@ class Trainer(ABC):
             file_name (str): File path for saving the figure.
             show (bool): If True, display the plots with plt.show().
         """
-        class1_acc_vl = []
-        class2_acc_vl = []
-        class3_acc_vl = []
-        class4_acc_vl = []
 
-        for vl_acc in self.val_acc:
-            class1_acc_vl.append(vl_acc[0])
-            class2_acc_vl.append(vl_acc[1])
-            class3_acc_vl.append(vl_acc[2])
-            class4_acc_vl.append(vl_acc[3])
+        class_acc_vl = {f"class{i}_acc_vl" : [] for i in range(self.LCA_classes)}
+        #class1_acc_vl = []
+        #class2_acc_vl = []
+        #class3_acc_vl = []
+        #class4_acc_vl = []
+        
+        for i in range(self.LCA_classes):
+            for vl_acc in self.val_acc:
+                class_aa[f"class{i}_acc_vl"].append(vl_acc[i])
 
-        class1_acc_tr = []
-        class2_acc_tr = []
-        class3_acc_tr = []
-        class4_acc_tr = []
+        #for vl_acc in self.val_acc:
+        #    class1_acc_vl.append(vl_acc[0])
+        #    class2_acc_vl.append(vl_acc[1])
+        #    class3_acc_vl.append(vl_acc[2])
+        #    class4_acc_vl.append(vl_acc[3])
 
-        for tr_acc in self.train_acc:
-            class1_acc_tr.append(tr_acc[0])
-            class2_acc_tr.append(tr_acc[1])
-            class3_acc_tr.append(tr_acc[2])
-            class4_acc_tr.append(tr_acc[3])
+        class_acc_tr = {f"class{i}_acc_tr" : [] for i in range(self.LCA_classes)}
+        #class1_acc_tr = []
+        #class2_acc_tr = []
+        #class3_acc_tr = []
+        #class4_acc_tr = []
+        
+        for i in range(self.LCA_classes):
+            for tr_acc in self.train_acc:
+                class_acc_tr[f"class{i}_acc_tr"].append(tr_acc[i])
+        #for tr_acc in self.train_acc:
+        #    class1_acc_tr.append(tr_acc[0])
+        #    class2_acc_tr.append(tr_acc[1])
+        #    class3_acc_tr.append(tr_acc[2])
+        #    class4_acc_tr.append(tr_acc[3])
 
         fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
 
-        axarr[0].plot(class1_acc_tr, label="LCA=0")
-        axarr[0].plot(class2_acc_tr, label="LCA=1")
-        axarr[0].plot(class3_acc_tr, label="LCA=2")
-        axarr[0].plot(class4_acc_tr, label="LCA=3")
+        for i in range(self.LCA_classes):
+            axarr[0].plot(class_acc_tr[f"class{i}_acc_tr"], label=f"LCA={i}")
+            axarr[1].plot(class_acc_vl[f"class{i}_acc_vl"], label=f"LCA={i}")
+            
+        #axarr[0].plot(class1_acc_tr, label="LCA=0")
+        #axarr[0].plot(class2_acc_tr, label="LCA=1")
+        #axarr[0].plot(class3_acc_tr, label="LCA=2")
+        #axarr[0].plot(class4_acc_tr, label="LCA=3")
 
         axarr[0].set_xlabel('epoch')
         axarr[0].set_ylabel('training accuracy')
 
         axarr[0].legend()
 
-        axarr[1].plot(class1_acc_vl, label="LCA=0")
-        axarr[1].plot(class2_acc_vl, label="LCA=1")
-        axarr[1].plot(class3_acc_vl, label="LCA=2")
-        axarr[1].plot(class4_acc_vl, label="LCA=3")
+        #axarr[1].plot(class1_acc_vl, label="LCA=0")
+        #axarr[1].plot(class2_acc_vl, label="LCA=1")
+        #axarr[1].plot(class3_acc_vl, label="LCA=2")
+        #axarr[1].plot(class4_acc_vl, label="LCA=3")
 
         axarr[1].set_xlabel('epoch')
         axarr[1].set_ylabel('validation accuracy')
