@@ -20,6 +20,8 @@ def hetero_positive_edge_weight(loader):
     sum_edges = 0
     sum_pos = 0
     for data in loader:
+        #print("A:\t",data[('tracks','to','tracks')].edges.shape[0])
+        #print("B:\t",torch.sum(data[('tracks','to','tracks')].y[:,0]==0).item())
         sum_edges += data[('tracks','to','tracks')].edges.shape[0]
         sum_pos  += torch.sum(data[('tracks','to','tracks')].y[:,0]==0).item()
     return sum_edges/(2*sum_pos)
@@ -69,6 +71,8 @@ def positive_edge_weight(loader):
     sum_edges = 0
     sum_pos = 0
     for data in loader:
+        print("D:\t",data.edges.shape[0])
+        print("E:\t",torch.sum(data.y[:,0]==0).item())
         sum_edges += data.edges.shape[0]
         sum_pos  += torch.sum(data.y[:,0]==0).item()
     return sum_edges/(2*sum_pos)

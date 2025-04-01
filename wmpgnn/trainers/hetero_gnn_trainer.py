@@ -1,5 +1,5 @@
 from wmpgnn.trainers.trainer import Trainer
-from wmpgnn.util.functions import hetero_positive_edge_weight, hetero_positive_node_weight, weight_four_class, acc_four_class
+from wmpgnn.util.functions import hetero_positive_edge_weight, hetero_positive_node_weight, weight_n_class, acc_n_class
 import torch
 from torch import nn
 from torch_scatter import scatter_add
@@ -48,7 +48,7 @@ class HeteroGNNTrainer(Trainer):
         """
         super().__init__(config, model, train_loader, val_loader)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
-        weights = weight_four_class(self.train_loader, hetero=True)
+        weights = weight_n_class(self.train_loader, hetero=True, n_class=self.LCA_classes)
         self.criterion = nn.CrossEntropyLoss(weight=weights)
         pos_weight = hetero_positive_edge_weight(train_loader)
         pos_weight = torch.tensor([pos_weight])
@@ -86,7 +86,6 @@ class HeteroGNNTrainer(Trainer):
         self.train_pv_acc = []
         self.val_pv_acc = []
 
-        self.LCA_classes = self.model.edge_op
         self.ce_train_loss = []
         self.ce_val_loss = []
         self.bce_nodes_train_loss = []
@@ -194,7 +193,7 @@ class HeteroGNNTrainer(Trainer):
                         loss += bce_edges_loss
                         loss += bce_nodes_loss
                     # loss += 1*self.criterionBCEnodes(block.node_logits['pvs'], pv_target)
-            acc_one_batch = acc_four_class(outputs[('tracks', 'to', 'tracks')].edges, label)
+            acc_one_batch = acc_n_class(outputs[('tracks', 'to', 'tracks')].edges, label, n_class=data[('tracks', 'to', 'tracks')].y.shape[1])
             acc_one_epoch.append(acc_one_batch)
 
             pv_acc_one_batch = torch.sum(

@@ -8,6 +8,16 @@ from wmpgnn.trainers.gnn_trainer import GNNTrainer
 from wmpgnn.trainers.hetero_gnn_trainer import HeteroGNNTrainer
 import argparse
 
+def flatten_dict(d, parent_key='', sep='_'):
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
 # load script arguments simply the config yaml
 parser = argparse.ArgumentParser(description="Argument parser for the training.")
 parser.add_argument("config", type=str, help="yaml config file for the training")
@@ -58,6 +68,10 @@ if dropped_lr_epochs > 0:
 
 # save model
 model_file = config_loader.get("training.model_file")
+# format the name with info from the config file
+flatten_config = flatten_dict(config_loader.config)
+model_file = model_file.format(**flatten_config)
+
 print(f"Training finished. Saving model in {model_file}")
 trainer.save_model(model_file)
 
