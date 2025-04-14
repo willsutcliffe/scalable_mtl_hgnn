@@ -96,3 +96,9 @@ class ConfigLoader:
     def reload(self):
         """Reload the configuration from the YAML file."""
         self.config = self._load_config()
+    
+    def print(self, file_name: str):
+        """print the configuration dict to text file"""
+        with open(file_name, "w") as f:
+            for key, value in self.config.items():
+                f.write(f"{key}: {value}\n")

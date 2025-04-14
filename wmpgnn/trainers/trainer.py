@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import torch
 import matplotlib.pyplot as plt
+import os
+
 
 class Trainer(ABC):
     """
@@ -44,6 +46,16 @@ class Trainer(ABC):
         self.val_loader = val_loader
         self.train_acc = []
         self.val_acc = []
+        self.train_eff = []
+        self.val_eff = []
+        self.train_rej = []
+        self.val_rej = []
+        self.train_acc_err = []
+        self.val_acc_err = []
+        self.train_eff_err = []
+        self.val_eff_err = []
+        self.train_rej_err = []
+        self.val_rej_err = []
         self.train_loss = []
         self.val_loss = []
         self.epochs = []
@@ -88,7 +100,7 @@ class Trainer(ABC):
 
         pass
 
-    def save_model(self, file_name):
+    def save_model(self, file_name, save_config=False):
         """
         Save the model's state dict to disk.
 
@@ -96,6 +108,9 @@ class Trainer(ABC):
             file_name (str): Path to save the `.pth` or `.pt` file.
         """
         torch.save(self.model.state_dict(), file_name)
+        if save_config: # print config file
+            print("Saving config file as txt file")
+            self.config.print(file_name.replace('.pt','.txt'))
 
     def save_dataframe(self, file_name):
         """
@@ -143,60 +158,34 @@ class Trainer(ABC):
         """
 
         class_acc_vl = {f"class{i}_acc_vl" : [] for i in range(self.LCA_classes)}
-        #class1_acc_vl = []
-        #class2_acc_vl = []
-        #class3_acc_vl = []
-        #class4_acc_vl = []
+        class_acc_vl_err = {f"class{i}_acc_vl_err" : [] for i in range(self.LCA_classes)}
         
         for i in range(self.LCA_classes):
-            for vl_acc in self.val_acc:
-                class_aa[f"class{i}_acc_vl"].append(vl_acc[i])
-
-        #for vl_acc in self.val_acc:
-        #    class1_acc_vl.append(vl_acc[0])
-        #    class2_acc_vl.append(vl_acc[1])
-        #    class3_acc_vl.append(vl_acc[2])
-        #    class4_acc_vl.append(vl_acc[3])
+            for vl_acc,vl_acc_err in zip(self.val_acc,self.val_acc_err):
+                class_acc_vl[f"class{i}_acc_vl"].append(vl_acc[i])
+                class_acc_vl_err[f"class{i}_acc_vl_err"].append(vl_acc_err[i])
 
         class_acc_tr = {f"class{i}_acc_tr" : [] for i in range(self.LCA_classes)}
-        #class1_acc_tr = []
-        #class2_acc_tr = []
-        #class3_acc_tr = []
-        #class4_acc_tr = []
+        class_acc_tr_err = {f"class{i}_acc_tr_err" : [] for i in range(self.LCA_classes)}
         
         for i in range(self.LCA_classes):
-            for tr_acc in self.train_acc:
+            for tr_acc,tr_acc_err in zip(self.train_acc,self.train_acc_err):
                 class_acc_tr[f"class{i}_acc_tr"].append(tr_acc[i])
-        #for tr_acc in self.train_acc:
-        #    class1_acc_tr.append(tr_acc[0])
-        #    class2_acc_tr.append(tr_acc[1])
-        #    class3_acc_tr.append(tr_acc[2])
-        #    class4_acc_tr.append(tr_acc[3])
+                class_acc_tr_err[f"class{i}_acc_tr_err"].append(tr_acc_err[i])
 
         fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
 
         for i in range(self.LCA_classes):
-            axarr[0].plot(class_acc_tr[f"class{i}_acc_tr"], label=f"LCA={i}")
-            axarr[1].plot(class_acc_vl[f"class{i}_acc_vl"], label=f"LCA={i}")
-            
-        #axarr[0].plot(class1_acc_tr, label="LCA=0")
-        #axarr[0].plot(class2_acc_tr, label="LCA=1")
-        #axarr[0].plot(class3_acc_tr, label="LCA=2")
-        #axarr[0].plot(class4_acc_tr, label="LCA=3")
+            axarr[0].errorbar(self.epochs, class_acc_tr[f"class{i}_acc_tr"], yerr=class_acc_tr_err[f"class{i}_acc_tr_err"], label=f"LCA={i}")
+            axarr[1].errorbar(self.epochs, class_acc_vl[f"class{i}_acc_vl"], yerr=class_acc_vl_err[f"class{i}_acc_vl_err"], label=f"LCA={i}")
 
         axarr[0].set_xlabel('epoch')
         axarr[0].set_ylabel('training accuracy')
-
+        
         axarr[0].legend()
-
-        #axarr[1].plot(class1_acc_vl, label="LCA=0")
-        #axarr[1].plot(class2_acc_vl, label="LCA=1")
-        #axarr[1].plot(class3_acc_vl, label="LCA=2")
-        #axarr[1].plot(class4_acc_vl, label="LCA=3")
 
         axarr[1].set_xlabel('epoch')
         axarr[1].set_ylabel('validation accuracy')
-
         axarr[1].legend()
 
         fig.tight_layout()
@@ -204,3 +193,68 @@ class Trainer(ABC):
             plt.show()
         plt.savefig(file_name)
 
+    def plot_efficiency(self, file_name="eff.png", show=True):
+
+        class_eff_vl = {f"class{i}_eff_vl" : [] for i in range(self.LCA_classes)}
+        
+        for i in range(self.LCA_classes):
+            for vl_eff in self.val_eff:
+                class_eff_vl[f"class{i}_eff_vl"].append(vl_eff[i])
+
+        class_eff_tr = {f"class{i}_eff_tr" : [] for i in range(self.LCA_classes)}
+
+        for i in range(self.LCA_classes):
+            for tr_eff in self.train_eff:
+                class_eff_tr[f"class{i}_eff_tr"].append(tr_eff[i])
+
+        fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
+
+        for i in range(self.LCA_classes):
+            axarr[0].plot(class_eff_tr[f"class{i}_eff_tr"], label=f"LCA={i}")
+            axarr[1].plot(class_eff_vl[f"class{i}_eff_vl"], label=f"LCA={i}")
+
+        axarr[0].set_xlabel('epoch')
+        axarr[0].set_ylabel('training efficiency')
+        axarr[0].legend()
+
+        axarr[1].set_xlabel('epoch')
+        axarr[1].set_ylabel('validation efficiency')
+        axarr[1].legend()
+
+        fig.tight_layout()
+        if show:
+            plt.show()
+        plt.savefig(file_name)
+    
+    def plot_rejection(self, file_name="rej.png", show=True):
+
+        class_rej_vl = {f"class{i}_rej_vl" : [] for i in range(self.LCA_classes)}
+        
+        for i in range(self.LCA_classes):
+            for vl_rej in self.val_rej:
+                class_rej_vl[f"class{i}_rej_vl"].append(vl_rej[i])
+
+        class_rej_tr = {f"class{i}_rej_tr" : [] for i in range(self.LCA_classes)}
+
+        for i in range(self.LCA_classes):
+            for tr_rej in self.train_rej:
+                class_rej_tr[f"class{i}_rej_tr"].append(tr_rej[i])
+
+        fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
+
+        for i in range(self.LCA_classes):
+            axarr[0].plot(class_rej_tr[f"class{i}_rej_tr"], label=f"LCA={i}")
+            axarr[1].plot(class_rej_vl[f"class{i}_rej_vl"], label=f"LCA={i}")
+
+        axarr[0].set_xlabel('epoch')
+        axarr[0].set_ylabel('training rejection')
+        axarr[0].legend()
+
+        axarr[1].set_xlabel('epoch')
+        axarr[1].set_ylabel('validation rejection')
+        axarr[1].legend()
+
+        fig.tight_layout()
+        if show:
+            plt.show()
+        plt.savefig(file_name)

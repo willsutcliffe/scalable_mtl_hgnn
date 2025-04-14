@@ -16,7 +16,7 @@ class CustomDataset(Dataset):
         filenames_target (list): List of file paths for target/label data
         performance_mode (bool): Whether to include additional performance evaluation data
     """
-    def __init__(self, filenames_input, filenames_target, performance_mode=False):
+    def __init__(self, filenames_input, filenames_target, performance_mode=False, n_classes=5):
         """
         Initialize the CustomDataset.
 
@@ -29,7 +29,8 @@ class CustomDataset(Dataset):
         self.filenames_input = filenames_input
         self.filenames_target = filenames_target
         self.performance_mode = performance_mode
-
+        self.n_classes = n_classes
+    # No. of graphs
     def __len__(self):
         """
         Get the number of samples in the dataset.
@@ -110,8 +111,12 @@ class CustomDataset(Dataset):
                 continue
             s = np.array([remapping[x] for x in graph["senders"]])
             r = np.array([remapping[x] for x in graph["receivers"]])
-            new_nodes = graph["nodes"][indices][:, : 10]
-            true_reco_pv =  graph["nodes"][indices][:, 10:13]
+            # new_nodes = np.take(graph["nodes"][indices], [0, 1, 2, 3, 4, 5,9], axis=1)
+            # new_edges = np.take(graph["edges"], [1, 2, 3], axis=1)
+            # 13 features and the last 3 are the correct associated pv
+            # used for the hetero training in reality so I cut them out
+            new_nodes = graph["nodes"][indices][:, : -3] 
+            #new_nodes = graph["nodes"][indices]
             new_edges = graph['edges']
             data = Data(nodes=torch.from_numpy(new_nodes),
                         edges=torch.from_numpy(new_edges),
@@ -119,7 +124,7 @@ class CustomDataset(Dataset):
                         receivers=torch.from_numpy(r + C).long(),
                         graph_globals=torch.from_numpy(graph["globals"]),
                         edgepos=torch.from_numpy(np.array([j] * graph["edges"].shape[0])).long(),
-                        y=torch.from_numpy(labels),
+                        y=torch.from_numpy(labels[:, :self.n_classes]),
                         num_edges=torch.tensor(graph["edges"].shape[0]),
                         num_nodes=torch.tensor(graph["nodes"][indices].shape[0]),
                         true_reco_pv= torch.from_numpy(true_reco_pv)
