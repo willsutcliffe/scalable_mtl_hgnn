@@ -12,7 +12,7 @@ model:
   use_edge_weights: True
   use_node_weights: True
   norm: "batch_norm"
-  LCA_classes: 7
+  LCA_classes: 5
 loss:
   bce_constraints: True
   lambda_bce : 0.2
@@ -24,7 +24,7 @@ training:
   starting_learning_rate: 0.001
   epochs: 3
   dropped_lr_epochs: 2
-  batch_size: 10
+  batch_size: 32
   model_file: "Final_{dataset_data_type}_{model_gnn_layers}block_{training_epochs}_epochs_message_passing_BCE.pt"
 inference:
   inference: True

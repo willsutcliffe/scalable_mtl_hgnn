@@ -11,19 +11,26 @@ class DataHandler:
 
     def __init__(self, config, performance_mode=False):
         self.config_loader = config
+        evt_max_train = self.config_loader.get("dataset.evt_max_train")
+        evt_max_val = self.config_loader.get("dataset.evt_max_val")
+        if evt_max_train is not None:
+            print(f"Using {evt_max_train} events for training")
+        if evt_max_val is not None:
+            print(f"Using {evt_max_val} events for validation")
         data_path = self.config_loader.get("dataset.data_dir")
         data_type = self.config_loader.get("dataset.data_type")
         self.batch_size =  self.config_loader.get("training.batch_size")
-        files_input_tr = sorted(glob.glob(f'{data_path}/training_dataset/input_*'))
-        files_target_tr = sorted(glob.glob(f'{data_path}/training_dataset/target_*'))
-        files_input_vl = sorted(glob.glob(f'{data_path}/validation_dataset/input_*'))
-        files_target_vl = sorted(glob.glob(f'{data_path}/validation_dataset/target_*'))
+        files_input_tr = sorted(glob.glob(f'{data_path}/training_dataset/input_*'))[:evt_max_train]
+        files_target_tr = sorted(glob.glob(f'{data_path}/training_dataset/target_*'))[:evt_max_train]
+        files_input_vl = sorted(glob.glob(f'{data_path}/validation_dataset/input_*'))[:evt_max_val]
+        files_target_vl = sorted(glob.glob(f'{data_path}/validation_dataset/target_*'))[:evt_max_val]
         files_input_tst = sorted(glob.glob(f'{data_path}/test_dataset/input_*'))
         files_target_tst = sorted(glob.glob(f'{data_path}/test_dataset/target_*'))
+        LCA_classes = self.config_loader.get('model.LCA_classes')
         if data_type == "homogeneous":
-            self.train_dataset = CustomDataset(files_input_tr, files_target_tr, performance_mode=performance_mode)
-            self.val_dataset = CustomDataset(files_input_vl, files_target_vl, performance_mode=performance_mode)
-            self.test_dataset = CustomDataset(files_input_tst, files_target_tst, performance_mode=performance_mode)
+            self.train_dataset = CustomDataset(files_input_tr, files_target_tr, performance_mode=performance_mode, n_classes=LCA_classes)
+            self.val_dataset = CustomDataset(files_input_vl, files_target_vl, performance_mode=performance_mode, n_classes=LCA_classes)
+            self.test_dataset = CustomDataset(files_input_tst, files_target_tst, performance_mode=performance_mode, n_classes=LCA_classes)
         elif data_type == "heterogeneous":
             self.train_dataset = CustomHeteroDataset(files_input_tr, files_target_tr, performance_mode=performance_mode)
             self.val_dataset = CustomHeteroDataset(files_input_vl, files_target_vl, performance_mode=performance_mode)

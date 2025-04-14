@@ -20,6 +20,7 @@ def flatten_dict(d, parent_key='', sep='_'):
             items.append((new_key, v))
     return dict(items)
 
+
 parser = argparse.ArgumentParser(description="Argument parser for the training.")
 parser.add_argument("config", type=str, help="yaml config file for the training")
 args = parser.parse_args()
@@ -60,9 +61,28 @@ model_file = config_loader.get("training.model_file")
 flatten_config = flatten_dict(config_loader.config)
 model_file = model_file.format(**flatten_config)
 
+# folder for the model and other outputs
+output_folder = f"outputs/{model_file.replace('.pt','')}/"
+os.makedirs(output_folder, exist_ok=True)
+
 print(f"Training finished. Saving model in {model_file}")
-trainer.save_model(model_file)
+trainer.save_model(output_folder+model_file, save_config=True)
 
 csv_file = model_file.replace(".pt", ".csv")
-trainer.save_dataframe(csv_file)
+trainer.save_dataframe(output_folder+csv_file)
 
+# make plots
+plot_name = model_file.replace(".pt", "_loss.png")
+trainer.plot_loss(output_folder+plot_name, show=False)
+
+plot_name = model_file.replace(".pt", "_acc.png")
+trainer.plot_accuracy(output_folder+plot_name, show=False)
+
+plot_name = model_file.replace(".pt", "_eff.png")
+trainer.plot_efficiency(output_folder+plot_name, show=False)
+
+plot_name = model_file.replace(".pt", "_rej.png")
+trainer.plot_rejection(output_folder+plot_name, show=False)
+
+
+#python scripts/train.py mp_gnn_run3.yaml | tee logs/homo.log
