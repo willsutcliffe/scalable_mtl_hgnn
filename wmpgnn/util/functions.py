@@ -244,7 +244,7 @@ def weight_n_class(dataset,hetero=False,n_class=5):
         for i in range(n_class):
             true_class[i] += (y.argmax(dim=1) == i).sum()
         num_sample += len(y)
-    
+        
     weight_class = {i: num_sample / (n_class * true_class[i]) for i in range(n_class)}
     weight = torch.stack(tuple(weight_class[i] for i in range(n_class)))
 
