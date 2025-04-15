@@ -18,7 +18,7 @@ loss:
   lambda_bce : 0.2
 dataset:
   data_type : "homogeneous"
-  data_dir: /user/gr1/lhcb/scapelli/DFEI/lhcbdfei/data_handling/input_formatting/run3
+  data_dir: /user/gr1/lhcb/scapelli/DFEI/lhcbdfei/data_handling/input_formatting/run3/magup
 training:
   train: True
   starting_learning_rate: 0.001
