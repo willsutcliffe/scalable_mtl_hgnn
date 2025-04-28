@@ -7,6 +7,7 @@ from wmpgnn.model.model_loader import ModelLoader
 from wmpgnn.trainers.gnn_trainer import GNNTrainer
 from wmpgnn.trainers.hetero_gnn_trainer import HeteroGNNTrainer
 import argparse
+import glob
 
 def flatten_dict(d, parent_key='', sep='_'):
     items = []
@@ -18,7 +19,16 @@ def flatten_dict(d, parent_key='', sep='_'):
             items.append((new_key, v))
     return dict(items)
 
-# load script arguments simply the config yaml
+def GetWarmstartFile(checkpoint_path, name_query="checkpoint*"):
+    """Search for the latest saved file in the given path."""
+    # get list of checkpoint files in the output folder
+    checkpoint_files = glob.glob(f'{checkpoint_path}{name_query}')
+    checkpoint_file = None
+    if len(checkpoint_files) > 0:
+        checkpoint_file = checkpoint_files[-1]
+        
+    return checkpoint_file
+
 parser = argparse.ArgumentParser(description="Argument parser for the training.")
 parser.add_argument("config", type=str, help="yaml config file for the training")
 args = parser.parse_args()
@@ -39,6 +49,22 @@ print(f"Initializing model {config_loader.get('model.type')}")
 model_loader = ModelLoader(config_loader)
 model = model_loader.get_model()
 
+model_file = config_loader.get("training.model_file")
+# format the name with info from the config file
+flatten_config = flatten_dict(config_loader.config)
+model_file = model_file.format(**flatten_config)
+# folder for the model and other outputs
+output_folder = f"outputs/{model_file.replace('.pt','')}/"
+os.makedirs(output_folder, exist_ok=True)
+
+model_file = config_loader.get("training.model_file")
+# format the name with info from the config file
+flatten_config = flatten_dict(config_loader.config)
+model_file = model_file.format(**flatten_config)
+# folder for the model and other outputs
+output_folder = f"outputs/{model_file.replace('.pt','')}/"
+os.makedirs(output_folder, exist_ok=True)
+
 # initialized GNNTrainer or HeteroGNNTrainer
 print("Training model")
 add_bce = config_loader.get('loss.add_bce')
@@ -52,13 +78,39 @@ elif config_loader.get('dataset.data_type') == "heterogeneous":
 trainer.set_beta_bce_nodes(config_loader.get('loss.beta_bce_nodes'))
 trainer.set_beta_bce_edges(config_loader.get('loss.beta_bce_edges'))
 
+checkpoint_path = f"{output_folder}"
+print(f"Checkpoint path: {checkpoint_path}")
+if config_loader.get('training.load_checkpoint'):
+    checkpoint_file = GetWarmstartFile(checkpoint_path, name_query="checkpoint*")
+    if checkpoint_file is not None:
+        trainer.load_checkpoint(checkpoint_file)
+        print(f"Checkpoint loaded from {checkpoint_file}")
+    else:
+        print("No checkpoint file found. Starting training from scratch.")
+
+
+checkpoint_path = f"{output_folder}"
+print(f"Checkpoint path: {checkpoint_path}")
+if config_loader.get('training.load_checkpoint'):
+    checkpoint_file = GetWarmstartFile(checkpoint_path, name_query="checkpoint*")
+    if checkpoint_file is not None:
+        trainer.load_checkpoint(checkpoint_file)
+        print(f"Checkpoint loaded from {checkpoint_file}")
+    else:
+        print("No checkpoint file found. Starting training from scratch.")
+
+
 epochs = config_loader.get('training.epochs')
 learning_rate = config_loader.get('training.starting_learning_rate')
 dropped_lr_epochs = config_loader.get('training.dropped_lr_epochs')
 
+
+
 # Run training loop with nominal learning rate
 print(f"Running {epochs} epochs with learning rate {learning_rate}")
-trainer.train(epochs = epochs, learning_rate = learning_rate)
+save_checkpoint = config_loader.get('training.save_checkpoint')
+trainer.train(epochs = epochs, learning_rate = learning_rate,
+              starting_epoch=trainer.epoch_warmstart, save_checkpoint=save_checkpoint, checkpoint_path=checkpoint_path)
 
 
 # Drop learning rate and continue for dropped_lr_epochs
@@ -94,6 +146,5 @@ trainer.plot_efficiency(output_folder+plot_name, show=False)
 
 plot_name = model_file.replace(".pt", "_rej.png")
 trainer.plot_rejection(output_folder+plot_name, show=False)
-
 
 #python scripts/train.py mp_gnn_run3.yaml | tee logs/homo.log
