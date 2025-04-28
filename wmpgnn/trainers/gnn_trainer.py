@@ -71,13 +71,37 @@ class GNNTrainer(Trainer):
         self.beta_bce_nodes = 1
         self.beta_bce_edges = 1
 
-        
         self.ce_train_loss = []
         self.ce_val_loss = []
         self.bce_nodes_train_loss = []
         self.bce_nodes_val_loss = []
         self.bce_edges_train_loss = []
         self.bce_edges_val_loss = []
+
+    def save_checkpoint(self,file_path:str):
+        """Saves the model and optimizer state to a checkpoint file."""
+        checkpoint = {
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'criterion_state_dict': self.criterion.state_dict(),
+            'criterion_bce_nodes_state_dict': self.criterion_bce_nodes.state_dict(),
+            'criterion_bce_edges_state_dict': self.criterion_bce_edges.state_dict(),
+            'epoch_warmstart': self.epoch_warmstart,
+            'history': self.get_history(),
+        }
+        torch.save(checkpoint, file_path)
+        print(f"Checkpoint saved to {file_path}")
+    
+    def load_checkpoint(self, file_path=None):
+        """Loads the model and optimizer state from a checkpoint file."""
+        checkpoint = torch.load(file_path, weights_only=True)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.criterion.load_state_dict(checkpoint['criterion_state_dict'])
+        self.criterion_bce_nodes.load_state_dict(checkpoint['criterion_bce_nodes_state_dict'])
+        self.criterion_bce_edges.load_state_dict(checkpoint['criterion_bce_edges_state_dict'])
+        self.set_history(checkpoint['history'])
+        self.epoch_warmstart = checkpoint['epoch_warmstart']+1
 
     def set_beta_bce_nodes(self, beta):
         self.beta_bce_nodes = beta
@@ -187,7 +211,7 @@ class GNNTrainer(Trainer):
         return metrics
         #return last_loss, acc_one_epoch.nanmean(dim=0), eff_one_epoch.nanmean(dim=0), rej_one_epoch.nanmean(dim=0)
 
-    def train(self, epochs=10, starting_epoch=0, learning_rate=0.001):
+    def train(self, epochs=10, starting_epoch=0, learning_rate=0.001, save_checkpoint=False, checkpoint_path=None,checkpoint_freq=0.3):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         for epoch in range(starting_epoch, epochs):
             print(f"At epoch {epoch}")
@@ -218,6 +242,19 @@ class GNNTrainer(Trainer):
             print(f"Val Eff: {val_metrics['eff']} +/- {val_metrics['eff_err']}")
             print(f"Train Rej: {train_metrics['rej']} +/- {train_metrics['rej_err']}")
             print(f"Val Rej: {val_metrics['rej']} +/- {val_metrics['rej_err']}")
+            # checkpoint
+            if save_checkpoint:
+                safe_epoch_frac = int(checkpoint_freq*epochs)
+                if safe_epoch_frac == 0:
+                    safe_epoch_frac = epochs+1
+                if epoch % safe_epoch_frac == 0 and epoch != 0:
+                    print(f"Saving checkpoint at epoch {epoch}")
+                    # Save the model and other properties
+                    file_path=f'{checkpoint_path}checkpoint_{epoch}.pt'
+                    self.epoch_warmstart = epoch
+                    self.save_checkpoint(file_path=f'{checkpoint_path}checkpoint_{epoch}.pt')
+
+
 
     def save_dataframe(self, file_name):
         data =  {
