@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import torch
 import matplotlib.pyplot as plt
 import os
+from wmpgnn.util.functions import NOW
 
 class Trainer(ABC):
     """
@@ -113,6 +114,9 @@ class Trainer(ABC):
         if save_config: # print config file
             print("Saving config file as txt file")
             self.config.print(file_name.replace('.pt','.txt'))
+            # append date time
+            with open(file_name.replace('.pt','.txt'), 'a') as f:
+                f.write(f"Date: {NOW(fmt='%Y-%m-%d %H:%M:%S')}\n")
     
     @abstractmethod
     def save_checkpoint(self, epoch:int, train_metrics:dict, val_metrics:dict, file_path:str):

@@ -138,8 +138,10 @@ class HeteroGNN(nn.Module):
                         'pvs'): lambda: nn.Linear(mlp_output_size, 1), ('tracks',
                                                                         'to',
                                                                         'tracks'): lambda: nn.Linear(mlp_output_size,
-                                                                                                     4)}
-
+                                                                                                     edge_op)}
+        # edge_models ={('tracks',
+        #                 'to',
+        #                 'tracks') : lambda: nn.Linear(mlp_output_size, 4).cuda()}
         self._output_transform = HeteroGraphCoder(node_types, edge_types, edge_models=edge_models,
                                                   node_models=node_fn, global_model=global_fn, endecoder=False)
 

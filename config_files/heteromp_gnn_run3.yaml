@@ -12,7 +12,7 @@ model:
   node_types: ['tracks', 'pvs']
   edge_types: ["tracks_tracks","tracks_pvs"]
   norm: "batch_norm"
-  LCA_classes: 4
+  LCA_classes: 5
 loss:
   add_bce: True
   beta_edge_bce : 0.2
@@ -20,13 +20,17 @@ loss:
   beta_pv_bce : 0.2
 dataset:
   data_type: "heterogeneous"
-  data_dir: "/user/gr1/lhcb/scapelli/DFEI/lhcbdfei/data_handling/input_formatting/run3"
+  data_dir: /user/gr1/lhcb/scapelli/DFEI/lhcbdfei/data_handling/input_formatting/run3_90k_magup
+  evt_max_train: 1500
+  evt_max_val: 100
 training:
   train: True
   starting_learning_rate: 0.001
-  epochs: 50
+  epochs: 10
   dropped_lr_epochs: 2
-  batch_size: 30
+  batch_size: 32
+  load_checkpoint: False
+  save_checkpoint: True
   model_file: "Final_{dataset_data_type}_{model_gnn_layers}block_{training_epochs}_epochs_message_passing_BCE.pt"
 inference:
   inference: True
