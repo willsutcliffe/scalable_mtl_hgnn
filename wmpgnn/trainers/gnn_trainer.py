@@ -1,20 +1,11 @@
 from wmpgnn.trainers.trainer import Trainer
-from wmpgnn.util.functions import positive_edge_weight, positive_node_weight, weight_n_class, acc_n_class, eff_n_class, rej_n_class
+from wmpgnn.util.functions import msg, positive_edge_weight, positive_node_weight, weight_n_class, acc_n_class, eff_n_class, rej_n_class
 import torch
 from torch import nn
 from torch_scatter import scatter_add
 import numpy as np
 import pandas as pd
 
-from datetime import datetime
-
-def NOW(fmt="%H:%M:%S"):
-    """return current time formatted"""
-    return datetime.now().strftime(fmt)
-
-def msg(obj):
-    """print string with time information"""
-    print("[{}] ".format(NOW()),obj)
     
     
 def positive_edge_weight(loader):
@@ -115,9 +106,9 @@ class GNNTrainer(Trainer):
         running_bce_edge_loss = 0.
         running_bce_node_loss = 0.
         last_loss = 0.
-        acc_one_epoch, acc_one_epoch_err = [],[]
-        eff_one_epoch, eff_one_epoch_err = [],[]
-        rej_one_epoch, rej_one_epoch_err = [],[]
+        acc_one_epoch = []
+        eff_one_epoch = []
+        rej_one_epoch = []
         if train == True:
             data_loader = self.train_loader
         else:
@@ -166,13 +157,10 @@ class GNNTrainer(Trainer):
                     loss += bce_node_loss
             acc_one_batch = acc_n_class(outputs.edges, label, n_class=data.y.shape[1])
             acc_one_epoch.append(acc_one_batch)
-            #acc_one_epoch_err.append(acc_err)
             eff_one_batch = eff_n_class(outputs.edges, label, n_class=data.y.shape[1])
             eff_one_epoch.append(eff_one_batch)
-            #eff_one_epoch_err.append(eff_err)
             rej_one_batch = rej_n_class(outputs.edges, label, n_class=data.y.shape[1])
             rej_one_epoch.append(rej_one_batch)
-            #rej_one_epoch_err.append(rej_err)
             if train:
                 loss.backward()
                 self.optimizer.step()
@@ -181,15 +169,12 @@ class GNNTrainer(Trainer):
             if (i + 1) == last_batch:
                 last_loss = running_loss / last_batch  # loss per batch
                 info_msg = '  batch {} last_batch {} loss: {}'.format(i + 1, last_batch, last_loss)
-                msg(info_msg)
+                print(info_msg)
                 running_loss = 0.
 
         acc_one_epoch = torch.stack(acc_one_epoch)
-        #acc_one_epoch_err = torch.stack(acc_one_epoch_err)
         eff_one_epoch = torch.stack(eff_one_epoch)
-        #eff_one_epoch_err = torch.stack(eff_one_epoch_err)
         rej_one_epoch = torch.stack(rej_one_epoch)
-        #rej_one_epoch_err = torch.stack(rej_one_epoch_err)
         if train:
             self.ce_train_loss.append(running_ce_loss/last_batch)
             self.bce_edges_train_loss.append(running_bce_edge_loss/last_batch)
@@ -214,7 +199,7 @@ class GNNTrainer(Trainer):
     def train(self, epochs=10, starting_epoch=0, learning_rate=0.001, save_checkpoint=False, checkpoint_path=None,checkpoint_freq=0.3):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         for epoch in range(starting_epoch, epochs):
-            print(f"At epoch {epoch}")
+            msg(f"At epoch {epoch}")
             self.epochs.append(epoch)
             #train_loss, train_acc, train_eff, train_rej = self.eval_one_epoch()
             train_metrics = self.eval_one_epoch()
@@ -253,8 +238,6 @@ class GNNTrainer(Trainer):
                     file_path=f'{checkpoint_path}checkpoint_{epoch}.pt'
                     self.epoch_warmstart = epoch
                     self.save_checkpoint(file_path=f'{checkpoint_path}checkpoint_{epoch}.pt')
-
-
 
     def save_dataframe(self, file_name):
         data =  {

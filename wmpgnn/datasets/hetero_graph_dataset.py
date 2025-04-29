@@ -18,6 +18,7 @@ def find_row_indices(t1, t2):
     # Find the indices in t2 for each row in t1
     indices = torch.argmax(matches_int, dim=1)
 
+
     # Verify matches exist (if no match, indices would be arbitrary)
     valid = matches.any(dim=1)
     indices[~valid] = -1  # Set unmatched rows to -1
@@ -32,10 +33,11 @@ def find_row_indices(t1, t2):
     return indices, one_hot_encoded
 
 class CustomHeteroDataset(Dataset):
-    def __init__(self, filenames_input, filenames_target, performance_mode=False):
+    def __init__(self, filenames_input, filenames_target, performance_mode=False, n_classes=5):
         self.filenames_input = filenames_input
         self.filenames_target = filenames_target
         self.performance_mode = performance_mode
+        self.n_classes = n_classes
 
     # No. of graphs
     def __len__(self):
@@ -53,6 +55,9 @@ class CustomHeteroDataset(Dataset):
         j = 0
         for i in range(self.__len__()):
             graph = np.load(self.filenames_input[i], allow_pickle=True).item()
+            if graph['nodes'].shape[0]==0:
+                print(f"Empty {i} graph: {self.filenames_input[i]}")
+                continue
             graph_target = np.load(self.filenames_target[i], allow_pickle=True).item()
             labels = np.array(graph_target["edges"])
             indices = np.unique(graph['receivers'])
@@ -68,10 +73,12 @@ class CustomHeteroDataset(Dataset):
             new_nodes = torch.from_numpy(new_nodes)
             new_edges = torch.from_numpy(new_edges)
 
-            recoPVs = torch.unique(new_nodes[:, 10:13], dim=0)
+            # last three columns are the PVs XYZ
+            recoPVs = torch.unique(new_nodes[:, -3:], dim=0)
             nPVs = recoPVs.shape[0]
-           # nodes_PVs = new_nodes[:, -10:-7]
-            true_nodes_PVs = new_nodes[:, 10:13]
+            true_nodes_PVs = new_nodes[:, -3:]
+            if nPVs == 0:
+                import pdb; pdb.set_trace()
             # print(torch.sum(torch.sum(nodes_PVs == true_nodes_PVs,dim=-1)==3)/nodes_PVs.shape[0])
             y, y_one_hot = find_row_indices(true_nodes_PVs, recoPVs)
 
@@ -89,7 +96,7 @@ class CustomHeteroDataset(Dataset):
 
             permutations = torch.cartesian_prod(torch.arange(true_nodes_PVs.shape[0]), torch.arange(recoPVs.shape[0]))
             data = HeteroData()
-            new_nodes = torch.hstack([new_nodes[:, :6], new_nodes[:, 9:10]])
+            new_nodes = new_nodes[:, :-6]
             data['tracks'].x = new_nodes
 
             data['pvs'].x = recoPVs
@@ -102,7 +109,7 @@ class CustomHeteroDataset(Dataset):
             data['tracks', 'pvs'].edges = IPs.flatten().unsqueeze(-1)
 
             data['tracks', 'tracks'].edge_index = torch.vstack([senders, receivers])
-            data['tracks', 'tracks'].y = torch.from_numpy(labels)
+            data['tracks', 'tracks'].y = torch.from_numpy(labels[:, :self.n_classes])
             data['tracks', 'tracks'].edges = new_edges
 
             if self.performance_mode:
