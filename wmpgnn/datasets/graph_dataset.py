@@ -4,10 +4,11 @@ from torch_geometric.data import Dataset, Data
 
 
 class CustomDataset(Dataset):
-    def __init__(self, filenames_input, filenames_target, performance_mode=False):
+    def __init__(self, filenames_input, filenames_target, performance_mode=False, n_classes=5):
         self.filenames_input = filenames_input
         self.filenames_target = filenames_target
         self.performance_mode = performance_mode
+        self.n_classes = n_classes
     # No. of graphs
     def __len__(self):
         return len(self.filenames_target)
@@ -36,8 +37,9 @@ class CustomDataset(Dataset):
             r = np.array([remapping[x] for x in graph["receivers"]])
             # new_nodes = np.take(graph["nodes"][indices], [0, 1, 2, 3, 4, 5,9], axis=1)
             # new_edges = np.take(graph["edges"], [1, 2, 3], axis=1)
-            new_nodes = graph["nodes"][indices][:, : 10]
-            #new_nodes = graph["nodes"][indices]
+            #new_nodes = graph["nodes"][indices][:, : -3] 
+            new_nodes = graph["nodes"][indices]
+            new_nodes = new_nodes[:, :-3] # skip the reco PVs coordinates
             new_edges = graph['edges']
             data = Data(nodes=torch.from_numpy(new_nodes),  # node features
                         #             data = Data(nodes=torch.from_numpy(graph["nodes"][indices]), #node features
@@ -49,7 +51,7 @@ class CustomDataset(Dataset):
                         receivers=torch.from_numpy(r + C).long(),
                         graph_globals=torch.from_numpy(graph["globals"]),
                         edgepos=torch.from_numpy(np.array([j] * graph["edges"].shape[0])).long(),
-                        y=torch.from_numpy(labels),
+                        y=torch.from_numpy(labels[:, :self.n_classes]),
                         num_edges=torch.tensor(graph["edges"].shape[0]),
                         num_nodes=torch.tensor(graph["nodes"][indices].shape[0])
                         )

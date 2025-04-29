@@ -1,0 +1,38 @@
+model:
+  type: "heterognn"
+  gnn_layers: 8
+  mlp_output_size: 16
+  mlp_layers: 4
+  mlp_channels: 128
+  weight_mlp_layers: 4
+  weight_mlp_channels: 16
+  weighted_mp: False
+  use_edge_weights: True
+  use_node_weights: True
+  node_types: ['tracks', 'pvs']
+  edge_types: ["tracks_tracks","tracks_pvs"]
+  norm: "batch_norm"
+  LCA_classes: 5
+loss:
+  add_bce: True
+  beta_edge_bce : 0.2
+  beta_node_bce : 0.2
+  beta_pv_bce : 0.2
+dataset:
+  data_type: "heterogeneous"
+  data_dir: /user/gr1/lhcb/scapelli/DFEI/lhcbdfei/data_handling/input_formatting/run3_90k_magup
+  evt_max_train: 1500
+  evt_max_val: 100
+training:
+  train: True
+  starting_learning_rate: 0.001
+  epochs: 10
+  dropped_lr_epochs: 2
+  batch_size: 32
+  load_checkpoint: False
+  save_checkpoint: True
+  model_file: "Final_{dataset_data_type}_{model_gnn_layers}block_{training_epochs}_epochs_message_passing_BCE.pt"
+inference:
+  inference: True
+  learning_rate: 0.001
+  batch_size: 32

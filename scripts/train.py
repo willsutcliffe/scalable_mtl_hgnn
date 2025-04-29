@@ -1,3 +1,6 @@
+import sys,os
+sys.path.append(os.getcwd())
+
 from wmpgnn.configs.config_loader import ConfigLoader
 from wmpgnn.datasets.data_handler import DataHandler
 from wmpgnn.model.model_loader import ModelLoader
@@ -6,6 +9,27 @@ from wmpgnn.trainers.hetero_gnn_trainer import HeteroGNNTrainer
 import torch
 from torch import nn
 import argparse
+import glob
+
+def flatten_dict(d, parent_key='', sep='_'):
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+def GetWarmstartFile(checkpoint_path, name_query="checkpoint*"):
+    """Search for the latest saved file in the given path."""
+    # get list of checkpoint files in the output folder
+    checkpoint_files = glob.glob(f'{checkpoint_path}{name_query}')
+    checkpoint_file = None
+    if len(checkpoint_files) > 0:
+        checkpoint_file = checkpoint_files[-1]
+        
+    return checkpoint_file
 
 parser = argparse.ArgumentParser(description="Argument parser for the training.")
 parser.add_argument("config", type=str, help="yaml config file for the training")
@@ -24,6 +48,14 @@ print(f"Initializing model {config_loader.get('model.type')}")
 model_loader = ModelLoader(config_loader)
 model = model_loader.get_model()
 
+model_file = config_loader.get("training.model_file")
+# format the name with info from the config file
+flatten_config = flatten_dict(config_loader.config)
+model_file = model_file.format(**flatten_config)
+# folder for the model and other outputs
+output_folder = f"outputs/{model_file.replace('.pt','')}/"
+os.makedirs(output_folder, exist_ok=True)
+
 print("Training model")
 add_bce = config_loader.get('loss.add_bce')
 if config_loader.get('dataset.data_type') == "homogeneous":
@@ -31,20 +63,48 @@ if config_loader.get('dataset.data_type') == "homogeneous":
 elif config_loader.get('dataset.data_type') == "heterogeneous":
     trainer = HeteroGNNTrainer(config_loader, model, train_loader, val_loader, add_bce=add_bce)
 
+checkpoint_path = f"{output_folder}"
+print(f"Checkpoint path: {checkpoint_path}")
+if config_loader.get('training.load_checkpoint'):
+    checkpoint_file = GetWarmstartFile(checkpoint_path, name_query="checkpoint*")
+    if checkpoint_file is not None:
+        trainer.load_checkpoint(checkpoint_file)
+        print(f"Checkpoint loaded from {checkpoint_file}")
+    else:
+        print("No checkpoint file found. Starting training from scratch.")
+
+
 epochs = config_loader.get('training.epochs')
 learning_rate = config_loader.get('training.starting_learning_rate')
 dropped_lr_epochs = config_loader.get('training.dropped_lr_epochs')
 
+
 print(f"Running {epochs} epochs with learning rate {learning_rate}")
-trainer.train(epochs = epochs, learning_rate = learning_rate)
+save_checkpoint = config_loader.get('training.save_checkpoint')
+trainer.train(epochs = epochs, learning_rate = learning_rate,
+              starting_epoch=trainer.epoch_warmstart, save_checkpoint=save_checkpoint, checkpoint_path=checkpoint_path)
 
 if dropped_lr_epochs > 0:
     print(f"Running {dropped_lr_epochs} epochs with learning rate {learning_rate/10}")
     trainer.train(epochs=epochs+dropped_lr_epochs, starting_epoch=epochs,learning_rate=learning_rate/10)
 
-model_file = config_loader.get("training.model_file")
 print(f"Training finished. Saving model in {model_file}")
-trainer.save_model(model_file)
+trainer.save_model(output_folder+model_file, save_config=True)
 
-trainer.save_dataframe("Final_hetero_8block_32_epochs_message_passing_BCE.csv")
+csv_file = model_file.replace(".pt", ".csv")
+trainer.save_dataframe(output_folder+csv_file)
 
+# make plots
+plot_name = model_file.replace(".pt", "_loss.png")
+trainer.plot_loss(output_folder+plot_name, show=False)
+
+plot_name = model_file.replace(".pt", "_acc.png")
+trainer.plot_accuracy(output_folder+plot_name, show=False)
+
+plot_name = model_file.replace(".pt", "_eff.png")
+trainer.plot_efficiency(output_folder+plot_name, show=False)
+
+plot_name = model_file.replace(".pt", "_rej.png")
+trainer.plot_rejection(output_folder+plot_name, show=False)
+
+#python scripts/train.py mp_gnn_run3.yaml | tee logs/homo.log
