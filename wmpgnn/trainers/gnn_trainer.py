@@ -60,6 +60,14 @@ class GNNTrainer(Trainer):
             self.criterion_bce_nodes = nn.BCELoss()
             self.use_logits = False
 
+        ### Modifications (for CPU)
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.criterion.to(device)
+        # self.criterion_bce_edges.to(device)
+        # self.criterion_bce_nodes.to(device)
+        # self.model.to(device)
+
+        ### Original code (for GPU)
         self.criterion.to('cuda')
         self.criterion_bce_edges.cuda()
         self.criterion_bce_nodes.cuda()
@@ -107,7 +115,11 @@ class GNNTrainer(Trainer):
             if train:
                 self.optimizer.zero_grad()
 
+            ### Modifications (for CPU)
+            # data.to(self.device)
+            ### Original code (for GPU)
             data.to('cuda')
+
             yBCE_start = 1. * (data.y[:, 0] == 0).unsqueeze(1)
             num_nodes = data.nodes.shape[0]
             out = data.edges.new_zeros(num_nodes, data.y.shape[1])

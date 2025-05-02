@@ -15,13 +15,10 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 
 
-
-
-
 class Performance:
     """ Class responsible for determining performance given a dataset and
     a configuration for both homogeneous and heterogeneous GNNs. """
-
+    ### Modifications (for CPU)  cuda=False
     def __init__(self, config, full_graphs=False, cuda=True):
         self.config_loader = config
         self.data_loader = DataHandler(self.config_loader, performance_mode=True)
@@ -352,6 +349,9 @@ class Performance:
         for layer in layers:
             preds[layer] = []
         for i, data in enumerate(self.dataset):
+            ### Modifications (for CPU)
+            # data.to(self.device)
+            ### Original code (for GPU)
             data.to('cuda')
             outputs = self.model(data)
             data = outputs
@@ -452,6 +452,11 @@ class Performance:
         if self.cuda:
             start = torch.cuda.Event(enable_timing=True)
             end = torch.cuda.Event(enable_timing=True)
+        ### Modifications (for CPU)
+        else :
+            start = None
+            end = None
+
         for batch_i, vdata in enumerate(self.dataset):
             if batch_i == event_max:
                 print(f"Event loop for reconstruction ending at event max {event_max}")

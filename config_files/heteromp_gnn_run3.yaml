@@ -20,7 +20,7 @@ loss:
   beta_pv_bce : 0.2
 dataset:
   data_type: "heterogeneous"
-  data_dir: "/user/gr1/lhcb/scapelli/DFEI/lhcbdfei/data_handling/input_formatting/run3"
+  data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array/magdown"
 training:
   train: True
   starting_learning_rate: 0.001
