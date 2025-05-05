@@ -1,5 +1,6 @@
 import torch
 from torch_scatter import scatter_add
+from datetime import datetime
 
 def hetero_positive_edge_weight(loader):
     sum_edges = 0
@@ -233,3 +234,11 @@ def init_plot_style():
         "xtick.top": True
     }
     return(my_rc_params)
+
+def NOW(fmt="%H:%M:%S"):
+    """return current time formatted"""
+    return datetime.now().strftime(fmt)
+
+def msg(obj,fmt="%H:%M:%S"):
+    """print string with time information"""
+    print("[{}] ".format(NOW(fmt)),obj)

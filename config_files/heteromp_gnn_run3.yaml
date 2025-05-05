@@ -22,12 +22,16 @@ dataset:
   data_type: "heterogeneous"
   # data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array/magdown"
   data_dir: /panfs/ebornand/DFEI/FullMC/npy_array/magdown
+  evt_max_train: 1500
+  evt_max_val: 100
 training:
   train: True
   starting_learning_rate: 0.001
-  epochs: 5 #50
+  epochs: 10
   dropped_lr_epochs: 2
-  batch_size: 8 #30
+  batch_size: 32
+  load_checkpoint: False
+  save_checkpoint: True
   model_file: "Final_{dataset_data_type}_{model_gnn_layers}block_{training_epochs}_epochs_message_passing_BCE.pt"
 inference:
   inference: True
