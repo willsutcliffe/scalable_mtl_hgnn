@@ -14,6 +14,7 @@ from torch_scatter import scatter_add
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 
+### TODO adapt this script to neutrals
 
 class Performance:
     """ Class responsible for determining performance given a dataset and

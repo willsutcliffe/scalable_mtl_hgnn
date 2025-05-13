@@ -37,7 +37,7 @@ class CustomDataset(Dataset):
             r = np.array([remapping[x] for x in graph["receivers"]])
             # new_nodes = np.take(graph["nodes"][indices], [0, 1, 2, 3, 4, 5,9], axis=1)
             # new_edges = np.take(graph["edges"], [1, 2, 3], axis=1)
-            #new_nodes = graph["nodes"][indices][:, : -3] 
+            #new_nodes = graph["nodes"][indices][:, : -3]
             new_nodes = graph["nodes"][indices]
             new_nodes = new_nodes[:, :-3] # skip the reco PVs coordinates
             new_edges = graph['edges']

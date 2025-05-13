@@ -1,29 +1,29 @@
 model:
-  type: "heterognn"
+  type: "neutral_heterognn"
   gnn_layers: 2 #8
   mlp_output_size: 4 #16
   mlp_layers: 2 #4
-  mlp_channels: 8 #128
+  mlp_channels: 16 #128
   weight_mlp_layers: 2 #8
   weight_mlp_channels: 8 #16
   weighted_mp: False
   use_edge_weights: True
   use_node_weights: True
-  node_types: ['tracks', 'pvs']
-  edge_types: ["tracks_tracks","tracks_pvs"]
+  node_types: ['chargedtree', 'neutrals']
+  edge_types: ["chargedtree_neutrals"]
   norm: "batch_norm"
-  LCA_classes: 5
+  neutrals_classes: 2
 loss:
   add_bce: True
   beta_edge_bce : 0.2
   beta_node_bce : 0.2
   beta_pv_bce : 0.2
 dataset:
-  data_type: "heterogeneous"
-  data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array/magdown/LCA_with_neutrals"
+  data_type: "neutrals"
+  data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array/magdown/neutrals"
   # data_dir: /panfs/ebornand/DFEI/FullMC/npy_array/magdown
-  evt_max_train: 900
-  evt_max_val: 100
+  evt_max_train: 9000
+  evt_max_val: 1000
 training:
   train: True
   starting_learning_rate: 0.001
