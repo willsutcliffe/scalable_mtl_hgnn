@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import tree
 from wmpgnn.gnn.neutrals_hetero_graph_network import NeutralsHeteroGraphNetwork
-from wmpgnn.gnn.neutrals_hetero_graphcoder import HeteroGraphCoder
+from wmpgnn.gnn.hetero_graphcoder import HeteroGraphCoder
 from wmpgnn.gnn.neutrals_hetero_graph_network import edge_pruning, node_pruning
 
 def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm"):
@@ -46,7 +46,7 @@ class NeutralsHeteroGNN(nn.Module):
             global_mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm="batch_norm")
         else:
             global_mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm)
-        self._encoder = NeutralsHeteroGraphCoder(node_types, edge_types,
+        self._encoder = HeteroGraphCoder(node_types, edge_types,
                                          edge_models={edge_type: mlp for edge_type in edge_types},
                                          node_models={node_type: mlp for node_type in node_types}, global_model=global_mlp)
 
@@ -59,7 +59,7 @@ class NeutralsHeteroGNN(nn.Module):
                                    weighted_mp=weighted_mp, norm=norm))
         self._blocks = nn.ModuleList(self._blocks)
 
-        self._decoder = NeutralsHeteroGraphCoder(node_types, edge_types,
+        self._decoder = HeteroGraphCoder(node_types, edge_types,
                                          edge_models={edge_type: mlp for edge_type in edge_types},
                                          node_models={node_type: mlp for node_type in node_types}, global_model=global_mlp)
 
@@ -81,16 +81,15 @@ class NeutralsHeteroGNN(nn.Module):
         else:
             global_fn = lambda: nn.Linear(mlp_output_size, global_op)
 
-        edge_models = {('chargedtree',
-                        'to',
-                        'neutrals'): lambda: nn.Linear(mlp_output_size, 1), ('chargedtree',
-                                                                        'to',
-                                                                        'neutrals'): lambda: nn.Linear(mlp_output_size,
-                                                                                                     edge_op)}
+        ## Here some change for debug -> to check
+        edge_models = {
+            ('chargedtree', 'to', 'neutrals'): lambda: nn.Linear(mlp_output_size, 1)
+        }
+
         # edge_models ={('tracks',
         #                 'to',
         #                 'tracks') : lambda: nn.Linear(mlp_output_size, 4).cuda()}
-        self._output_transform = NeutralsHeteroGraphCoder(node_types, edge_types, edge_models=edge_models,
+        self._output_transform = HeteroGraphCoder(node_types, edge_types, edge_models=edge_models,
                                                   node_models=node_fn, global_model=global_fn, endecoder=False)
 
 

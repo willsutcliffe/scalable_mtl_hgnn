@@ -45,6 +45,20 @@ class HeteroGraphCoder(AbstractModule):
             for node_type in self._node_types:
                 graph[node_type].x = self._node_models[node_type](graph[node_type].x, graph[node_type].batch)
             for edge_type in self._edge_types:
+
+                # edge_type = ('chargedtree', 'to', 'neutrals')
+                # edge_src_idx = graph[edge_type].edge_index[0]
+                # batch_src = graph['chargedtree'].batch
+
+                # print(f"\n[GRAPH DEBUG]")
+                # print(f"graph['chargedtree'].x.shape = {graph['chargedtree'].x.shape}")
+                # print(f"graph['chargedtree'].batch.shape = {graph['chargedtree'].batch.shape}")
+                # print(f"graph[edge_type].edge_index.shape = {graph[edge_type].edge_index.shape}")
+                # print(f"edge_src_idx.max() = {edge_src_idx.max()}")
+                # print(f"batch_src.shape = {batch_src.shape}")
+                # print(f"BAD INDICES (edge_src_idx >= batch_src.shape[0]):")
+                # print(edge_src_idx[edge_src_idx >= batch_src.shape[0]])
+
                 graph[edge_type].edges = self._edge_models[edge_type](graph[edge_type].edges, graph[edge_type[0]].batch[ graph[edge_type].edge_index[0]])
         else:
             for node_type in self._node_types:

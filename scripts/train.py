@@ -8,6 +8,7 @@ from wmpgnn.trainers.gnn_trainer import GNNTrainer
 from wmpgnn.trainers.hetero_gnn_trainer import HeteroGNNTrainer
 from wmpgnn.trainers.neutrals_hetero_gnn_trainer import NeutralsHeteroGNNTrainer
 
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 import torch
 from torch import nn
 import argparse
@@ -42,6 +43,7 @@ config_loader = ConfigLoader(f"config_files/{args.config}", environment_prefix="
 
 print(f"Loading Dataset {config_loader.get('dataset.data_type')}")
 data_loader = DataHandler(config_loader)
+print('Data loader created')
 data_loader.load_data()
 train_loader = data_loader.get_train_dataloader()
 val_loader = data_loader.get_val_dataloader()
@@ -64,6 +66,9 @@ if config_loader.get('dataset.data_type') == "homogeneous":
     trainer = GNNTrainer(config_loader, model, train_loader, val_loader, add_bce = add_bce)
 elif config_loader.get('dataset.data_type') == "heterogeneous":
     trainer = HeteroGNNTrainer(config_loader, model, train_loader, val_loader, add_bce=add_bce)
+elif config_loader.get('dataset.data_type') == "neutrals":
+    threshold = config_loader.get('model.threshold')
+    trainer = NeutralsHeteroGNNTrainer(config_loader, model, train_loader, val_loader, add_bce=add_bce, threshold=threshold)
 
 checkpoint_path = f"{output_folder}"
 print(f"Checkpoint path: {checkpoint_path}")

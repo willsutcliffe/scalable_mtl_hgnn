@@ -75,8 +75,8 @@ class NeutralsTrainer(ABC):
         history['val_rej_err']   = self.val_rej_err
         history['ce_train_loss']        = self.ce_train_loss
         history['ce_val_loss']          = self.ce_val_loss
-        history['bce_nodes_train_loss'] = self.bce_nodes_train_loss
-        history['bce_nodes_val_loss']   = self.bce_nodes_val_loss
+        # history['bce_nodes_train_loss'] = self.bce_nodes_train_loss
+        # history['bce_nodes_val_loss']   = self.bce_nodes_val_loss
         history['bce_edges_train_loss'] = self.bce_edges_train_loss
         history['bce_edges_val_loss']   = self.bce_edges_val_loss
         return history
@@ -99,8 +99,8 @@ class NeutralsTrainer(ABC):
         self.val_rej_err   = history['val_rej_err']
         self.ce_train_loss        = history['ce_train_loss']
         self.ce_val_loss          = history['ce_val_loss']
-        self.bce_nodes_train_loss = history['bce_nodes_train_loss']
-        self.bce_nodes_val_loss   = history['bce_nodes_val_loss']
+        # self.bce_nodes_train_loss = history['bce_nodes_train_loss']
+        # self.bce_nodes_val_loss   = history['bce_nodes_val_loss']
         self.bce_edges_train_loss = history['bce_edges_train_loss']
         self.bce_edges_val_loss   = history['bce_edges_val_loss']
     
@@ -123,130 +123,94 @@ class NeutralsTrainer(ABC):
         plt.savefig(file_name)
 
     def plot_accuracy(self, file_name="acc.png", show=True):
+        """
+        Plot training and validation accuracy for binary classification.
+        """
 
-        class_acc_vl = {f"class{i}_acc_vl" : [] for i in range(self.neutrals_classes)}
-        class_acc_vl_err = {f"class{i}_acc_vl_err" : [] for i in range(self.neutrals_classes)}
-        
-        for i in range(self.neutrals_classes):
-            for vl_acc,vl_acc_err in zip(self.val_acc,self.val_acc_err):
-                class_acc_vl[f"class{i}_acc_vl"].append(vl_acc[i])
-                class_acc_vl_err[f"class{i}_acc_vl_err"].append(vl_acc_err[i])
+        train_acc = [a.cpu().item() if hasattr(a, "cpu") else a for a in self.train_acc]
+        val_acc = [a.cpu().item() if hasattr(a, "cpu") else a for a in self.val_acc]
+        tr_err = [e.cpu().item() if hasattr(e, "cpu") else e for e in self.train_acc_err]
+        vl_err = [e.cpu().item() if hasattr(e, "cpu") else e for e in self.val_acc_err]
 
-        class_acc_tr = {f"class{i}_acc_tr" : [] for i in range(self.neutrals_classes)}
-        class_acc_tr_err = {f"class{i}_acc_tr_err" : [] for i in range(self.neutrals_classes)}
-        
-        for i in range(self.neutrals_classes):
-            for tr_acc,tr_acc_err in zip(self.train_acc,self.train_acc_err):
-                class_acc_tr[f"class{i}_acc_tr"].append(tr_acc[i])
-                class_acc_tr_err[f"class{i}_acc_tr_err"].append(tr_acc_err[i])
-
-        fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
-
-        if self.epochs[0] != 0:
-            x = [e for e in range(self.epoch_warmstart)]+self.epochs
+        if hasattr(self, "epoch_warmstart") and self.epoch_warmstart and self.epochs[0] != 0:
+            x = list(range(self.epoch_warmstart)) + self.epochs
         else:
             x = self.epochs
-        for i in range(self.neutrals_classes):
-            axarr[0].errorbar(x, class_acc_tr[f"class{i}_acc_tr"], yerr=class_acc_tr_err[f"class{i}_acc_tr_err"], label=f"Classe={i}")
-            axarr[1].errorbar(x, class_acc_vl[f"class{i}_acc_vl"], yerr=class_acc_vl_err[f"class{i}_acc_vl_err"], label=f"Classe={i}")
 
-        axarr[0].set_xlabel('epoch')
-        axarr[0].set_ylabel('training accuracy')
-        axarr[0].grid()
-        axarr[0].legend()
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.errorbar(x, train_acc, yerr=tr_err, label="Train Accuracy", marker='o')
+        ax.errorbar(x, val_acc, yerr=vl_err, label="Validation Accuracy", marker='o')
 
-        axarr[1].set_xlabel('epoch')
-        axarr[1].set_ylabel('validation accuracy')
-        axarr[1].grid()
-        axarr[1].legend()
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("Accuracy")
+        ax.set_title("Training and Validation Accuracy")
+        ax.grid(True)
+        ax.legend()
 
         fig.tight_layout()
         if show:
             plt.show()
-        plt.savefig(file_name)
+        fig.savefig(file_name)
+
+
 
     def plot_efficiency(self, file_name="eff.png", show=True):
+        """
+        Plot training and validation efficiency for binary classification.
+        """
 
-        class_eff_vl = {f"class{i}_eff_vl" : [] for i in range(self.neutrals_classes)}
-        class_eff_vl_err = {f"class{i}_eff_vl_err" : [] for i in range(self.neutrals_classes)}
-        
-        for i in range(self.neutrals_classes):
-            for vl_eff,vl_eff_err in zip(self.val_eff,self.val_eff_err):
-                class_eff_vl[f"class{i}_eff_vl"].append(vl_eff[i])
-                class_eff_vl_err[f"class{i}_eff_vl_err"].append(vl_eff_err[i])
+        train_eff = [e.cpu().item() if hasattr(e, "cpu") else e for e in self.train_eff]
+        val_eff = [e.cpu().item() if hasattr(e, "cpu") else e for e in self.val_eff]
+        tr_err = [e.cpu().item() if hasattr(e, "cpu") else e for e in self.train_eff_err]
+        vl_err = [e.cpu().item() if hasattr(e, "cpu") else e for e in self.val_eff_err]
 
-        class_eff_tr = {f"class{i}_eff_tr" : [] for i in range(self.neutrals_classes)}
-        class_eff_tr_err = {f"class{i}_eff_tr_err" : [] for i in range(self.neutrals_classes)}
-        
-        for i in range(self.neutrals_classes):
-            for tr_eff,tr_eff_err in zip(self.train_eff,self.train_eff_err):
-                class_eff_tr[f"class{i}_eff_tr"].append(tr_eff[i])
-                class_eff_tr_err[f"class{i}_eff_tr_err"].append(tr_eff_err[i])
-
-        fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
-
-        if self.epochs[0] != 0:
-            x = [e for e in range(self.epoch_warmstart)]+self.epochs
+        if hasattr(self, "epoch_warmstart") and self.epoch_warmstart and self.epochs[0] != 0:
+            x = list(range(self.epoch_warmstart)) + self.epochs
         else:
             x = self.epochs
-        for i in range(self.neutrals_classes):
-            axarr[0].errorbar(x, class_eff_tr[f"class{i}_eff_tr"], yerr=class_eff_tr_err[f"class{i}_eff_tr_err"], label=f"Classe={i}")
-            axarr[1].errorbar(x, class_eff_vl[f"class{i}_eff_vl"], yerr=class_eff_vl_err[f"class{i}_eff_vl_err"], label=f"Classe={i}")
-            
-        axarr[0].set_xlabel('epoch')
-        axarr[0].set_ylabel('training efficiency')
-        axarr[0].grid()
-        axarr[0].legend()
 
-        axarr[1].set_xlabel('epoch')
-        axarr[1].set_ylabel('validation efficiency')
-        axarr[1].grid()
-        axarr[1].legend()
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.errorbar(x, train_eff, yerr=tr_err, label="Train Efficiency", marker='o')
+        ax.errorbar(x, val_eff, yerr=vl_err, label="Validation Efficiency", marker='o')
+
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("Efficiency")
+        ax.set_title("Training and Validation Efficiency")
+        ax.grid(True)
+        ax.legend()
 
         fig.tight_layout()
         if show:
             plt.show()
-        plt.savefig(file_name)
-    
+        fig.savefig(file_name)
+
+
     def plot_rejection(self, file_name="rej.png", show=True):
+        """
+        Plot training and validation rejection for binary classification.
+        """
 
-        class_rej_vl = {f"class{i}_rej_vl" : [] for i in range(self.neutrals_classes)}
-        class_rej_vl_err = {f"class{i}_rej_vl_err" : [] for i in range(self.neutrals_classes)}
-        
-        for i in range(self.neutrals_classes):
-            for vl_rej,vl_rej_err in zip(self.val_rej,self.val_rej_err):
-                class_rej_vl[f"class{i}_rej_vl"].append(vl_rej[i])
-                class_rej_vl_err[f"class{i}_rej_vl_err"].append(vl_rej_err[i])
+        train_rej = [r.cpu().item() if hasattr(r, "cpu") else r for r in self.train_rej]
+        val_rej = [r.cpu().item() if hasattr(r, "cpu") else r for r in self.val_rej]
+        tr_err = [e.cpu().item() if hasattr(e, "cpu") else e for e in self.train_rej_err]
+        vl_err = [e.cpu().item() if hasattr(e, "cpu") else e for e in self.val_rej_err]
 
-        class_rej_tr = {f"class{i}_rej_tr" : [] for i in range(self.neutrals_classes)}
-        class_rej_tr_err = {f"class{i}_rej_tr_err" : [] for i in range(self.neutrals_classes)}
-        
-        for i in range(self.neutrals_classes):
-            for tr_rej,tr_rej_err in zip(self.train_rej,self.train_rej_err):
-                class_rej_tr[f"class{i}_rej_tr"].append(tr_rej[i])
-                class_rej_tr_err[f"class{i}_rej_tr_err"].append(tr_rej_err[i])
-
-        fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
-
-        if self.epochs[0] != 0:
-            x = [e for e in range(self.epoch_warmstart)]+self.epochs
+        if hasattr(self, "epoch_warmstart") and self.epoch_warmstart and self.epochs[0] != 0:
+            x = list(range(self.epoch_warmstart)) + self.epochs
         else:
             x = self.epochs
-        for i in range(self.neutrals_classes):
-            axarr[0].errorbar(x, class_rej_tr[f"class{i}_rej_tr"], yerr=class_rej_tr_err[f"class{i}_rej_tr_err"], label=f"Classe={i}")
-            axarr[1].errorbar(x, class_rej_vl[f"class{i}_rej_vl"], yerr=class_rej_vl_err[f"class{i}_rej_vl_err"], label=f"Classe={i}")
 
-        axarr[0].set_xlabel('epoch')
-        axarr[0].set_ylabel('training rejection')
-        axarr[0].grid()
-        axarr[0].legend()
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.errorbar(x, train_rej, yerr=tr_err, label="Train Rejection", marker='o')
+        ax.errorbar(x, val_rej, yerr=vl_err, label="Validation Rejection", marker='o')
 
-        axarr[1].set_xlabel('epoch')
-        axarr[1].set_ylabel('validation rejection')
-        axarr[1].grid()
-        axarr[1].legend()
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("Rejection")
+        ax.set_title("Training and Validation Rejection")
+        ax.grid(True)
+        ax.legend()
 
         fig.tight_layout()
         if show:
             plt.show()
-        plt.savefig(file_name)
+        fig.savefig(file_name)

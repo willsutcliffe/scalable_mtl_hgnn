@@ -1,6 +1,6 @@
 from wmpgnn.datasets.graph_dataset import CustomDataset
 from wmpgnn.datasets.hetero_graph_dataset import CustomHeteroDataset
-from wmpgnn.datasets.neutrals_hetero_graph_dataset import CustomNeutraslHeteroDataset
+from wmpgnn.datasets.neutrals_hetero_graph_dataset import CustomNeutralsHeteroDataset
 from torch_geometric.loader import DataLoader
 import glob
 
@@ -39,6 +39,7 @@ class DataHandler:
             self.test_dataset = CustomHeteroDataset(files_input_tst, files_target_tst, performance_mode=performance_mode, n_classes=LCA_classes)
         elif data_type == "neutrals":
             neutrals_classes = self.config_loader.get('model.neutrals_classes')
+            print('creating custom datasets...')
             self.train_dataset = CustomNeutralsHeteroDataset(files_input_tr, files_target_tr, performance_mode=performance_mode, n_classes=neutrals_classes)
             self.val_dataset = CustomNeutralsHeteroDataset(files_input_vl, files_target_vl, performance_mode=performance_mode, n_classes=neutrals_classes)
             self.test_dataset = CustomNeutralsHeteroDataset(files_input_tst, files_target_tst, performance_mode=performance_mode, n_classes=neutrals_classes)

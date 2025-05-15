@@ -80,6 +80,67 @@ def compute_efficiency_error(num,den):
     a = den - num
     return torch.sqrt(num*a/((num+a)**3))
 
+def eff_binary(pred, label):
+    """
+    Compute binary signal efficiency (recall) for class 1:
+    eff = true positives for class 1 / total actual samples of class 1
+    """
+    ### [DEBUG]
+    # print(f"Mean prediction {pred.float().mean()}")
+    # print(f"Median prediction {pred.float().median()}")
+    print(f"Max prediction {pred.max()}")
+    print(f"Min prediction {pred.min()}")
+    print(f"Max label {label.max()}")
+    print(f"Min label {label.min()}")
+    print(f"lenght label: {len(label)}")
+    print(f"lenght pred: {len(pred)}")
+
+    print(f"pred shape: {pred.shape}")
+    print(f"label shape: {label.shape}")
+    
+    true_positives = (pred * label).sum().float()  # TP for class 1
+    total_positives = label.sum().float()  # Total actual samples of class 1
+    
+    print(f"true positives: {true_positives}")
+    print(f"total_positives: {total_positives}")
+
+    if total_positives > 0:
+        eff = true_positives / total_positives
+    else:
+        eff = torch.tensor(0.0)
+    print(f"Eff: {eff}")
+    return eff
+
+def rej_binary(pred, label):
+    """
+    Compute binary background rejection for class 1:
+    rej = TN[1] / (TN[1] + FP[1])
+    """
+    true_negatives = ((pred == 0) & (label == 0)).sum().float()  # TN for class 1
+    false_positives = ((pred == 1) & (label == 0)).sum().float()  # FP for class 1
+    
+    if (true_negatives + false_positives) > 0:
+        rej = true_negatives / (true_negatives + false_positives)
+    else:
+        rej = torch.tensor(0.0)
+    print(f"rej: {rej}")
+    return rej
+
+def acc_binary(pred, label):
+    """
+    Compute binary accuracy:
+    acc = correct predictions / total samples
+    """
+    correct_preds = (pred == label).sum().float()  # Correct predictions
+    total_samples = label.size(0)
+    
+    if total_samples > 0:
+        acc = correct_preds / total_samples
+    else:
+        acc = torch.tensor(0.0)
+    print(f"Acc: {acc}")
+    return acc
+
 def eff_n_class(pred, label, n_class=4):
     """
     Compute per-class signal efficiency (recall):

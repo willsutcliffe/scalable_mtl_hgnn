@@ -57,7 +57,8 @@ class CustomNeutralsHeteroDataset(Dataset):
             graph = np.load(self.filenames_input[i], allow_pickle=True).item()
             if graph['nodes'].shape[0] == 0:
                 continue
-
+            if i % 25 == 0:
+               print(f"Event {i}...")
             # Convert to pandas DataFrame for efficient group operations
             features = pd.DataFrame(graph['nodes'])
             features['key'] = graph['keys']
@@ -145,7 +146,7 @@ class CustomNeutralsHeteroDataset(Dataset):
                     row['theta'],
                     row['trdist']
                 ]
-                edge_index.append([n_idx, c_idx])
+                edge_index.append([c_idx, n_idx])
                 edge_attr.append(attr)
                 edge_neutral_key.append(row['neutral_key'])  # string ou int selon ton format
                 edge_chargedtree_decay_id.append(row['decay_id'])
@@ -172,7 +173,7 @@ class CustomNeutralsHeteroDataset(Dataset):
             data['neutrals'].x = neutral_node_feats
             data['neutrals'].decay_id = torch.tensor(neutral_df['decay_id'].values, dtype=torch.long)
             data['chargedtree', 'to', 'neutrals'].edge_index = edge_index
-            data['chargedtree', 'to', 'neutrals'].edge_attr = edge_attr
+            data['chargedtree', 'to', 'neutrals'].edges = edge_attr
             data['chargedtree', 'to', 'neutrals'].edge_chargedtree_decay_id = torch.tensor(edge_chargedtree_decay_id, dtype=torch.long)
             data['chargedtree', 'to', 'neutrals'].edge_neutral_key = torch.tensor(edge_neutral_key, dtype=torch.long)
             data['globals'].x = globals_
@@ -192,7 +193,7 @@ class CustomNeutralsHeteroDataset(Dataset):
 
             matched_labels = []
 
-            for n_idx, c_idx in edge_index.T.tolist():
+            for c_idx, n_idx in edge_index.T.tolist():
                 n_key = neutral_df.iloc[n_idx]['key']
                 decay_id = chargedtree_nodes.iloc[c_idx]['decay_id']
                 c_keys = chargedtree_df[chargedtree_df['decay_id'] == decay_id]['key'].tolist()
@@ -209,6 +210,7 @@ class CustomNeutralsHeteroDataset(Dataset):
                 matched_labels.append(label)
 
             data['chargedtree', 'to', 'neutrals'].y = torch.tensor(matched_labels, dtype=torch.float).unsqueeze(-1)
+            
 
 
             # if self.performance_mode:

@@ -1,5 +1,5 @@
 from wmpgnn.trainers.neutrals_trainer import NeutralsTrainer
-from wmpgnn.util.functions import msg, neutrals_hetero_positive_edge_weight, neutrals_hetero_positive_node_weight, weight_n_class, acc_n_class, eff_n_class, rej_n_class
+from wmpgnn.util.functions import msg, neutrals_hetero_positive_edge_weight, neutrals_hetero_positive_node_weight, weight_n_class, acc_binary, eff_binary, rej_binary
 import torch
 from torch import nn
 from torch_scatter import scatter_add
@@ -10,23 +10,25 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
     """ Class for training """
 
     def __init__(self, config, model, train_loader, val_loader, add_bce=True,
-                use_bce_pos_weight=False):
+                use_bce_pos_weight=False, threshold=0.5):
         super().__init__(config, model, train_loader, val_loader)
-        
+        self.threshold=threshold
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
 
         # Class weighting for the classification task
-        weights = weight_n_class(self.train_loader, hetero=True, n_class=self.neutrals_classes)
-        self.criterion = nn.CrossEntropyLoss(weight=weights)
+        # weights = weight_n_class(self.train_loader, hetero=True, n_class=self.neutrals_classes)
+        ## choose between using weights (think how?) or not
+        # self.criterion = nn.CrossEntropyLoss(weight=weights)
+        self.criterion = nn.BCEWithLogitsLoss()
 
         # BCE loss setup for edge prediction
         if use_bce_pos_weight:
-            pos_weight = hetero_positive_edge_weight(train_loader)
+            pos_weight = neutrals_hetero_positive_edge_weight(train_loader)
             pos_weight = torch.tensor([pos_weight])
             self.criterion_bce_edges = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
             self.use_logits = True
         else:
-            self.criterion_bce_edges = nn.BCELoss()
+            self.criterion_bce_edges = nn.BCELoss() ### use this one
             self.use_logits = False
 
         print("Use logits", self.use_logits)
@@ -51,9 +53,9 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'criterion_state_dict': self.criterion.state_dict(),
-            'criterion_bce_nodes_state_dict': self.criterion_bce_nodes.state_dict(),
+            # 'criterion_bce_nodes_state_dict': self.criterion_bce_nodes.state_dict(),
             'criterion_bce_edges_state_dict': self.criterion_bce_edges.state_dict(),
-            'criterion_bce_pvs_state_dict': self.criterion_bce_pvs.state_dict(),
+            # 'criterion_bce_pvs_state_dict': self.criterion_bce_pvs.state_dict(),
             'epoch_warmstart': self.epoch_warmstart,
             'history': self.get_history(),
         }
@@ -63,15 +65,22 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
     def load_checkpoint(self, file_path=None):
         """Loads the model and optimizer state from a checkpoint file."""
         checkpoint = torch.load(file_path, weights_only=True)
-        self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        self.criterion.load_state_dict(checkpoint['criterion_state_dict'])
-        self.criterion_bce_nodes.load_state_dict(checkpoint['criterion_bce_nodes_state_dict'])
-        self.criterion_bce_edges.load_state_dict(checkpoint['criterion_bce_edges_state_dict'])
-        self.set_history(checkpoint['history'])
-        self.epoch_warmstart = checkpoint['epoch_warmstart']+1
 
-     def get_history(self):
+        if 'model_state_dict' in checkpoint:
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+        if 'optimizer_state_dict' in checkpoint:
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if 'criterion_state_dict' in checkpoint:
+            self.criterion.load_state_dict(checkpoint['criterion_state_dict'])
+        if 'criterion_bce_edges_state_dict' in checkpoint:
+            self.criterion_bce_edges.load_state_dict(checkpoint['criterion_bce_edges_state_dict'])
+        if 'history' in checkpoint:
+            self.set_history(checkpoint['history'])
+        if 'epoch_warmstart' in checkpoint:
+            self.epoch_warmstart = checkpoint['epoch_warmstart'] + 1
+
+
+    def get_history(self):
         """Returns the training and validation history of the heterogeneous model's metrics"""
         history = super().get_history()
         # Retain only edge-level losses and metrics for chargedtree -> neutrals
@@ -102,13 +111,9 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         last_loss = 0.
         running_ce_loss = 0.
         running_bce_edge_loss = 0.
-        running_bce_node_loss = 0.
-        running_bce_pv_loss = 0.
         acc_one_epoch = []
         eff_one_epoch = []
         rej_one_epoch = []
-        pv_acc_one_epoch = []
-        pv_node_acc_one_epoch = []
         if train == True:
             data_loader = self.train_loader
         else:
@@ -125,11 +130,14 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             outputs = self.model(data)
             data = outputs
 
+            # TODO try add edges between neutrals
+
             # --- Edge classification loss for chargedtree -> neutrals ---
             # True labels: 0 = background, 1 = signal
             # y is one-hot or logits over two classes
-            label_edges = data[('chargedtree', 'to', 'neutrals')].y.argmax(dim=1)
+            label_edges = data[('chargedtree', 'to', 'neutrals')].y
             # Compute cross-entropy loss on edges
+
             loss = self.criterion(
                 outputs[('chargedtree', 'to', 'neutrals')].edges,
                 label_edges
@@ -137,13 +145,33 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             running_ce_loss += loss.item()
 
             # --- Determine which edges are predicted positive (signal) ---
-            # Apply softmax or logits depending on criterion
-            # Here, assume outputs.edges are raw logits: take class 1 probability
-            edge_probs = torch.softmax(
-                outputs[('chargedtree', 'to', 'neutrals')].edges, dim=1
-            )[:, 1]
+            edge_probs = torch.sigmoid(
+                outputs[('chargedtree', 'to', 'neutrals')].edges
+            )[:,0]
+
+
+            ### [DEBUG]
+            pred=edge_probs
+            print(f"Mean prediction {pred.float().mean()}")
+            print(f"Median prediction {pred.float().median()}")
+            print(f"Max prediction {pred.max()}")
+            print(f"Min prediction {pred.min()}")
+
+
+
             # Boolean mask of predicted positive edges
-            pred_positive = edge_probs > 0.5
+            pred_positive = edge_probs > self.threshold
+            label_edges = label_edges.squeeze() # transforms from [N,1] to [N]
+            ### [DEBUG]
+            print(f"Total elements: {len(pred_positive)}")
+            print(f"Predicted as 1: {pred_positive.sum().item()}")
+            print(f"Predicted as 0: {(~pred_positive).sum().item()}")
+            print(f"True positive: {(pred_positive & label_edges.bool()).sum().item()}")
+            print(f"False positive: {(pred_positive & ~label_edges.bool()).sum().item()}")
+            print(f"False negative: {(~pred_positive & label_edges.bool()).sum().item()}")
+            print(f"True negative: {(~pred_positive & ~label_edges.bool()).sum().item()}")
+
+
             edge_index = data[('chargedtree', 'to', 'neutrals')].edge_index
 
             # --- Aggregate per neutral node: mark neutral as signal if any connecting edge is positive ---
@@ -175,7 +203,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                         # BCE loss on ('chargedtree', 'to', 'neutrals') edge logits
                         bce_edges_loss = self.beta_bce_edges * self.criterion_bce_edges(
                             block.edge_logits[('chargedtree', 'to', 'neutrals')],
-                            data[('chargedtree', 'to', 'neutrals')].y[:, 1].float().unsqueeze(1)  # Assuming binary class (0/1)
+                            data[('chargedtree', 'to', 'neutrals')].y.float()  # Assuming binary class (0/1)
                         )
                         running_bce_edge_loss += bce_edges_loss.item()
                         loss += bce_edges_loss
@@ -184,15 +212,15 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                         # BCE loss on weights instead of logits
                         bce_edges_loss = self.beta_bce_edges * self.criterion_bce_edges(
                             block.edge_weights[('chargedtree', 'to', 'neutrals')],
-                            data[('chargedtree', 'to', 'neutrals')].y[:, 1].float().unsqueeze(1)
+                            data[('chargedtree', 'to', 'neutrals')].y.float()
                         )
                         running_bce_edge_loss += bce_edges_loss.item()
                         loss += bce_edges_loss
 
             # Accuracy/effectiveness/rejection metrics for new edge type
-            acc_one_batch = acc_n_class(outputs[('chargedtree', 'to', 'neutrals')].edges, label, n_class=2)
-            eff_one_batch = eff_n_class(outputs[('chargedtree', 'to', 'neutrals')].edges, label, n_class=2)
-            rej_one_batch = rej_n_class(outputs[('chargedtree', 'to', 'neutrals')].edges, label, n_class=2)
+            acc_one_batch = acc_binary(pred_positive, label_edges)
+            eff_one_batch = eff_binary(pred_positive, label_edges)
+            rej_one_batch = rej_binary(pred_positive, label_edges)
             acc_one_epoch.append(acc_one_batch)
             eff_one_epoch.append(eff_one_batch)
             rej_one_epoch.append(rej_one_batch)
@@ -215,13 +243,13 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         if train:
             self.ce_train_loss.append(running_ce_loss / last_batch)
             self.bce_edges_train_loss.append(running_bce_edge_loss / last_batch)
-            self.bce_nodes_train_loss.append(running_bce_node_loss / last_batch)
-            self.bce_pvs_train_loss.append(running_bce_pv_loss / last_batch)
+            # self.bce_nodes_train_loss.append(running_bce_node_loss / last_batch)
+            # self.bce_pvs_train_loss.append(running_bce_pv_loss / last_batch)
         else:
             self.ce_val_loss.append(running_ce_loss / last_batch)
             self.bce_edges_val_loss.append(running_bce_edge_loss / last_batch)
-            self.bce_nodes_val_loss.append(running_bce_node_loss / last_batch)
-            self.bce_pvs_val_loss.append(running_bce_pv_loss / last_batch)
+            # self.bce_nodes_val_loss.append(running_bce_node_loss / last_batch)
+            # self.bce_pvs_val_loss.append(running_bce_pv_loss / last_batch)
 
         metrics = {
             'loss': last_loss,
@@ -292,14 +320,67 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             "val_loss": self.val_loss,
         }
         # Metrics per class for edge classification
-        for nClasse in range(self.neutrals_classes):
-            data[f"train_acc_Class{nClasse}"] = list(np.array(self.train_acc)[:, nClasse])
-            data[f"val_acc_Class{nClasse}"] = list(np.array(self.val_acc)[:, nClasse])
-            data[f"train_eff_Class{nClasse}"] = list(np.array(self.train_eff)[:, nClasse])
-            data[f"val_eff_Class{nClasse}"] = list(np.array(self.val_eff)[:, nClasse])
-            data[f"train_rej_Class{nClasse}"] = list(np.array(self.train_rej)[:, nClasse])
-            data[f"val_rej_Class{nClasse}"] = list(np.array(self.val_rej)[:, nClasse])
+        data["train_acc"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.train_acc]
+        data["val_acc"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.val_acc]
+        data["train_eff"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.train_eff]
+        data["val_eff"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.val_eff]
+        data["train_rej"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.train_rej]
+        data["val_rej"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.val_rej]
+
+        
+        if self.add_bce:
+            data["ce_train_loss"] = self.ce_train_loss
+            data["ce_val_loss"]  = self.ce_val_loss
+            # data["bce_nodes_train_loss"] = self.bce_nodes_train_loss
+            # data["bce_nodes_val_loss"] = self.bce_nodes_val_loss
+            data["bce_edges_train_loss"]  = self.bce_edges_train_loss
+            data["bce_edges_val_loss"] = self.bce_edges_val_loss
 
         df = pd.DataFrame(data)
         df.to_csv(file_name)
         return df
+
+
+    # def save_dataframe(self, file_name):
+    #     data = {
+    #         "train_loss": self.train_loss,
+    #         "val_loss": self.val_loss,
+    #     }
+
+    #     def safe_extract(metric_list, index):
+    #         values = []
+    #         for x in metric_list:
+    #             if torch.is_tensor(x):
+    #                 x = x.cpu()
+    #                 if x.ndim == 0:
+    #                     # Scalar tensor
+    #                     values.append(x.item())
+    #                 else:
+    #                     # Vector tensor
+    #                     values.append(x[index].item())
+    #             else:
+    #                 # Not a tensor (e.g., float or list)
+    #                 if isinstance(x, (list, tuple, np.ndarray)):
+    #                     values.append(x[index])
+    #                 else:
+    #                     values.append(x)
+    #         return values
+
+    #     for nClasse in range(self.neutrals_classes):
+    #         data[f"train_acc_Class{nClasse}"] = safe_extract(self.train_acc, nClasse)
+    #         data[f"val_acc_Class{nClasse}"] = safe_extract(self.val_acc, nClasse)
+    #         data[f"train_eff_Class{nClasse}"] = safe_extract(self.train_eff, nClasse)
+    #         data[f"val_eff_Class{nClasse}"] = safe_extract(self.val_eff, nClasse)
+    #         data[f"train_rej_Class{nClasse}"] = safe_extract(self.train_rej, nClasse)
+    #         data[f"val_rej_Class{nClasse}"] = safe_extract(self.val_rej, nClasse)
+
+    #     if self.add_bce:
+    #         data["ce_train_loss"] = [x.cpu().item() if torch.is_tensor(x) else x for x in self.ce_train_loss]
+    #         data["ce_val_loss"]  = [x.cpu().item() if torch.is_tensor(x) else x for x in self.ce_val_loss]
+    #         data["bce_edges_train_loss"] = [x.cpu().item() if torch.is_tensor(x) else x for x in self.bce_edges_train_loss]
+    #         data["bce_edges_val_loss"]   = [x.cpu().item() if torch.is_tensor(x) else x for x in self.bce_edges_val_loss]
+
+    #     df = pd.DataFrame(data)
+    #     df.to_csv(file_name)
+    #     return df
+

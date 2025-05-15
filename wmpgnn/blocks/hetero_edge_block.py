@@ -38,6 +38,7 @@ class HeteroEdgeBlock(AbstractModule):
             if self._use_globals:
                 edges_to_collect.append(graph['globals'].x[node_0.batch[edges.edge_index[0]]])
             # print([col.shape  for col in edges_to_collect])
+
             collected_edges = torch.cat(edges_to_collect, axis=-1)
             updated_edges = self._edge_models[edge_type](collected_edges, graph[edge_type[0]].batch[ graph[edge_type].edge_index[0] ] )
             graph[edge_type].edges = updated_edges
