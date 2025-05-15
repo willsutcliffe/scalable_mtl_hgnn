@@ -167,11 +167,10 @@ class CustomHeteroDataset(Dataset):
             new_nodes = torch.from_numpy(new_nodes)
             new_edges = torch.from_numpy(new_edges)
 
-
-            recoPVs = torch.unique(new_nodes[:, -3:], dim=0)
+            recoPVs = torch.unique(new_nodes[:, 12:15], dim=0)
             nPVs = recoPVs.shape[0]
 
-            true_nodes_PVs = new_nodes[:, -3:]
+            true_nodes_PVs = new_nodes[:, 12:15]
 
             y, y_one_hot = find_row_indices(true_nodes_PVs, recoPVs)
 
@@ -189,11 +188,15 @@ class CustomHeteroDataset(Dataset):
 
             permutations = torch.cartesian_prod(torch.arange(true_nodes_PVs.shape[0]), torch.arange(recoPVs.shape[0]))
             data = HeteroData()
+<<<<<<< HEAD
 
 
             truth_reco_pv = new_nodes[:, -3:]
             new_nodes = torch.hstack([new_nodes[:, :6], new_nodes[:, 9:10]])
 
+=======
+            new_nodes = torch.hstack([new_nodes[:, :12]])
+>>>>>>> 59cc4e2 (adapted graphing for pid information, added saving data in graphed form)
             data['tracks'].x = new_nodes
 
             data['pvs'].x = recoPVs
@@ -225,5 +228,11 @@ class CustomHeteroDataset(Dataset):
 
 
             data_set.append(data)
+        
+        # storing the graphed data in pt format
+        if "training" in self.filenames_input[0]:
+            torch.save(data_set, f"training_data_{self.__len__()}.pt")
+        elif "validation" in self.filenames_input[0]:
+            torch.save(data_set, f"validation_data_{self.__len__()}.pt")
 
         return data_set
