@@ -198,6 +198,40 @@ def weight_four_class(dataset,hetero=False):
     print(weight)
     return weight
 
+
+def get_hetero_weight(loader, node_weight=True, edge_weight=True, LCA_weight=True):
+    true_class = torch.zeros(4)
+    num_sample = 0
+
+    sum_nodes = 0
+    sum_nodes_pos = 0
+
+    sum_edges = 0
+    sum_edges_pos = 0
+
+    for data in loader:
+    
+        if node_weight:
+            node_sum = scatter_add(data[('tracks','to','tracks')].y, data[('tracks','to','tracks')].edge_index[0],dim=0)
+            ynodes = (1.*(torch.sum(node_sum[:,1:],1)>0)).unsqueeze(1)
+            sum_nodes += data['tracks'].x.shape[0]
+            sum_nodes_pos  += torch.sum(ynodes==1).item()
+
+        if edge_weight:
+            sum_edges += data[('tracks','to','tracks')].edges.shape[0]
+            sum_edges_pos  += torch.sum(data[('tracks','to','tracks')].y[:,0]==0).item()
+
+        if LCA_weight:
+            y = data[('tracks','to','tracks')].y
+            for i in range(true_class.shape[0]):
+                true_class[i] += (y.argmax(dim=1) == i).sum()
+            num_sample += len(y)
+        
+    weight_class = num_sample / (4*true_class)
+
+    return sum_nodes/(2*sum_nodes_pos), sum_edges/(2*sum_edges_pos), weight_class
+
+
 def init_plot_style():
     """
     Initializes and returns a dictionary of matplotlib RC parameters for
