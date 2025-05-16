@@ -114,6 +114,9 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         acc_one_epoch = []
         eff_one_epoch = []
         rej_one_epoch = []
+        preds_one_epoch =[]
+        labels_one_epoch = []
+
         if train == True:
             data_loader = self.train_loader
         else:
@@ -224,6 +227,8 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             acc_one_epoch.append(acc_one_batch)
             eff_one_epoch.append(eff_one_batch)
             rej_one_epoch.append(rej_one_batch)
+            preds_one_epoch.append(edge_probs)
+            labels_one_epoch.append(label_edges)
 
             if train:
                 loss.backward()
@@ -240,6 +245,13 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         eff_one_epoch = torch.stack(eff_one_epoch)
         rej_one_epoch = torch.stack(rej_one_epoch)
 
+        if len(preds_one_epoch) > 0:
+            epoch_preds  = torch.cat(preds_one_epoch, dim=0)  # shape [total_edges_in_epoch]
+            epoch_labels = torch.cat(labels_one_epoch, dim=0) # même shape
+        else:
+            epoch_preds  = torch.tensor([], device='cuda')
+            epoch_labels = torch.tensor([], device='cuda')
+
         if train:
             self.ce_train_loss.append(running_ce_loss / last_batch)
             self.bce_edges_train_loss.append(running_bce_edge_loss / last_batch)
@@ -252,6 +264,8 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             # self.bce_pvs_val_loss.append(running_bce_pv_loss / last_batch)
 
         metrics = {
+            'preds' : epoch_preds,
+            'labels': epoch_labels,
             'loss': last_loss,
             'acc': acc_one_epoch.nanmean(dim=0),
             'acc_err': acc_one_epoch.std(dim=0),
@@ -277,6 +291,9 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             val_metrics = self.eval_one_epoch(train=False)
 
             # Append metrics
+            self.train_predictions.append(train_metrics['preds'])
+            self.train_labels.append(train_metrics['labels'])
+
             self.train_loss.append(train_metrics['loss'])
             self.train_acc.append(train_metrics['acc'])
             self.train_eff.append(train_metrics['eff'])
@@ -284,6 +301,9 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             self.train_acc_err.append(train_metrics['acc_err'])
             self.train_eff_err.append(train_metrics['eff_err'])
             self.train_rej_err.append(train_metrics['rej_err'])
+
+            self.val_predictions.append(val_metrics['preds'])
+            self.val_labels.append(val_metrics['labels'])
 
             self.val_loss.append(val_metrics['loss'])
             self.val_acc.append(val_metrics['acc'])
@@ -313,6 +333,12 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                     self.epoch_warmstart = epoch
                     file_path = f'{checkpoint_path}checkpoint_{epoch}.pt'
                     self.save_checkpoint(file_path)
+
+        # self.train_predicitions = torch.cat(self.train_predictions)
+        # self.val_predicitions = torch.cat(self.val_predictions)
+        # self.train_labels = torch.cat(self.train_labels)
+        # self.val_labels = torch.cat(self.val_labels)
+
 
     def save_dataframe(self, file_name):
         data = {

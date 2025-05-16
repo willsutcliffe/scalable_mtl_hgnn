@@ -7,6 +7,7 @@ from wmpgnn.model.model_loader import ModelLoader
 from wmpgnn.trainers.gnn_trainer import GNNTrainer
 from wmpgnn.trainers.hetero_gnn_trainer import HeteroGNNTrainer
 from wmpgnn.trainers.neutrals_hetero_gnn_trainer import NeutralsHeteroGNNTrainer
+from wmpgnn.util.functions import select_epoch_indices
 
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 import torch
@@ -113,5 +114,9 @@ trainer.plot_efficiency(output_folder+plot_name, show=False)
 
 plot_name = model_file.replace(".pt", "_rej.png")
 trainer.plot_rejection(output_folder+plot_name, show=False)
+
+for i in select_epoch_indices(epochs,5):
+    plot_name = model_file.replace(".pt", f"_pred_epoch{i}.png")
+    trainer.plot_predictions(output_folder+plot_name, epoch=i, show=False)
 
 #python scripts/train.py mp_gnn_run3.yaml | tee logs/homo.log

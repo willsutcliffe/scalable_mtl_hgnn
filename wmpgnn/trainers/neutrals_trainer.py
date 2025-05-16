@@ -2,7 +2,12 @@ from abc import ABC, abstractmethod
 import torch
 import matplotlib.pyplot as plt
 import os
-from wmpgnn.util.functions import NOW
+import numpy as np
+import mplhep
+from uncertainties.unumpy import (uarray, nominal_values as unp_n,
+                                  std_devs as unp_s)
+from wmpgnn.util.functions import NOW, plt_pull, ks_test, centers, hist, plt_smooth, batched_predict_proba
+# plt.style.use(mplhep.style.LHCb2)
 
 class NeutralsTrainer(ABC):
 
@@ -28,7 +33,10 @@ class NeutralsTrainer(ABC):
         self.epochs = []
         self.neutrals_classes = config.get('model.neutrals_classes')
         self.epoch_warmstart = 0
-        
+        self.train_predictions = []
+        self.train_labels = []
+        self.val_predictions = []
+        self.val_labels = []
 
     @abstractmethod
     def eval_one_epoch(self, train=True):
@@ -122,6 +130,79 @@ class NeutralsTrainer(ABC):
             plt.show()
         plt.savefig(file_name)
 
+    def plot_predictions(self, file_name="pred.png", epoch=-1, show=True):
+        """Plot the predicitions for the training and validations samples"""
+
+        def to_numpy(tensor):
+            if isinstance(tensor, torch.Tensor):
+                # Detach the tensor from the computation graph before converting to NumPy
+                return tensor.detach().cpu().numpy()
+            return tensor
+
+        data = {
+            'Bkg (train)': (
+                to_numpy(self.train_predictions[epoch][self.train_labels[epoch] == 0]),
+                to_numpy(torch.ones_like(self.train_labels[epoch][self.train_labels[epoch] == 0])),
+            ),
+            'Bkg (val)': (
+                to_numpy(self.val_predictions[epoch][self.val_labels[epoch] == 0]),
+                to_numpy(torch.ones_like(self.val_labels[epoch][self.val_labels[epoch] == 0])),
+            ),
+            'Signal (train)': (
+                to_numpy(self.train_predictions[epoch][self.train_labels[epoch] == 1]),
+                to_numpy(torch.ones_like(self.train_labels[epoch][self.train_labels[epoch] == 1])),
+            ),
+            'Signal (val)': (
+                to_numpy(self.val_predictions[epoch][self.val_labels[epoch] == 1]),
+                to_numpy(torch.ones_like(self.val_labels[epoch][self.val_labels[epoch] == 1])),
+            ),
+        }
+        # responses = {
+        #     key: (batched_predict_proba(model, sample)[:, 1], weight)
+        #     for key, (sample, weight) in data.items()
+        # }
+        responses = data
+
+        bins = np.linspace(0, 1, 30)
+        x, xerr = centers(bins, xerr=True)
+        figure, (ax, pull1, pull2) = plt.subplots(
+                3, sharex=True, figsize=(12, 10),
+                gridspec_kw=dict(height_ratios=(4, 1, 1), hspace=0),
+        )
+        hists = {key: uarray(h, he) / np.sum(h)
+                for key, (response, weight) in responses.items()
+                for (_, h, he) in (hist(response, weight, bins=bins), )}
+        ylim = min((np.min(np.fmax((.5 * unp_n(h))[unp_n(h) > 0],
+                                (unp_n(h) - unp_s(h))[unp_n(h) > 0])))
+                for h in hists.values())
+        for key, h in hists.items():
+            color = ((.1, .1, .8) if 'Signal' in key else (.8, .1, .1))
+            if 'train' in key:
+                plt_smooth(ax, x, unp_n(h), unp_s(h), label=key, color=(*color, .7))
+            else:
+                ax.errorbar(x, unp_n(h), unp_s(h), xerr=xerr, label=key,
+                            linestyle='', marker='o', markersize=.5, linewidth=.3,
+                            markeredgewidth=.3, capsize=.5, color=color)
+        signal = hists['Signal (val)'] - hists['Signal (train)']
+        bkg = hists['Bkg (val)'] - hists['Bkg (train)']
+        plt_pull(pull1, bins, unp_n(signal), 0, err=unp_s(signal))
+        plt_pull(pull2, bins, unp_n(bkg), 0, err=unp_s(bkg))
+        pull1.set_ylabel('signal\n'
+                        r'$\frac{\mathrm{val} - \mathrm{train}}{\sigma}$',
+                        loc='center')
+        pull2.set_ylabel('bkg\n'
+                        r'$\frac{\mathrm{val} - \mathrm{train}}{\sigma}$',
+                        loc='center')
+        ax.set_ylim(bottom=ylim)
+        # ax.set_yscale('log')
+        plt.xlim(bins[0], bins[-1])
+        plt.xlabel('Predicitions')
+        ax.legend(loc='best')
+        # ax.set_title(ks_test(responses), size='medium')
+        if show:
+            plt.show()
+        figure.savefig(file_name)
+
     def plot_accuracy(self, file_name="acc.png", show=True):
         """
         Plot training and validation accuracy for binary classification.
@@ -151,7 +232,6 @@ class NeutralsTrainer(ABC):
         if show:
             plt.show()
         fig.savefig(file_name)
-
 
 
     def plot_efficiency(self, file_name="eff.png", show=True):

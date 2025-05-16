@@ -1,6 +1,6 @@
 model:
   type: "neutral_heterognn"
-  gnn_layers: 2 #8
+  gnn_layers: 4 #8
   mlp_output_size: 4 #16
   mlp_layers: 2 #4
   mlp_channels: 16 #128
@@ -21,12 +21,12 @@ dataset:
   data_type: "neutrals"
   data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array/magdown/neutrals"
   # data_dir: /panfs/ebornand/DFEI/FullMC/npy_array/magdown
-  evt_max_train: 9000
-  evt_max_val: 1000
+  evt_max_train: 1000
+  evt_max_val: 500
 training:
   train: True
   starting_learning_rate: 0.001
-  epochs: 20
+  epochs: 25
   dropped_lr_epochs: 2
   batch_size: 32
   load_checkpoint: False

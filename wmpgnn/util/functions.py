@@ -1,6 +1,10 @@
 import torch
+import numpy as np
 from torch_scatter import scatter_add
 from datetime import datetime
+from scipy.stats import ks_2samp
+
+
 
 def neutrals_hetero_positive_edge_weight(loader):
     sum_edges = 0
@@ -85,30 +89,16 @@ def eff_binary(pred, label):
     Compute binary signal efficiency (recall) for class 1:
     eff = true positives for class 1 / total actual samples of class 1
     """
-    ### [DEBUG]
-    # print(f"Mean prediction {pred.float().mean()}")
-    # print(f"Median prediction {pred.float().median()}")
-    print(f"Max prediction {pred.max()}")
-    print(f"Min prediction {pred.min()}")
-    print(f"Max label {label.max()}")
-    print(f"Min label {label.min()}")
-    print(f"lenght label: {len(label)}")
-    print(f"lenght pred: {len(pred)}")
-
-    print(f"pred shape: {pred.shape}")
-    print(f"label shape: {label.shape}")
     
     true_positives = (pred * label).sum().float()  # TP for class 1
     total_positives = label.sum().float()  # Total actual samples of class 1
     
-    print(f"true positives: {true_positives}")
-    print(f"total_positives: {total_positives}")
 
     if total_positives > 0:
         eff = true_positives / total_positives
     else:
         eff = torch.tensor(0.0)
-    print(f"Eff: {eff}")
+
     return eff
 
 def rej_binary(pred, label):
@@ -123,7 +113,6 @@ def rej_binary(pred, label):
         rej = true_negatives / (true_negatives + false_positives)
     else:
         rej = torch.tensor(0.0)
-    print(f"rej: {rej}")
     return rej
 
 def acc_binary(pred, label):
@@ -138,7 +127,6 @@ def acc_binary(pred, label):
         acc = correct_preds / total_samples
     else:
         acc = torch.tensor(0.0)
-    print(f"Acc: {acc}")
     return acc
 
 def eff_n_class(pred, label, n_class=4):
@@ -327,3 +315,99 @@ def NOW(fmt="%H:%M:%S"):
 def msg(obj,fmt="%H:%M:%S"):
     """print string with time information"""
     print("[{}] ".format(NOW(fmt)),obj)
+
+def batched_predict_proba(model, X, batch_size=100_000):
+    probas = []
+    for i in range(0, len(X), batch_size):
+        batch = X[i:i+batch_size]
+        probas.append(model.predict_proba(batch))
+    return np.vstack(probas)
+
+def plt_smooth(ax, x, y, yerr, **kwargs):
+    """Plot a smooth curve with errors"""
+    curves = ax.step(x, y, where='mid', linewidth=.75, **kwargs)
+    ax.fill_between(x, y - yerr, y + yerr, facecolor=curves[0].get_color(),
+                    alpha=.3, step='mid')
+
+def hist(array, weights=None, *, bins=20, range=None, log=False):
+    """Create a histogram (with errors)"""
+    if np.shape(array)[1:] == (2, ):
+        array, weights = array.T
+
+    # Check if array is a torch tensor and move to CPU
+    if isinstance(array, torch.Tensor):
+        array = array.cpu().numpy()  # Move to CPU and convert to numpy array
+    if isinstance(weights, torch.Tensor):
+        weights = weights.cpu().numpy()
+
+    if weights is None:
+        weights = np.ones(len(array))
+    if isinstance(bins, int):
+        lo, hi = (np.min(array), np.max(array)) if range is None else range
+        bins = (np.logspace(np.log10(lo), np.log10(hi), bins) if log 
+                else np.linspace(lo, hi, bins))
+    y, _ = np.histogram(array, bins=bins, weights=weights)
+    w2, _ = np.histogram(array, bins=bins, weights=weights**2)
+    yerr = w2**0.5
+    yerr[yerr == 0] = np.mean(weights)
+    return bins, y * 1.0, yerr
+
+def centers(bins, *, log=False, xerr=False):
+    """Get bin centers for linear and logarithmic spaces"""
+    x = (np.sqrt(bins[1:] * bins[:-1]) if log else
+         .5 * (bins[1:] + bins[:-1]))
+    if not xerr: return x
+    err = np.array((x - bins[:-1], bins[1:] - x))
+    return x, err
+
+
+def plt_pull(ax, bins, hist, model, err=None):
+    """Create a pull plot"""
+    if err is None: err = hist**.5
+    # This min(err > 0) is a guess. The fully correct way would be 1/integral,
+    # but when we have zeros, it's likely we also have ones.
+    pull = (hist - model) / np.where(err > 0, err, np.min(err[err > 0]))
+    ax.stairs(np.where(abs(pull) < 3, pull, 0), bins, linewidth=.5,
+              fill=True, color=(.65, .65, .65), edgecolor='black')
+    ax.stairs(np.where(abs(pull) >= 3, pull, 0), bins, linewidth=.5,
+              fill=True, color=(.9, .2, .2), edgecolor='black')
+    lim = np.max(np.abs(ax.get_ylim()))
+    ax.set_ylim(-lim, lim)
+    vals = tuple(i for i in (3, 5, 7, 9, 15, 30, 50, 100, 200) if i < lim)
+    ax.set_yticks((-vals[-1], vals[-1]) if vals else
+                  tuple(t for t in ax.get_yticks() if t != 0 and abs(t) < lim))
+    ax.hlines(tuple((i, -i) for i in vals), bins[0], bins[-1],
+              linestyle='--', linewidth=.5, color='gray')
+    ax.set_ylabel(r'$\frac{\mathrm{data} - \mathrm{fit}}{\sigma}$',
+                  loc='center')
+
+def ks_test(responses):
+    """Perform a Kolmogorov-Smirnov test and summarize it"""
+    _, signal = ks_2samp(responses['Signal (train)'][0],
+                         responses['Signal (val)'][0])
+    _, bkg = ks_2samp(responses['Bkg (train)'][0], responses['Bkg (val)'][0])
+    return (f'Kolmogorov-Smirnov test: signal (bkg) probability: '
+            f'{signal:.3f} ({bkg:.3f})')
+
+
+def select_epoch_indices(n_epochs, n_samples=5):
+    """
+    Return `n_samples` epoch indices (0-based, going up to n_epochs+1),
+    including the first (0) and last (n_epochs+1), and equally spaced values in between.
+    """
+    # Include the first and last epochs
+    total_epochs = n_epochs + 1
+
+    if n_samples < 2:
+        raise ValueError("At least two samples are needed (first and last).")
+
+    if n_samples > total_epochs + 1:
+        # Return all indices from 0 to n_epochs + 1
+        return list(range(total_epochs + 1))
+
+    # Create equally spaced indices
+    indices = torch.linspace(0, total_epochs, steps=n_samples).tolist()
+
+    # Round and convert to a set of integers to avoid duplicates,
+    # then sort the result
+    return sorted(set(round(x) for x in indices))
