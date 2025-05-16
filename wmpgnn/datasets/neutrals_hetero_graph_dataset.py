@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import pandas as pd
+import time
 from torch_geometric.data import Dataset, Data
 from torch_geometric.data import HeteroData
 
@@ -50,21 +51,26 @@ class CustomNeutralsHeteroDataset(Dataset):
     def update(self, **kwargs):
         self.__dict__.update(kwargs)
 
-
     def get(self):
+        start_time = time.time()
         data_set = []
+
         for i in range(len(self.filenames_input)):
+            event_start_time = time.time()
+
             graph = np.load(self.filenames_input[i], allow_pickle=True).item()
+
             if graph['nodes'].shape[0] == 0:
                 continue
+
             if i % 25 == 0:
-               print(f"Event {i}...")
+                print(f"Event {i}...")
+
             # Convert to pandas DataFrame for efficient group operations
             features = pd.DataFrame(graph['nodes'])
             features['key'] = graph['keys']
             features['charge'] = graph['charges']
             features['decay_id'] = graph['PrimaryHeavyHadronIndex']
-
             senders = graph['senders']
             receivers = graph['receivers']
             edge_feats = pd.DataFrame(graph['edges'], columns=['theta', 'trdist', 'DOCA', 'delta_z0'])
@@ -72,10 +78,10 @@ class CustomNeutralsHeteroDataset(Dataset):
             edge_feats['receiver_key'] = [graph['keys'][r] for r in receivers]
 
             # Separate chargedtree and neutral
-            chargedtree_df = features[(features['charge'] != 0) & (features['decay_id'] >= 0)].copy()  # Ajoute la condition `decay_id >= 0`
+            chargedtree_df = features[(features['charge'] != 0) & (features['decay_id'] >= 0)].copy()
             neutral_df = features[features['charge'] == 0].copy()
 
-            # --- CHARGEDTREE NODE FEATURES ---
+            # CHARGEDTREE NODE FEATURES
             group = chargedtree_df.groupby('decay_id')
             chargedtree_nodes = group.agg({
                 5: 'sum',   # pz
@@ -83,7 +89,7 @@ class CustomNeutralsHeteroDataset(Dataset):
                 7: 'mean'   # eta
             }).rename(columns={5: 'sum_pz', 6: 'sum_pt', 7: 'mean_eta'})
 
-            # Mean DOCA, theta, trdist per decay tree
+            # Mean DOCA, theta, and trdist per decay tree
             edge_feats['pair'] = list(zip(edge_feats['sender_key'], edge_feats['receiver_key']))
             edge_feats_flip = edge_feats.copy()
             edge_feats_flip['pair'] = list(zip(edge_feats_flip['receiver_key'], edge_feats_flip['sender_key']))
@@ -94,43 +100,35 @@ class CustomNeutralsHeteroDataset(Dataset):
             same_decay = all_edges[all_edges['decay_id_s'] == all_edges['decay_id_r']]
             intra_means = same_decay.groupby('decay_id_s')[['DOCA', 'theta', 'trdist']].mean()
             chargedtree_nodes = chargedtree_nodes.join(intra_means, how='left').fillna(0).reset_index()
-
             chargedtree_node_feats = torch.tensor(
                 chargedtree_nodes[['sum_pt', 'sum_pz', 'mean_eta', 'DOCA', 'theta', 'trdist']].values,
                 dtype=torch.float
             )
 
-            # --- NEUTRAL NODE FEATURES ---
+            # NEUTRAL NODE FEATURES
             neutral_node_feats = torch.tensor(neutral_df[[6, 5, 7]].values, dtype=torch.float)  # pt, pz, eta
 
-            # --- EDGE INDEX + ATTRIBUTES (vectorized) ---
+            # EDGE INDEX + ATTRIBUTES (vectorized)
             neutral_decay_pairs = pd.merge(
                 neutral_df[['key']].assign(tmp=1),
                 chargedtree_nodes[['decay_id']].assign(tmp=1),
                 on='tmp'
             ).drop(columns='tmp').rename(columns={'key': 'neutral_key'})
-
             chargedtree_keys_per_decay = chargedtree_df[['key', 'decay_id']].rename(columns={'key': 'chargedtree_key'})
-
             extended = pd.merge(neutral_decay_pairs, chargedtree_keys_per_decay, on='decay_id')
             extended['pair_key'] = list(zip(extended['neutral_key'], extended['chargedtree_key']))
-
             edge_feats['pair_key'] = list(zip(edge_feats['sender_key'], edge_feats['receiver_key']))
             edge_feats_flip = edge_feats.copy()
             edge_feats_flip['pair_key'] = list(zip(edge_feats_flip['receiver_key'], edge_feats_flip['sender_key']))
             all_edge_feats = pd.concat([edge_feats, edge_feats_flip])
-
             joined = pd.merge(extended, all_edge_feats, on='pair_key')
             agg = joined.groupby(['neutral_key', 'decay_id'])[['DOCA', 'theta', 'trdist']].mean().reset_index()
-
             decay_id_to_idx = {d: i for i, d in enumerate(chargedtree_nodes['decay_id'])}
             key_to_idx_neutral = {k: i for i, k in enumerate(neutral_df['key'])}
-
             edge_index = []
             edge_attr = []
             edge_neutral_key = []
             edge_chargedtree_decay_id = []
-
 
             for _, row in agg.iterrows():
                 n_idx = key_to_idx_neutral[row['neutral_key']]
@@ -151,14 +149,13 @@ class CustomNeutralsHeteroDataset(Dataset):
                 edge_neutral_key.append(row['neutral_key'])  # string ou int selon ton format
                 edge_chargedtree_decay_id.append(row['decay_id'])
 
-
             if not edge_index:
                 continue
 
             edge_index = torch.tensor(edge_index).T
             edge_attr = torch.tensor(edge_attr, dtype=torch.float)
 
-            # --- GLOBAL FEATURES ---
+            # GLOBAL FEATURES
             globals_ = torch.tensor([
                 len(neutral_node_feats),
                 features.shape[0],
@@ -178,42 +175,46 @@ class CustomNeutralsHeteroDataset(Dataset):
             data['chargedtree', 'to', 'neutrals'].edge_neutral_key = torch.tensor(edge_neutral_key, dtype=torch.long)
             data['globals'].x = globals_
 
-            # --- LABELS basés sur FromSameHeavyHadron dans graph_target ---
+            # LABELS based on FromSameHeavyHadron in graph_target
             graph_target = np.load(self.filenames_target[i], allow_pickle=True).item()
-
-            # Récupère la mapping key → original index
             key_to_original_idx = dict(zip(graph['keys'], range(len(graph['keys']))))
-
-            # Table de correspondance (i, j) -> FromSameHeavyHadron
             truth_pair_to_label = {}
             for s, r, edge_attr in zip(graph_target['senders'], graph_target['receivers'], graph_target['edges']):
                 label = edge_attr[0]  # FromSameHeavyHadron
                 truth_pair_to_label[(s, r)] = label
-                truth_pair_to_label[(r, s)] = label  # symétrie
-
+                truth_pair_to_label[(r, s)] = label  # symmetry
             matched_labels = []
-
             for c_idx, n_idx in edge_index.T.tolist():
                 n_key = neutral_df.iloc[n_idx]['key']
                 decay_id = chargedtree_nodes.iloc[c_idx]['decay_id']
                 c_keys = chargedtree_df[chargedtree_df['decay_id'] == decay_id]['key'].tolist()
-
                 label = 0
                 n_orig_idx = key_to_original_idx.get(n_key, -1)
-
                 for c_key in c_keys:
                     c_orig_idx = key_to_original_idx.get(c_key, -1)
                     if (n_orig_idx, c_orig_idx) in truth_pair_to_label:
                         label = truth_pair_to_label[(n_orig_idx, c_orig_idx)]
-                        break  # une correspondance suffit
-
+                        break  # one match is enough
                 matched_labels.append(label)
-
             data['chargedtree', 'to', 'neutrals'].y = torch.tensor(matched_labels, dtype=torch.float).unsqueeze(-1)
             
+           
+
+            data_set.append(data)
+
+            event_end_time = time.time()
+            print(f"Processed Event {i} in {event_end_time - event_start_time:.2f}s")
+        
+        total_time = time.time() - start_time
+        print(f"Processed {len(data_set)} events in {total_time:.2f}s, averaging {total_time / max(len(data_set), 1):.2f}s per event")
+        
+    
+
+        return data_set
 
 
-            # if self.performance_mode:
+
+         # if self.performance_mode:
             #     data['init_senders'] = torch.from_numpy(graph["init_y"]["senders"]).long()
             #     data['init_receivers'] = torch.from_numpy(graph["init_y"]["receivers"]).long()
             #     data['init_y'] = torch.from_numpy(graph["init_y"]["edges"])
@@ -238,7 +239,3 @@ class CustomNeutralsHeteroDataset(Dataset):
             #                 init_senders + init_receivers - 1) + init_senders
             #     final_cantor = 0.5 * (senders + receivers - 2) * (senders + receivers - 1) + senders
             #     data['old_y'] = data.init_y[~torch.isin(init_cantor, final_cantor)]
-
-            data_set.append(data)
-
-        return data_set
