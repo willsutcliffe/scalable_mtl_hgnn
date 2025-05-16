@@ -228,8 +228,13 @@ def get_hetero_weight(loader, node_weight=True, edge_weight=True, LCA_weight=Tru
             num_sample += len(y)
         
     weight_class = num_sample / (4*true_class)
+    weight_nodes = torch.tensor(sum_nodes/(2*sum_nodes_pos))
+    weight_edges = torch.tensor(sum_edges/(2*sum_edges_pos))
 
-    return sum_nodes/(2*sum_nodes_pos), sum_edges/(2*sum_edges_pos), weight_class
+    pos_weight ={"t_nodes": weight_nodes, "tt_edges": weight_edges, "LCA": weight_class}
+
+
+    return pos_weight
 
 
 def init_plot_style():
