@@ -9,6 +9,7 @@ GitRepo for the paper: https://arxiv.org/abs/2504.21844
 
 ```bash
 pip install -r requirements.txt
+```
 
 ### Using `conda`
 
@@ -16,4 +17,4 @@ pip install -r requirements.txt
 conda env create -n hgnn python=3.11 
 conda activate hgnn
 pip install -r requirements.txt
-
+```
