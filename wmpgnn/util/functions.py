@@ -237,6 +237,32 @@ def acc_four_class(pred, label):
 
     return acc
 
+def weight_binary_class(dataset,hetero=True):
+    num_sample = 0
+    true_class = {0: 0, 1: 0}  # Pour deux classes
+
+    for tdata in dataset:
+        if hetero:
+            y = tdata[('chargedtree', 'to', 'neutrals')].y
+        else:
+            y = tdata.y
+        
+        # Compter les instances de chaque classe
+        true_class[0] += (y == 0).sum().item()
+        true_class[1] += (y == 1).sum().item()
+        num_sample += len(y)
+    
+    # Calcul des poids pour chaque classe
+    weight_class = {
+        0: num_sample / (2 * true_class[0]) if true_class[0] > 0 else 0,
+        1: num_sample / (2 * true_class[1]) if true_class[1] > 0 else 0
+    }
+    
+    weight = torch.tensor([weight_class[0], weight_class[1]], dtype=torch.float32)
+    print(f"Weights :{weight}")
+    return weight
+  
+
 def weight_n_class(dataset,hetero=False,n_class=5):
     num_sample = 0
     true_class = {i: 0 for i in range(n_class)}

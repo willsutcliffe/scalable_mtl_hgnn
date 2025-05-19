@@ -1,5 +1,5 @@
 from wmpgnn.trainers.neutrals_trainer import NeutralsTrainer
-from wmpgnn.util.functions import msg, neutrals_hetero_positive_edge_weight, neutrals_hetero_positive_node_weight, weight_n_class, acc_binary, eff_binary, rej_binary
+from wmpgnn.util.functions import msg, neutrals_hetero_positive_edge_weight, neutrals_hetero_positive_node_weight, weight_binary_class, acc_binary, eff_binary, rej_binary
 import torch
 from torch import nn
 from torch_scatter import scatter_add
@@ -16,10 +16,11 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
 
         # Class weighting for the classification task
-        # weights = weight_n_class(self.train_loader, hetero=True, n_class=self.neutrals_classes)
-        ## choose between using weights (think how?) or not
-        # self.criterion = nn.CrossEntropyLoss(weight=weights)
-        self.criterion = nn.BCEWithLogitsLoss()
+        weights = weight_binary_class(self.train_loader, hetero=True)
+        pos_weight = (weights[1] / weights[0]).clone().detach().cuda()
+
+        # Initialize the criterion with pos_weight as computed
+        self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
         # BCE loss setup for edge prediction
         if use_bce_pos_weight:
