@@ -129,7 +129,7 @@ class HGNNLightningModule(L.LightningModule):
 
 
 # Here is a trainer wrapper
-def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader):
+def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulate_grad_batches=4):
     module = HGNNLightningModule(
         model=model,
         pos_weights=pos_weight,
@@ -163,7 +163,8 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader):
         strategy="auto",  # ddp_notebook change it to normal ddp
         callbacks=[early_stopping, best_model_callback, all_epochs_callback],
         precision="32",  # never doe 16-mixed
-        gradient_clip_val=1.0
+        gradient_clip_val=1.0,
+        accumulate_grad_batches=accumulate_grad_batches
     )
 
     """Start training"""
