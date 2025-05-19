@@ -49,14 +49,14 @@ for idx, data in enumerate(data_list):
 
         # === Edges ===
         edge_index = data['chargedtree', 'to', 'neutrals'].edge_index.T.numpy()
-        edge_attr = data['chargedtree', 'to', 'neutrals'].edge_attr.numpy()
+        edges = data['chargedtree', 'to', 'neutrals'].edges.numpy()
 
         neutral_idx = edge_index[:, 0]
         chargedtree_idx = edge_index[:, 1]
         # neutral_keys_mapped = neutral_keys[neutral_idx]
         # chargedtree_keys_mapped = charged_keys[chargedtree_idx]
 
-        edge_df = pd.DataFrame(edge_attr, columns=[
+        edge_df = pd.DataFrame(edges, columns=[
             'sum_pt', 'sum_pz', 'abs_pt_diff', 'abs_pz_diff', 'mean_DOCA', 'mean_theta', 'mean_trdist'])
 
         edge_df.insert(0, 'edge_idx', range(len(edge_df)))

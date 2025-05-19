@@ -55,163 +55,121 @@ class CustomNeutralsHeteroDataset(Dataset):
         start_time = time.time()
         data_set = []
 
-        for i in range(len(self.filenames_input)):
-            event_start_time = time.time()
+        col_names = ['xProd','yProd','zProd','px','py','pz','pt','eta','charge', 'ParticleRecoType']
 
-            graph = np.load(self.filenames_input[i], allow_pickle=True).item()
-
+        for i, (in_fn, tgt_fn) in enumerate(zip(self.filenames_input, self.filenames_target)):
+            event_start = time.time()
+            graph = np.load(in_fn, allow_pickle=True).item()
             if graph['nodes'].shape[0] == 0:
                 continue
-
             if i % 25 == 0:
                 print(f"Event {i}...")
 
-            # Convert to pandas DataFrame for efficient group operations
-            features = pd.DataFrame(graph['nodes'])
+            # Node features
+            features = pd.DataFrame(graph['nodes'], columns=col_names)
             features['key'] = graph['keys']
             features['charge'] = graph['charges']
             features['decay_id'] = graph['PrimaryHeavyHadronIndex']
-            senders = graph['senders']
-            receivers = graph['receivers']
-            edge_feats = pd.DataFrame(graph['edges'], columns=['theta', 'trdist', 'DOCA', 'delta_z0'])
-            edge_feats['sender_key'] = [graph['keys'][s] for s in senders]
-            edge_feats['receiver_key'] = [graph['keys'][r] for r in receivers]
 
-            # Separate chargedtree and neutral
-            chargedtree_df = features[(features['charge'] != 0) & (features['decay_id'] >= 0)].copy()
+            # Edge features + labels
+            edge_feats = pd.DataFrame(graph['edges'], columns=['theta','trdist','DOCA','delta_z0'])
+            senders = np.array(graph['senders']); receivers = np.array(graph['receivers'])
+            keys_arr = np.array(graph['keys'])
+            edge_feats['sender_key'] = keys_arr[senders]
+            edge_feats['receiver_key'] = keys_arr[receivers]
+            # load labels array in same order
+            tgt = np.load(tgt_fn, allow_pickle=True).item()
+            labels = np.array([e[0] for e in tgt['edges']])
+            edge_feats['label'] = labels
+
+            # Separate charged & neutral nodes
+            charged_df = features[(features['charge'] != 0) & (features['decay_id'] >= 0)].copy()
             neutral_df = features[features['charge'] == 0].copy()
 
-            # CHARGEDTREE NODE FEATURES
-            group = chargedtree_df.groupby('decay_id')
-            chargedtree_nodes = group.agg({
-                5: 'sum',   # pz
-                6: 'sum',   # pt
-                7: 'mean'   # eta
-            }).rename(columns={5: 'sum_pz', 6: 'sum_pt', 7: 'mean_eta'})
-
-            # Mean DOCA, theta, and trdist per decay tree
-            edge_feats['pair'] = list(zip(edge_feats['sender_key'], edge_feats['receiver_key']))
-            edge_feats_flip = edge_feats.copy()
-            edge_feats_flip['pair'] = list(zip(edge_feats_flip['receiver_key'], edge_feats_flip['sender_key']))
-            all_edges = pd.concat([edge_feats, edge_feats_flip])
-            decay_pairs = chargedtree_df[['key', 'decay_id']].rename(columns={'key': 'chargedtree_key'})
-            all_edges = all_edges.merge(decay_pairs, left_on='sender_key', right_on='chargedtree_key', how='inner')
-            all_edges = all_edges.merge(decay_pairs, left_on='receiver_key', right_on='chargedtree_key', how='inner', suffixes=('_s', '_r'))
-            same_decay = all_edges[all_edges['decay_id_s'] == all_edges['decay_id_r']]
-            intra_means = same_decay.groupby('decay_id_s')[['DOCA', 'theta', 'trdist']].mean()
-            chargedtree_nodes = chargedtree_nodes.join(intra_means, how='left').fillna(0).reset_index()
-            chargedtree_node_feats = torch.tensor(
-                chargedtree_nodes[['sum_pt', 'sum_pz', 'mean_eta', 'DOCA', 'theta', 'trdist']].values,
+            # Charged-tree node aggregates
+            charged_stats = charged_df.groupby('decay_id').agg(
+                sum_pz=('pz','sum'), sum_pt=('pt','sum'), mean_eta=('eta','mean')
+            )
+            # intra-decay-edge means
+            ef = edge_feats.copy()
+            ef_flip = ef.rename(columns={'sender_key':'receiver_key','receiver_key':'sender_key'})
+            all_e = pd.concat([ef, ef_flip], ignore_index=True)
+            ck = charged_df[['key','decay_id']]
+            m1 = all_e.merge(ck.rename(columns={'key':'sent_key'}), left_on='sender_key', right_on='sent_key')
+            m2 = m1.merge(ck.rename(columns={'key':'rec_key'}), left_on='receiver_key', right_on='rec_key', suffixes=('_s','_r'))
+            same = m2[m2['decay_id_s']==m2['decay_id_r']]
+            intra = same.groupby('decay_id_s')[['DOCA','theta','trdist']].mean()
+            charged_nodes = charged_stats.join(intra, how='left').fillna(0).reset_index()
+            charged_feats = torch.tensor(
+                charged_nodes[['sum_pt','sum_pz','mean_eta','DOCA','theta','trdist']].values,
                 dtype=torch.float
             )
 
-            # NEUTRAL NODE FEATURES
-            neutral_node_feats = torch.tensor(neutral_df[[6, 5, 7]].values, dtype=torch.float)  # pt, pz, eta
+            # Neutral features
+            neutral_feats = torch.tensor(neutral_df[['pt','pz','eta']].values, dtype=torch.float)
 
-            # EDGE INDEX + ATTRIBUTES (vectorized)
-            neutral_decay_pairs = pd.merge(
-                neutral_df[['key']].assign(tmp=1),
-                chargedtree_nodes[['decay_id']].assign(tmp=1),
-                on='tmp'
-            ).drop(columns='tmp').rename(columns={'key': 'neutral_key'})
-            chargedtree_keys_per_decay = chargedtree_df[['key', 'decay_id']].rename(columns={'key': 'chargedtree_key'})
-            extended = pd.merge(neutral_decay_pairs, chargedtree_keys_per_decay, on='decay_id')
-            extended['pair_key'] = list(zip(extended['neutral_key'], extended['chargedtree_key']))
-            edge_feats['pair_key'] = list(zip(edge_feats['sender_key'], edge_feats['receiver_key']))
-            edge_feats_flip = edge_feats.copy()
-            edge_feats_flip['pair_key'] = list(zip(edge_feats_flip['receiver_key'], edge_feats_flip['sender_key']))
-            all_edge_feats = pd.concat([edge_feats, edge_feats_flip])
-            joined = pd.merge(extended, all_edge_feats, on='pair_key')
-            agg = joined.groupby(['neutral_key', 'decay_id'])[['DOCA', 'theta', 'trdist']].mean().reset_index()
-            decay_id_to_idx = {d: i for i, d in enumerate(chargedtree_nodes['decay_id'])}
-            key_to_idx_neutral = {k: i for i, k in enumerate(neutral_df['key'])}
-            edge_index = []
-            edge_attr = []
-            edge_neutral_key = []
-            edge_chargedtree_decay_id = []
+            # Build full cross between neutrals and charged trees
+            neutral_keys = neutral_df[['key']].rename(columns={'key':'neutral_key'}).assign(tmp=1)
+            charged_keys = charged_nodes[['decay_id']].rename(columns={'decay_id':'decay_id'}).assign(tmp=1)
+            cross = pd.merge(neutral_keys, charged_keys, on='tmp').drop(columns='tmp')
+            cross = cross.rename(columns={'decay_id':'decay_id'})
+            charged_keys_map = charged_df[['key','decay_id']].rename(columns={'key':'charged_key'})
+            cross = cross.merge(charged_keys_map, on='decay_id')
 
-            for _, row in agg.iterrows():
-                n_idx = key_to_idx_neutral[row['neutral_key']]
-                c_idx = decay_id_to_idx[row['decay_id']]
-                c_feat = chargedtree_node_feats[c_idx]
-                n_feat = neutral_node_feats[n_idx]
-                attr = [
-                    c_feat[0].item(),  # sum_pt
-                    c_feat[1].item(),  # sum_pz
-                    abs(c_feat[0].item() - n_feat[0].item()),
-                    abs(c_feat[1].item() - n_feat[1].item()),
-                    row['DOCA'],
-                    row['theta'],
-                    row['trdist']
-                ]
-                edge_index.append([c_idx, n_idx])
-                edge_attr.append(attr)
-                edge_neutral_key.append(row['neutral_key'])  # string ou int selon ton format
-                edge_chargedtree_decay_id.append(row['decay_id'])
+            # Prepare pair_key and merge edge_feats
+            ef['pair'] = list(zip(ef['sender_key'],ef['receiver_key']))
+            ef_flip['pair'] = list(zip(ef_flip['sender_key'],ef_flip['receiver_key']))
+            all_ef = pd.concat([ef,ef_flip], ignore_index=True)
+            cross['pair'] = list(zip(cross['neutral_key'],cross['charged_key']))
+            joined = pd.merge(cross, all_ef, on='pair', how='left')
 
-            if not edge_index:
+            # Aggregate per neutral-charged pair
+            agg = joined.groupby(['neutral_key','decay_id'])[['DOCA','theta','trdist','label']]
+            agg = agg.mean().reset_index()
+
+            # Build edge index & attributes
+            dec2idx = {d:i for i,d in enumerate(charged_nodes['decay_id'])}
+            neu2idx = {k:i for i,k in enumerate(neutral_df['key'])}
+            agg['c_idx'] = agg['decay_id'].map(dec2idx)
+            agg['n_idx'] = agg['neutral_key'].map(neu2idx)
+            edge_index = torch.tensor(agg[['c_idx','n_idx']].values.T, dtype=torch.long)
+            cvals = charged_feats[agg['c_idx'].values]
+            nvals = neutral_feats[agg['n_idx'].values]
+            edge_attr = torch.stack([
+                cvals[:,0],cvals[:,1],
+                torch.abs(cvals[:,0]-nvals[:,0]),
+                torch.abs(cvals[:,1]-nvals[:,1]),
+                torch.tensor(agg['DOCA'].values),
+                torch.tensor(agg['theta'].values),
+                torch.tensor(agg['trdist'].values)
+            ], dim=1)
+            edge_labels = torch.tensor(agg['label'].values, dtype=torch.float).unsqueeze(-1)
+
+            if edge_index.size(1)==0:
                 continue
 
-            edge_index = torch.tensor(edge_index).T
-            edge_attr = torch.tensor(edge_attr, dtype=torch.float)
-
-            # GLOBAL FEATURES
-            globals_ = torch.tensor([
-                len(neutral_node_feats),
-                features.shape[0],
-                chargedtree_nodes.shape[0],
-                neutral_node_feats[:, 0].sum(),
-                neutral_node_feats[:, 1].sum()
-            ], dtype=torch.float).unsqueeze(0)
+            # Global features
+            globals_ = torch.tensor([[neutral_feats.size(0), features.shape[0], charged_nodes.shape[0],
+                                    neutral_feats[:,0].sum(), neutral_feats[:,1].sum()]], dtype=torch.float)
 
             data = HeteroData()
-            data['chargedtree'].x = chargedtree_node_feats
-            data['chargedtree'].decay_id = torch.tensor(chargedtree_nodes['decay_id'].values, dtype=torch.long)
-            data['neutrals'].x = neutral_node_feats
+            data['chargedtree'].x = charged_feats
+            data['chargedtree'].decay_id = torch.tensor(charged_nodes['decay_id'].values, dtype=torch.long)
+            data['neutrals'].x = neutral_feats
             data['neutrals'].decay_id = torch.tensor(neutral_df['decay_id'].values, dtype=torch.long)
-            data['chargedtree', 'to', 'neutrals'].edge_index = edge_index
-            data['chargedtree', 'to', 'neutrals'].edges = edge_attr
-            data['chargedtree', 'to', 'neutrals'].edge_chargedtree_decay_id = torch.tensor(edge_chargedtree_decay_id, dtype=torch.long)
-            data['chargedtree', 'to', 'neutrals'].edge_neutral_key = torch.tensor(edge_neutral_key, dtype=torch.long)
+            data['chargedtree','to','neutrals'].edge_index = edge_index
+            data['chargedtree','to','neutrals'].edges = edge_attr
+            data['chargedtree','to','neutrals'].y = edge_labels
+            data['chargedtree', 'to', 'neutrals'].edge_chargedtree_decay_id = torch.tensor(agg['decay_id'].values, dtype=torch.long)
+            data['chargedtree', 'to', 'neutrals'].edge_neutral_key = torch.tensor(agg['neutral_key'].values, dtype=torch.long)
             data['globals'].x = globals_
 
-            # LABELS based on FromSameHeavyHadron in graph_target
-            graph_target = np.load(self.filenames_target[i], allow_pickle=True).item()
-            key_to_original_idx = dict(zip(graph['keys'], range(len(graph['keys']))))
-            truth_pair_to_label = {}
-            for s, r, edge_attr in zip(graph_target['senders'], graph_target['receivers'], graph_target['edges']):
-                label = edge_attr[0]  # FromSameHeavyHadron
-                truth_pair_to_label[(s, r)] = label
-                truth_pair_to_label[(r, s)] = label  # symmetry
-            matched_labels = []
-            for c_idx, n_idx in edge_index.T.tolist():
-                n_key = neutral_df.iloc[n_idx]['key']
-                decay_id = chargedtree_nodes.iloc[c_idx]['decay_id']
-                c_keys = chargedtree_df[chargedtree_df['decay_id'] == decay_id]['key'].tolist()
-                label = 0
-                n_orig_idx = key_to_original_idx.get(n_key, -1)
-                for c_key in c_keys:
-                    c_orig_idx = key_to_original_idx.get(c_key, -1)
-                    if (n_orig_idx, c_orig_idx) in truth_pair_to_label:
-                        label = truth_pair_to_label[(n_orig_idx, c_orig_idx)]
-                        break  # one match is enough
-                matched_labels.append(label)
-            data['chargedtree', 'to', 'neutrals'].y = torch.tensor(matched_labels, dtype=torch.float).unsqueeze(-1)
-            
-           
-
             data_set.append(data)
+            # print(f"Processed Event {i} in {time.time() - event_start:.2f}s")
 
-            event_end_time = time.time()
-            print(f"Processed Event {i} in {event_end_time - event_start_time:.2f}s")
-        
-        total_time = time.time() - start_time
-        print(f"Processed {len(data_set)} events in {total_time:.2f}s, averaging {total_time / max(len(data_set), 1):.2f}s per event")
-        
-    
-
+        total = time.time() - start_time
+        print(f"Processed {len(data_set)} events in {total:.2f}s, avg {total/max(len(data_set),1):.2f}s/event")
         return data_set
-
 
 
          # if self.performance_mode:
