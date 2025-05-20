@@ -92,14 +92,14 @@ class CustomHeteroDataset(Dataset):
             new_nodes = torch.hstack([new_nodes[:, :12]])
             data['tracks'].x = new_nodes
 
-            data['pvs'].x = recoPVs
+            data['PVs'].x = recoPVs
             data['globals'].x = torch.hstack(
                 [torch.from_numpy(graph["globals"]), torch.tensor(nPVs, dtype=torch.float32)]).unsqueeze(0)
 
 
-            data['tracks', 'pvs'].edge_index = permutations.T
-            data['tracks', 'pvs'].y = y_one_hot.flatten().unsqueeze(-1)
-            data['tracks', 'pvs'].edges = IPs.flatten().unsqueeze(-1)
+            data['tracks', 'PVs'].edge_index = permutations.T
+            data['tracks', 'PVs'].y = y_one_hot.flatten().unsqueeze(-1)
+            data['tracks', 'PVs'].edges = IPs.flatten().unsqueeze(-1)
 
             data['tracks', 'tracks'].edge_index = torch.vstack([senders, receivers])
             data['tracks', 'tracks'].y = torch.from_numpy(labels)
@@ -132,11 +132,5 @@ class CustomHeteroDataset(Dataset):
                 data['old_y'] = data.init_y[~torch.isin(init_cantor, final_cantor)]
 
             data_set.append(data)
-        
-        # storing the graphed data in pt format
-        if "training" in self.filenames_input[0]:
-            torch.save(data_set, f"training_data_{self.__len__()}.pt")
-        elif "validation" in self.filenames_input[0]:
-            torch.save(data_set, f"validation_data_{self.__len__()}.pt")
 
         return data_set
