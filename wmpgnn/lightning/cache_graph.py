@@ -98,19 +98,18 @@ def hgnn_caching(f_input, f_target, nevnts):
 
         if i == nevnts + 5000 * counter:
             if "training" in f_input[0]:
-                torch.save(data_set, f"training_data_{str(counter*(nevnts+1)).zfill(6)}_{str(i).zfill(6)}.pt")
+                torch.save(data_set, f"training_data_{str(counter*(nevnts)).zfill(6)}_{str(i-1).zfill(6)}.pt")
             elif "validation" in f_input[0]:
-                torch.save(data_set, f"validation_data_{str(counter*(nevnts+1)).zfill(6)}_{str(i).zfill(6)}.pt")
+                torch.save(data_set, f"validation_data_{str(counter*(nevnts)).zfill(6)}_{str(i-1).zfill(6)}.pt")
             counter += 1
             data_set = []
 
         data_set.append(data)
 
-    import pdb; pdb.set_trace()
     if "training" in f_input[0]:
-        torch.save(data_set, f"training_data_{str(counter*(nevnts+1)).zfill(6)}_{str(i).zfill(6)}.pt")
+        torch.save(data_set, f"training_data_{str(counter*(nevnts)).zfill(6)}_{str(i).zfill(6)}.pt")
     elif "validation" in f_input[0]:
-        torch.save(data_set, f"validation_data_{str(counter*(nevnts+1)).zfill(6)}_{str(i).zfill(6)}.pt")
+        torch.save(data_set, f"validation_data_{str(counter*(nevnts)).zfill(6)}_{str(i).zfill(6)}.pt")
 
 
 
