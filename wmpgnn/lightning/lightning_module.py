@@ -51,7 +51,7 @@ class HGNNLightningModule(L.LightningModule):
 
         """Truth information for interference"""
         y_tt_LCA = batch[('tracks', 'to', 'tracks')].y.argmax(dim=1)  # for LCA multi classification
-        y_tPV_edges = batch[('tracks', 'to', 'PVs')].y.to(dtype=torch.float32)  # PV to track edge classification
+        y_tPV_edges = batch[('tracks', 'to', 'pvs')].y.to(dtype=torch.float32)  # PV to track edge classification
         y_tt_edges = (batch[('tracks', 'to', 'tracks')].y[:, 0] == 0).unsqueeze(1).float()  # for edge pruning, wether edge exists or not
         
         # Getting the truth for node pruning
@@ -66,20 +66,22 @@ class HGNNLightningModule(L.LightningModule):
 
         """Passing to the model"""
         outputs = self.model(batch)
+        print(torch.cuda.memory_allocated() / (1024 ** 2) )
+        # print(torch.cuda.memory_summary())
 
         """Getting the loss"""
         loss_LCA = self.LCA_criterion(outputs[('tracks', 'to', 'tracks')].edges, y_tt_LCA)
         # Looping over all the GN blocks to grab the interference
-        for block in self.model._blocks:
+        for block in self.model._blocks:  # Changed here the interference from logits (not even sure why they are called logits but anyways) to weights
             loss_t_nodes += self.t_nodes_criterion(block.node_logits['tracks'], y_t_nodes)
             loss_tt_edges += self.tt_edges_criterion(block.edge_logits[('tracks', 'to', 'tracks')], y_tt_edges)
-            loss_tPV_edges += self.tPV_edges_criterion(block.edge_logits[('tracks', 'to', 'PVs')], y_tPV_edges)
+            loss_tPV_edges += self.tPV_edges_criterion(block.edge_logits[('tracks', 'to', 'pvs')], y_tPV_edges)
 
         """Combing the loss"""
         loss = (  # Here we can add the weights
                 loss_LCA +
-                loss_t_nodes +
-                loss_tt_edges +
+                3*loss_t_nodes +
+                30*loss_tt_edges +
                 loss_tPV_edges
         )
 
@@ -112,8 +114,19 @@ class HGNNLightningModule(L.LightningModule):
     
     def validation_step(self, batch, batch_idx): 
         loss = self.shared_step(batch, log_dict=self.val_log)
-        import pdb; pdb.set_trace()
         return loss
+
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        import gc
+        del outputs  # if not needed later
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    def on_validation_batch_end(self, outputs, batch, batch_idx, dataloader_idx=0):
+        import gc
+        del outputs
+        gc.collect()
+        torch.cuda.empty_cache()
     
     def on_train_epoch_end(self):
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.trn_log.items()}
@@ -129,7 +142,7 @@ class HGNNLightningModule(L.LightningModule):
 
 
 # Here is a trainer wrapper
-def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulate_grad_batches=4):
+def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulate_grad_batches=2):
     module = HGNNLightningModule(
         model=model,
         pos_weights=pos_weight,
@@ -160,9 +173,9 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulat
         max_epochs=epochs,
         accelerator='gpu',
         devices=n_gpu,
-        strategy="auto",  # ddp_notebook change it to normal ddp
+        strategy="auto",  # ddp_notebook change it to normal ddp don't do ddp_notebook takes way to much memory
         callbacks=[early_stopping, best_model_callback, all_epochs_callback],
-        precision="32",  # never doe 16-mixed
+        precision="32",  # never do 16-mixed
         gradient_clip_val=1.0,
         accumulate_grad_batches=accumulate_grad_batches
     )
