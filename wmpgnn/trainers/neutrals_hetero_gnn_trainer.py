@@ -155,11 +155,11 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
 
             ### [DEBUG]
-            pred=edge_probs
-            print(f"Mean prediction {pred.float().mean()}")
-            print(f"Median prediction {pred.float().median()}")
-            print(f"Max prediction {pred.max()}")
-            print(f"Min prediction {pred.min()}")
+            # pred=edge_probs
+            # print(f"Mean prediction {pred.float().mean()}")
+            # print(f"Median prediction {pred.float().median()}")
+            # print(f"Max prediction {pred.max()}")
+            # print(f"Min prediction {pred.min()}")
 
 
 
@@ -167,13 +167,13 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             pred_positive = edge_probs > self.threshold
             label_edges = label_edges.squeeze() # transforms from [N,1] to [N]
             ### [DEBUG]
-            print(f"Total elements: {len(pred_positive)}")
-            print(f"Predicted as 1: {pred_positive.sum().item()}")
-            print(f"Predicted as 0: {(~pred_positive).sum().item()}")
-            print(f"True positive: {(pred_positive & label_edges.bool()).sum().item()}")
-            print(f"False positive: {(pred_positive & ~label_edges.bool()).sum().item()}")
-            print(f"False negative: {(~pred_positive & label_edges.bool()).sum().item()}")
-            print(f"True negative: {(~pred_positive & ~label_edges.bool()).sum().item()}")
+            # print(f"Total elements: {len(pred_positive)}")
+            # print(f"Predicted as 1: {pred_positive.sum().item()}")
+            # print(f"Predicted as 0: {(~pred_positive).sum().item()}")
+            # print(f"True positive: {(pred_positive & label_edges.bool()).sum().item()}")
+            # print(f"False positive: {(pred_positive & ~label_edges.bool()).sum().item()}")
+            # print(f"False negative: {(~pred_positive & label_edges.bool()).sum().item()}")
+            # print(f"True negative: {(~pred_positive & ~label_edges.bool()).sum().item()}")
 
 
             edge_index = data[('chargedtree', 'to', 'neutrals')].edge_index

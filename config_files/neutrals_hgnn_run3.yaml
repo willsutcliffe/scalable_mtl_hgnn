@@ -1,10 +1,10 @@
 model:
   type: "neutral_heterognn"
-  gnn_layers: 4 #8
-  mlp_output_size: 4 #16
-  mlp_layers: 2 #4
-  mlp_channels: 16 #128
-  weight_mlp_layers: 2 #8
+  gnn_layers: 6 #8
+  mlp_output_size: 8 #16
+  mlp_layers: 4 #4
+  mlp_channels: 32 #128
+  weight_mlp_layers: 4 #8
   weight_mlp_channels: 8 #16
   weighted_mp: False
   use_edge_weights: True
@@ -19,20 +19,24 @@ loss:
   beta_edge_bce : 0.2
 dataset:
   data_type: "neutrals"
-  data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array/magdown/neutrals"
-  # data_dir: /panfs/ebornand/DFEI/FullMC/npy_array/magdown
-  evt_max_train: 5000
+  #data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array/magdown/neutrals"
+  data_dir: /panfs/ebornand/DFEI/FullMC/npy_array/magdown/neutrals/
+  evt_max_train: 9000
   evt_max_val: 1000
+  load_graph: True
+  save_graph: False
 training:
   train: True
   starting_learning_rate: 0.001
   epochs: 30
   dropped_lr_epochs: 2
-  batch_size: 32
+  batch_size: 16
   load_checkpoint: False
   save_checkpoint: True
   model_file: "Final_{dataset_data_type}_{model_gnn_layers}block_{training_epochs}_epochs_message_passing_BCE.pt"
 inference:
   inference: True
   learning_rate: 0.001
-  batch_size: 32
+  batch_size: 16
+
+#mem-per-gpu

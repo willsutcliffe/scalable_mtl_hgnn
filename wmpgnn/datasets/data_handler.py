@@ -5,7 +5,6 @@ from torch_geometric.loader import DataLoader
 import glob
 
 
-
 class DataHandler:
     """ Class which loads data using an appropriate
         dataset class """
@@ -38,11 +37,11 @@ class DataHandler:
             self.val_dataset = CustomHeteroDataset(files_input_vl, files_target_vl, performance_mode=performance_mode, n_classes=LCA_classes)
             self.test_dataset = CustomHeteroDataset(files_input_tst, files_target_tst, performance_mode=performance_mode, n_classes=LCA_classes)
         elif data_type == "neutrals":
-            neutrals_classes = self.config_loader.get('model.neutrals_classes')
+            neutrals_classes = self.config_loader.get('model.neutrals_classes') 
             print('creating custom datasets...')
-            self.train_dataset = CustomNeutralsHeteroDataset(files_input_tr, files_target_tr, performance_mode=performance_mode, n_classes=neutrals_classes)
-            self.val_dataset = CustomNeutralsHeteroDataset(files_input_vl, files_target_vl, performance_mode=performance_mode, n_classes=neutrals_classes)
-            self.test_dataset = CustomNeutralsHeteroDataset(files_input_tst, files_target_tst, performance_mode=performance_mode, n_classes=neutrals_classes)
+            self.train_dataset = CustomNeutralsHeteroDataset(files_input_tr, files_target_tr, performance_mode=performance_mode, config_loader=self.config_loader, split="train")
+            self.val_dataset = CustomNeutralsHeteroDataset(files_input_vl, files_target_vl, performance_mode=performance_mode, config_loader=self.config_loader, split="val")
+            self.test_dataset = CustomNeutralsHeteroDataset(files_input_tst, files_target_tst, performance_mode=performance_mode, config_loader=self.config_loader, split="test")         
         else:
             LCA_classes = self.config_loader.get('model.LCA_classes')
             raise Exception(f"Unexpected data type {data_type}. Please use neutrals, homogeneous or heterogeneous.")
