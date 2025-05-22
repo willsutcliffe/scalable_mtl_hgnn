@@ -36,6 +36,33 @@ def find_row_indices(t1, t2):
 
     return indices, one_hot_encoded
 
+def balance_edges(edge_index, edge_attr, edge_label, seed=42):
+        torch.manual_seed(seed)
+        # flatten labels to 1-D int tensor
+        labels = edge_label.view(-1).long()
+        sig_idx = (labels == 1).nonzero(as_tuple=True)[0]
+        bkg_idx = (labels == 0).nonzero(as_tuple=True)[0]
+        num_sig = sig_idx.numel()
+
+        # if no signal or too peu de background, skip balancing
+        if num_sig == 0 or bkg_idx.numel() < num_sig:
+            return None  # on signalera qu'il faut skipper cet event
+
+        # sample as many bkg as sig
+        perm = torch.randperm(bkg_idx.numel())
+        bkg_sample = bkg_idx[perm[:num_sig]]
+
+        # concat and shuffle
+        keep = torch.cat([sig_idx, bkg_sample], dim=0)
+        keep = keep[torch.randperm(keep.numel())]
+
+        # subset everything
+        ei = edge_index[:, keep]
+        ea = edge_attr[keep]
+        el = edge_label[keep]
+
+        return ei, ea, el
+
 class CustomNeutralsHeteroDataset(Dataset):
     def __init__(self, filenames_input, filenames_target, performance_mode=False, config_loader=None, split="train"):
         self.filenames_input = filenames_input
@@ -54,6 +81,7 @@ class CustomNeutralsHeteroDataset(Dataset):
     def update(self, **kwargs):
         self.__dict__.update(kwargs)
 
+
     def get(self):
         start_time = time.time()
         dataset = []
@@ -61,7 +89,9 @@ class CustomNeutralsHeteroDataset(Dataset):
         save_graph = self.config_loader.get("dataset.save_graph", False)
         load_graph = self.config_loader.get("dataset.load_graph", False)
         dir = self.config_loader.get("dataset.data_dir")
-        cache_dir = f"{dir}graphs/{self.split}_graphs/"
+        balanced = self.config_loader.get("dataset.balanced_classes", False)
+        subdir = "graphs_balanced" if balanced else "graphs"
+        cache_dir = os.path.join(dir, subdir, f"{self.split}_graphs/")
         os.makedirs(cache_dir, exist_ok=True)
         # cache_path = os.path.join(cache_dir, f"{self.split}_graphs.pt")
         evt_max = self.config_loader.get(f"dataset.evt_max_{self.split}", None)
@@ -73,9 +103,12 @@ class CustomNeutralsHeteroDataset(Dataset):
         def get_cache_file(start_idx, end_idx):
             return os.path.join(cache_dir, f"events_{start_idx:05d}_to_{end_idx:05d}_{self.split}.pt")
 
+
         ### We can load the graphs if already generated
         if load_graph:
             print(f"Loading preprocessed graphs for split {self.split}")
+            if balanced :
+                print("Random background neutral particles have been discarded to have balanced class")
             for i in range(num_chunks_needed):
                 cache_file = get_cache_file(i*chunk_size, min(((i + 1)*chunk_size), total_events) - 1)
                 if not os.path.exists(cache_file):
@@ -88,6 +121,8 @@ class CustomNeutralsHeteroDataset(Dataset):
 
         ## Or generate the graphs
         print("Generating graphs from scratch...")
+        if balanced :
+            print("Discarding random background neutral particles to have balanced class")
         col_names = ['xProd','yProd','zProd','px','py','pz','pt','eta','charge', 'ParticleRecoType']
         for i in range(0, total_events, chunk_size):
             chunk_data = []
@@ -187,6 +222,15 @@ class CustomNeutralsHeteroDataset(Dataset):
                 # Global features
                 globals_ = torch.tensor([[neutral_feats.size(0), features.shape[0], charged_nodes.shape[0],
                                         neutral_feats[:,0].sum(), neutral_feats[:,1].sum()]], dtype=torch.float)
+
+                if balanced:
+                    result = balance_edges(edge_index, edge_attr, edge_labels.squeeze(-1))
+                    if result is None:
+                        # skip this event if on n'a pas assez de neutrals signal ou bkg
+                        continue
+                    edge_index, edge_attr, edge_labels = result
+                    # restore shape of labels to [...,1]
+                    edge_labels = edge_labels.unsqueeze(-1)
 
                 data = HeteroData()
                 data['chargedtree'].x = charged_feats

@@ -427,12 +427,12 @@ def select_epoch_indices(n_epochs, n_samples=5):
     if n_samples < 2:
         raise ValueError("At least two samples are needed (first and last).")
 
-    if n_samples > total_epochs + 1:
+    if n_samples >= total_epochs + 1:
         # Return all indices from 0 to n_epochs + 1
         return list(range(total_epochs + 1))
 
     # Create equally spaced indices
-    indices = torch.linspace(0, total_epochs, steps=n_samples).tolist()
+    indices = torch.linspace(1, total_epochs, steps=n_samples).tolist()
 
     # Round and convert to a set of integers to avoid duplicates,
     # then sort the result

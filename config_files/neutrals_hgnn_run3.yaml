@@ -1,10 +1,10 @@
 model:
   type: "neutral_heterognn"
-  gnn_layers: 6 #8
-  mlp_output_size: 8 #16
-  mlp_layers: 4 #4
-  mlp_channels: 32 #128
-  weight_mlp_layers: 4 #8
+  gnn_layers: 4 #8
+  mlp_output_size:  4 #16
+  mlp_layers: 2 #4
+  mlp_channels: 16 #128
+  weight_mlp_layers: 2 #8
   weight_mlp_channels: 8 #16
   weighted_mp: False
   use_edge_weights: True
@@ -25,6 +25,7 @@ dataset:
   evt_max_val: 1000
   load_graph: True
   save_graph: False
+  balanced_classes: True
 training:
   train: True
   starting_learning_rate: 0.001

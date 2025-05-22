@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 import mplhep
+from sklearn.metrics import roc_curve, auc
 from uncertainties.unumpy import (uarray, nominal_values as unp_n,
                                   std_devs as unp_s)
 from wmpgnn.util.functions import NOW, plt_pull, ks_test, centers, hist, plt_smooth, batched_predict_proba
@@ -130,7 +131,7 @@ class NeutralsTrainer(ABC):
             plt.show()
         plt.savefig(file_name)
 
-    def plot_predictions(self, file_name="pred.png", epoch=-1, show=True):
+    def plot_predictions(self, path, file_name="pred.png", epoch=-1, show=True):
         """Plot the predicitions for the training and validations samples"""
 
         def to_numpy(tensor):
@@ -162,7 +163,7 @@ class NeutralsTrainer(ABC):
         #     for key, (sample, weight) in data.items()
         # }
         responses = data
-
+        fontsize = 20
         bins = np.linspace(0, 1, 30)
         x, xerr = centers(bins, xerr=True)
         figure, (ax, pull1, pull2) = plt.subplots(
@@ -189,19 +190,86 @@ class NeutralsTrainer(ABC):
         plt_pull(pull2, bins, unp_n(bkg), 0, err=unp_s(bkg))
         pull1.set_ylabel('signal\n'
                         r'$\frac{\mathrm{val} - \mathrm{train}}{\sigma}$',
-                        loc='center')
+                        loc='center', fontsize=fontsize)
         pull2.set_ylabel('bkg\n'
                         r'$\frac{\mathrm{val} - \mathrm{train}}{\sigma}$',
-                        loc='center')
+                        loc='center', fontsize=fontsize)
         ax.set_ylim(bottom=ylim)
+        ax.tick_params(axis='both', labelsize=fontsize)        # Change 16 par ce que tu veux
+        pull1.tick_params(axis='both', labelsize=fontsize)     # Pour les subplots des pulls
+        pull2.tick_params(axis='both', labelsize=fontsize)
         # ax.set_yscale('log')
         plt.xlim(bins[0], bins[-1])
-        plt.xlabel('Predicitions')
-        ax.legend(loc='best')
+        plt.xlabel('Predicitions', fontsize=fontsize)
+        ax.legend(loc='best', fontsize=fontsize)
         # ax.set_title(ks_test(responses), size='medium')
+        ax.set_title(f'Predictions distribution at Epoch {epoch}', fontsize=fontsize+2)
         if show:
             plt.show()
-        figure.savefig(file_name)
+        output_path = os.path.join(path, "predictions_distribution", file_name)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        figure.savefig(output_path)
+
+    def plot_roc_auc(self, path, file_name=None, epoch=-1, show=True):
+        """
+        Plot ROC AUC curves for training and validation splits at a given epoch.
+        """
+        # Set default filename if not provided
+        if file_name is None:
+            file_name = f"roc_epoch_{epoch}.png"
+
+        # Extract predictions and labels for train and validation
+        y_train_pred = self.train_predictions[epoch]
+        y_train_true = self.train_labels[epoch]
+        y_val_pred = self.val_predictions[epoch]
+        y_val_true = self.val_labels[epoch]
+
+        # Convert tensors to CPU numpy arrays if needed
+        def to_numpy(x):
+            if hasattr(x, 'detach'):
+                return x.detach().cpu().numpy()
+            return x
+
+        y_train_pred = to_numpy(y_train_pred)
+        y_train_true = to_numpy(y_train_true)
+        y_val_pred = to_numpy(y_val_pred)
+        y_val_true = to_numpy(y_val_true)
+
+        # Compute ROC curve and ROC area for train
+        fpr_train, tpr_train, _ = roc_curve(y_train_true, y_train_pred)
+        roc_auc_train = auc(fpr_train, tpr_train)
+
+        # Compute ROC curve and ROC area for validation
+        fpr_val, tpr_val, _ = roc_curve(y_val_true, y_val_pred)
+        roc_auc_val = auc(fpr_val, tpr_val)
+
+        # Plotting
+        fontsize = 16
+        plt.figure(figsize=(7, 5))
+        plt.plot(fpr_train, tpr_train, linestyle='--', label=f'Train ROC (AUC = {roc_auc_train:.3f})')
+        plt.plot(fpr_val, tpr_val, linestyle='-', label=f'Val   ROC (AUC = {roc_auc_val:.3f})')
+        # plt.plot([0, 1], [0, 1], color='grey', linestyle=':', label='Chance')
+
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate', fontsize=fontsize)
+        plt.ylabel('True Positive Rate', fontsize=fontsize)
+        plt.title(f'ROC Curves at Epoch {epoch}', fontsize=fontsize+2)
+        plt.legend(loc='lower right', fontsize=fontsize)
+        plt.tight_layout()
+
+        # Show or save
+        if show:
+            plt.show()
+            # Ensure the directory exists
+        output_path = os.path.join(path, "roc_auc", file_name)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        plt.savefig(output_path)
+
+        # return {'fpr_train': fpr_train, 'tpr_train': tpr_train, 'auc_train': roc_auc_train,
+        #         'fpr_val': fpr_val, 'tpr_val': tpr_val, 'auc_val': roc_auc_val}
+
+
 
     def plot_accuracy(self, file_name="acc.png", show=True):
         """

@@ -58,6 +58,8 @@ model_file = config_loader.get("training.model_file")
 flatten_config = flatten_dict(config_loader.config)
 model_file = model_file.format(**flatten_config)
 # folder for the model and other outputs
+if config_loader.get("dataset.balanced_classes", False) :
+    model_file=model_file.replace(".pt", "_balanced.pt")
 output_folder = f"outputs/{model_file.replace('.pt','')}/"
 os.makedirs(output_folder, exist_ok=True)
 
@@ -117,6 +119,7 @@ trainer.plot_rejection(output_folder+plot_name, show=False)
 
 for i in select_epoch_indices(epochs,5):
     plot_name = model_file.replace(".pt", f"_pred_epoch{i}.png")
-    trainer.plot_predictions(output_folder+plot_name, epoch=i, show=False)
-
+    trainer.plot_predictions(output_folder, plot_name, epoch=i, show=False)
+    plot_name = model_file.replace(".pt", f"_roc_auc_epoch{i}.png")
+    trainer.plot_roc_auc(output_folder, plot_name, epoch=i, show=False)
 #python scripts/train.py mp_gnn_run3.yaml | tee logs/homo.log
