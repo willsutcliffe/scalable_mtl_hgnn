@@ -32,20 +32,22 @@ conda create -n dfei_env python=3.10 -y
 conda activate dfei_env
 ```
 
-### Install PyTorch with CUDA 12.4
+#### Install PyTorch with CUDA 12.4
 ```bash
 pip install torch==2.4.0+cu124 torchvision==0.19.0+cu124 torchaudio==2.4.0+cu124 --index-url https://download.pytorch.org/whl/cu124
 ```
 
-### Install PyG libraries
+#### Install PyG libraries
 ```bash
 pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.4.0+cu124.html
 ```
 
-### Other dependencies
+#### Other dependencies
 ```bash
 pip install scikit-learn dm-tree torch_geometric==2.6.1 uncertainties numpy pandas matplotlib mplhep
 ```
+
+The list of required packages are avalaible in the file `environment.yml` 
 
 ## Training
 
