@@ -25,7 +25,7 @@ dataset:
   evt_max_val: 1000
   load_graph: True
   save_graph: False
-  balanced_classes: True
+  balanced_classes: False
 training:
   train: True
   starting_learning_rate: 0.001
