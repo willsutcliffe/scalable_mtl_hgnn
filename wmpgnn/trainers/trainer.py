@@ -202,6 +202,7 @@ class Trainer(ABC):
         plt.xlabel('epoch')
         plt.ylabel('Cross Entropy Loss')
         plt.grid()
+        plt.yscale('log')
 
         plt.legend()
         if show:
@@ -238,7 +239,9 @@ class Trainer(ABC):
 
         fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
 
-        if self.epochs[0] != 0:
+        if len(self.epochs) == 0:
+            x = [e for e in range(self.epoch_warmstart)]
+        elif self.epochs[0] != 0:
             x = [e for e in range(self.epoch_warmstart)]+self.epochs
         else:
             x = self.epochs
@@ -281,7 +284,9 @@ class Trainer(ABC):
 
         fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
 
-        if self.epochs[0] != 0:
+        if len(self.epochs) == 0:
+            x = [e for e in range(self.epoch_warmstart)]
+        elif self.epochs[0] != 0:
             x = [e for e in range(self.epoch_warmstart)]+self.epochs
         else:
             x = self.epochs
@@ -324,7 +329,9 @@ class Trainer(ABC):
 
         fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
 
-        if self.epochs[0] != 0:
+        if len(self.epochs) == 0:
+            x = [e for e in range(self.epoch_warmstart)]
+        elif self.epochs[0] != 0:
             x = [e for e in range(self.epoch_warmstart)]+self.epochs
         else:
             x = self.epochs

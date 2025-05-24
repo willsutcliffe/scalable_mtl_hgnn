@@ -4,7 +4,6 @@ from torch_geometric.loader import DataLoader
 import glob
 
 
-
 class DataHandler:
     """
     DataHandler orchestrates loading and batching of graph datasets for training,
@@ -40,19 +39,47 @@ class DataHandler:
         self.config_loader = config
         evt_max_train = self.config_loader.get("dataset.evt_max_train")
         evt_max_val = self.config_loader.get("dataset.evt_max_val")
-        if evt_max_train is not None:
-            print(f"Using {evt_max_train} events for training")
-        if evt_max_val is not None:
-            print(f"Using {evt_max_val} events for validation")
+        evt_max_test = self.config_loader.get("dataset.evt_max_test")
+        
         data_path = self.config_loader.get("dataset.data_dir")
         data_type = self.config_loader.get("dataset.data_type")
+        # single or multiple data paths
+        if isinstance(data_path, str):
+            data_paths = [data_path]
+        elif isinstance(data_path, list):
+            data_paths = data_path
+        else:
+            raise Exception(f"Unexpected data path type {type(data_path)}. Please use str or list.")
+        
+        files_input_tr, files_target_tr = [], []
+        files_input_vl, files_target_vl = [], []
+        files_input_tst, files_target_tst = [], []
+        # get all files in the data paths
+        for data_path in data_paths:
+            files_input_tr   += glob.glob(f'{data_path}/training_dataset/input_*')
+            files_target_tr  += glob.glob(f'{data_path}/training_dataset/target_*')
+            files_input_vl   += glob.glob(f'{data_path}/validation_dataset/input_*')
+            files_target_vl  += glob.glob(f'{data_path}/validation_dataset/target_*')
+            files_input_tst  += glob.glob(f'{data_path}/test_dataset/input_*')
+            files_target_tst += glob.glob(f'{data_path}/test_dataset/target_*')
+        
+        
+        # reduce the number of events if needed
+        if isinstance(evt_max_train, int) and evt_max_train > 0:
+            files_input_tr = files_input_tr[:evt_max_train]
+            files_target_tr = files_target_tr[:evt_max_train]
+        if isinstance(evt_max_val, int) and evt_max_val > 0:
+            files_input_vl = files_input_vl[:evt_max_val]
+            files_target_vl = files_target_vl[:evt_max_val]
+        if isinstance(evt_max_test, int) and evt_max_test > 0:
+            files_input_tst = files_input_tst[:evt_max_test]
+            files_target_tst = files_target_tst[:evt_max_test]
+        
+        print(f"Using {len(files_input_tr)} events for training")
+        print(f"Using {len(files_input_vl)} events for validation")
+        print(f"Using {len(files_input_tst)} events for testing")
+            
         self.batch_size =  self.config_loader.get("training.batch_size")
-        files_input_tr = glob.glob(f'{data_path}/training_dataset/input_*')[:evt_max_train]
-        files_target_tr = glob.glob(f'{data_path}/training_dataset/target_*')[:evt_max_train]
-        files_input_vl = glob.glob(f'{data_path}/validation_dataset/input_*')[:evt_max_val]
-        files_target_vl = glob.glob(f'{data_path}/validation_dataset/target_*')[:evt_max_val]
-        files_input_tst = glob.glob(f'{data_path}/test_dataset/input_*')
-        files_target_tst = glob.glob(f'{data_path}/test_dataset/target_*')
         LCA_classes = self.config_loader.get('model.LCA_classes')
         if data_type == "homogeneous":
             self.train_dataset = CustomDataset(files_input_tr, files_target_tr, performance_mode=performance_mode, n_classes=LCA_classes)

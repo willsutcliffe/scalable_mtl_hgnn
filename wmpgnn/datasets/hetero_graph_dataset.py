@@ -178,7 +178,8 @@ class CustomHeteroDataset(Dataset):
             nPVs = recoPVs.shape[0]
             true_nodes_PVs = new_nodes[:, -3:]
             if nPVs == 0:
-                import pdb; pdb.set_trace()
+                print(f"Number of recoPVs=0 in event {i}: {self.filenames_input[i]}")
+                continue
             # print(torch.sum(torch.sum(nodes_PVs == true_nodes_PVs,dim=-1)==3)/nodes_PVs.shape[0])
             y, y_one_hot = find_row_indices(true_nodes_PVs, recoPVs)
 

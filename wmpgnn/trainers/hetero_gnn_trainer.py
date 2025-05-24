@@ -327,7 +327,7 @@ class HeteroGNNTrainer(Trainer):
             starting_epoch (int): Epoch index to start from (for resuming).
             learning_rate (float): Learning rate for Adam optimizer.
         """
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        #self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         for epoch in range(starting_epoch, epochs):
             msg(f"At epoch {epoch}")
             self.epochs.append(epoch)
@@ -397,26 +397,41 @@ class HeteroGNNTrainer(Trainer):
         }
         for nLCA in range(self.LCA_classes):
             data[f"train_acc_LCA{nLCA}"] = list(np.array(self.train_acc)[:, nLCA])
-            data[f"val_acc_LCA{nLCA}"] = list(np.array(self.val_acc)[:, nLCA])
+            data[f"val_acc_LCA{nLCA}"]   = list(np.array(self.val_acc)[:, nLCA])
             data[f"train_eff_LCA{nLCA}"] = list(np.array(self.train_eff)[:, nLCA])
-            data[f"val_eff_LCA{nLCA}"] = list(np.array(self.val_eff)[:, nLCA])
+            data[f"val_eff_LCA{nLCA}"]   = list(np.array(self.val_eff)[:, nLCA])
             data[f"train_rej_LCA{nLCA}"] = list(np.array(self.train_rej)[:, nLCA])
-            data[f"val_rej_LCA{nLCA}"] = list(np.array(self.val_rej)[:, nLCA])
+            data[f"val_rej_LCA{nLCA}"]   = list(np.array(self.val_rej)[:, nLCA])
+            # save associated errors
+            data[f"train_acc_LCA{nLCA}_err"] = list(np.array(self.train_acc_err)[:, nLCA])
+            data[f"val_acc_LCA{nLCA}_err"]   = list(np.array(self.val_acc_err)[:, nLCA])
+            data[f"train_eff_LCA{nLCA}_err"] = list(np.array(self.train_eff_err)[:, nLCA])
+            data[f"val_eff_LCA{nLCA}_err"]   = list(np.array(self.val_eff_err)[:, nLCA])
+            data[f"train_rej_LCA{nLCA}_err"] = list(np.array(self.train_rej_err)[:, nLCA])
+            data[f"val_rej_LCA{nLCA}_err"]   = list(np.array(self.val_rej_err)[:, nLCA])
             
         if self.add_bce:
-            data["ce_train_loss"] = self.ce_train_loss
-            data["ce_val_loss"]  = self.ce_val_loss
+            data["ce_train_loss"]        = self.ce_train_loss
+            data["ce_val_loss"]          = self.ce_val_loss
             data["bce_nodes_train_loss"] = self.bce_nodes_train_loss
-            data["bce_nodes_val_loss"] = self.bce_nodes_val_loss
-            data["bce_edges_train_loss"]  = self.bce_edges_train_loss
-            data["bce_edges_val_loss"] = self.bce_edges_val_loss
+            data["bce_nodes_val_loss"]   = self.bce_nodes_val_loss
+            data["bce_edges_train_loss"] = self.bce_edges_train_loss
+            data["bce_edges_val_loss"]   = self.bce_edges_val_loss
 
-        data["pv_train_acc"] = self.train_pv_acc
-        data["pv_val_acc"] = self.val_pv_acc
-        data["pv_node_train_acc"] = self.train_node_pv_acc
-        data["pv_node_val_acc"] = self.val_node_pv_acc
         data["pv_train_loss"] = self.bce_pvs_train_loss
-        data["pv_val_loss"] = self.bce_pvs_val_loss
+        data["pv_val_loss"]   = self.bce_pvs_val_loss
+        
+        data["pv_train_acc"]      = self.train_pv_acc
+        data["pv_val_acc"]        = self.val_pv_acc
+        data["pv_node_train_acc"] = self.train_node_pv_acc
+        data["pv_node_val_acc"]   = self.val_node_pv_acc
+        # save associated errors
+        data["pv_train_acc_err"]      = self.train_pv_acc_err
+        data["pv_val_acc_err"]        = self.val_pv_acc_err
+        data["pv_node_train_acc_err"] = self.train_node_pv_acc_err
+        data["pv_node_val_acc_err"]   = self.val_node_pv_acc_err
+        
         df = pd.DataFrame( data)
+        df.fillna(0, inplace=True)
         df.to_csv(file_name)
         return df

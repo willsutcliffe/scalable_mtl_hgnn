@@ -109,8 +109,13 @@ dropped_lr_epochs = config_loader.get('training.dropped_lr_epochs')
 # Run training loop with nominal learning rate
 print(f"Running {epochs} epochs with learning rate {learning_rate}")
 save_checkpoint = config_loader.get('training.save_checkpoint')
-trainer.train(epochs = epochs, learning_rate = learning_rate,
+
+if config_loader.get("training.train"):
+    print("Training model")
+    trainer.train(epochs = epochs, learning_rate = learning_rate,
               starting_epoch=trainer.epoch_warmstart, save_checkpoint=save_checkpoint, checkpoint_path=checkpoint_path)
+else:
+    print("Training skipped.")
 
 
 # Drop learning rate and continue for dropped_lr_epochs

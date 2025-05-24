@@ -19,10 +19,11 @@ loss:
   beta_node_bce : 0.2
   beta_pv_bce : 0.2
 dataset:
+  event_type: 1
   data_type: "heterogeneous"
   data_dir: /user/gr1/lhcb/scapelli/DFEI/lhcbdfei/data_handling/input_formatting/run3_90k_magup
-  evt_max_train: 1500
-  evt_max_val: 100
+  evt_max_train: 15000
+  evt_max_val: 1000
 training:
   train: True
   starting_learning_rate: 0.001
