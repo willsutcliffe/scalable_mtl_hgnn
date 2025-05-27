@@ -4,6 +4,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from collections import defaultdict
+import gc
 
 import torch
 from torch import nn
@@ -66,7 +67,7 @@ class HGNNLightningModule(L.LightningModule):
 
         """Passing to the model"""
         outputs = self.model(batch)
-        print(torch.cuda.memory_allocated() / (1024 ** 2) )
+        # print(torch.cuda.memory_allocated() / (1024 ** 2) )
         # print(torch.cuda.memory_summary())
 
         """Getting the loss"""
@@ -117,13 +118,11 @@ class HGNNLightningModule(L.LightningModule):
         return loss
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
-        import gc
         del outputs  # if not needed later
         gc.collect()
         torch.cuda.empty_cache()
 
     def on_validation_batch_end(self, outputs, batch, batch_idx, dataloader_idx=0):
-        import gc
         del outputs
         gc.collect()
         torch.cuda.empty_cache()
@@ -142,8 +141,17 @@ class HGNNLightningModule(L.LightningModule):
 
 
 # Here is a trainer wrapper
-def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulate_grad_batches=2):
-    module = HGNNLightningModule(
+def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulate_grad_batches=2, checkpoint_path=None):
+    if checkpoint_path is None:
+        module = HGNNLightningModule(
+            model=model,
+            pos_weights=pos_weight,
+            optimizer_class=torch.optim.Adam,
+            optimizer_params={"lr": 1e-3}
+        )
+    else:
+        module = HGNNLightningModule.load_from_checkpoint(
+        checkpoint_path=checkpoint_path,
         model=model,
         pos_weights=pos_weight,
         optimizer_class=torch.optim.Adam,
@@ -177,7 +185,8 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulat
         callbacks=[early_stopping, best_model_callback, all_epochs_callback],
         precision="32",  # never do 16-mixed
         gradient_clip_val=1.0,
-        accumulate_grad_batches=accumulate_grad_batches
+        accumulate_grad_batches=accumulate_grad_batches,
+        num_sanity_val_steps=0
     )
 
     """Start training"""
