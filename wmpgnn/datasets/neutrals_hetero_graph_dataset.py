@@ -195,7 +195,8 @@ class CustomNeutralsHeteroDataset(Dataset):
                 joined = pd.merge(cross, all_ef, on='pair', how='left')
 
                 # Aggregate per neutral-charged pair
-                agg = joined.groupby(['neutral_key','decay_id'])[['DOCA','theta','trdist','label']]
+                # agg = joined.groupby(['neutral_key','decay_id'])[['DOCA','theta','trdist','label']]
+                agg = joined.groupby(['neutral_key','decay_id'])[['theta','label']]
                 agg = agg.mean().reset_index()
 
                 # Build edge index & attributes
@@ -210,9 +211,9 @@ class CustomNeutralsHeteroDataset(Dataset):
                     cvals[:,0],cvals[:,1],
                     torch.abs(cvals[:,0]-nvals[:,0]),
                     torch.abs(cvals[:,1]-nvals[:,1]),
-                    torch.tensor(agg['DOCA'].values),
+                    # torch.tensor(agg['DOCA'].values),
                     torch.tensor(agg['theta'].values),
-                    torch.tensor(agg['trdist'].values)
+                    # torch.tensor(agg['trdist'].values)
                 ], dim=1)
                 edge_labels = torch.tensor(agg['label'].values, dtype=torch.float).unsqueeze(-1)
 
