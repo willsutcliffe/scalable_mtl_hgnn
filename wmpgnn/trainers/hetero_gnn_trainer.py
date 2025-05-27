@@ -7,10 +7,45 @@ import numpy as np
 import pandas as pd
 
 class HeteroGNNTrainer(Trainer):
-    """ Class for training """
+    """
+    Trainer for heterogeneous GNNs with multi-task objectives:
+      - Four-class edge classification (LCA task)
+      - Binary edge/node auxiliary losses
+      - Optional track-to-primary vertex (PV) association
 
+    Inherits from:
+        Trainer: abstract base class for training loops.
+
+    Attributes:
+        optimizer: Adam optimizer on model parameters.
+        criterion: CrossEntropyLoss for LCA task.
+        criterion_bce_edges: BCE or BCEWithLogitsLoss for edges.
+        criterion_bce_nodes: BCE or BCEWithLogitsLoss for nodes.
+        criterion_pvs: BCE or BCEWithLogitsLoss for PV task.
+        use_logits: Whether to expect logits for BCE tasks.
+        beta_bce_edges, beta_bce_nodes, beta_bce_pvs (float): Scaling factors.
+        add_bce, add_pv, no_lca_task (bool): Task flags.
+        train_pv_acc, val_pv_acc: Lists of PV-edge accuracy per epoch.
+        ce_train_loss, ce_val_loss: CE loss histories.
+        bce_edges_train_loss, bce_edges_val_loss: Edge-BCE loss histories.
+        bce_nodes_train_loss, bce_nodes_val_loss: Node-BCE loss histories.
+        bce_pvs_train_loss, bce_pvs_val_loss: PV-BCE loss histories.
+    """
     def __init__(self, config, model, train_loader, val_loader, add_bce=True,
                  use_bce_pos_weight=False, add_pv = True, no_lca_task = False):
+        """
+        Initialize the HeteroGNNTrainer.
+
+        Args:
+            config (dict): Configuration dict (must include 'device').
+            model (nn.Module): Heterogeneous GNN model.
+            train_loader: DataLoader for training graphs.
+            val_loader: DataLoader for validation graphs.
+            add_bce (bool): Include BCE losses for edges/nodes.
+            use_bce_pos_weight (bool): Use positive-class weighting in BCEWithLogitsLoss.
+            add_pv (bool): Include PV association BCE loss.
+            no_lca_task (bool): If True, skip the four-class LCA loss.
+        """
         super().__init__(config, model, train_loader, val_loader)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
         weights = weight_four_class(self.train_loader, hetero=True)
@@ -63,15 +98,30 @@ class HeteroGNNTrainer(Trainer):
         self.no_lca_task = no_lca_task
 
     def set_beta_BCE_nodes(self, beta):
+        """Set scaling factor for node-level BCE loss."""
         self.beta_BCE_nodes = beta
 
     def set_beta_BCE_edges(self, beta):
+        """Set scaling factor for edge-level BCE loss."""
         self.beta_BCE_edges = beta
 
     def set_beta_BCE_pvs(self, beta):
+        """Set scaling factor for PV-association BCE loss."""
         self.beta_BCE_pvs= beta
 
     def eval_one_epoch(self, train=True):
+        """
+        Evaluate (and train) one epoch over graphs.
+
+        Args:
+            train (bool): If True, backprop and update; else eval only.
+
+        Returns:
+            last_loss (float): Average total loss from the final batch.
+            acc_per_class (Tensor[4]): Mean four-class edge accuracy.
+            pv_edge_acc (float): Mean PV-edge binary accuracy.
+            pv_node_acc (float): Mean PV-node binary accuracy.
+        """
         running_loss = 0.
         last_loss = 0.
         running_ce_loss = 0.
@@ -182,6 +232,14 @@ class HeteroGNNTrainer(Trainer):
             dim=0)
 
     def train(self, epochs=10, starting_epoch=0, learning_rate=0.001):
+        """
+        Full training loop over multiple epochs.
+
+        Args:
+            epochs (int): Total epochs to run.
+            starting_epoch (int): Epoch index to start from (for resuming).
+            learning_rate (float): Learning rate for Adam optimizer.
+        """
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         for epoch in range(starting_epoch, epochs):
             print(f"At epoch {epoch}")
@@ -205,6 +263,15 @@ class HeteroGNNTrainer(Trainer):
             print(f'Val pv edge Acc: {val_B_pv_acc}')
 
     def save_dataframe(self, file_name):
+        """
+        Save all recorded metrics to a CSV and return the DataFrame.
+
+        Columns:
+          - train_loss, val_loss
+          - train_acc_LCA{i}, val_acc_LCA{i} for i in 0..3
+          - If add_bce: ce_*, bce_edges_*, bce_nodes_*, bce_pvs_*
+          - pv_train_acc, pv_val_acc
+        """
         data =  {
             "train_loss":self.train_loss,
             "val_loss":self.val_loss,

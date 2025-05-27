@@ -8,6 +8,21 @@ import pandas as pd
 
 
 def positive_edge_weight(loader):
+    """
+    Compute the ratio of total edges to twice the number of positive edges.
+
+    This is useful as a pos_weight for BCE loss to counter class imbalance.
+
+    Args:
+        loader (Iterable): A PyTorch DataLoader or other iterator yielding
+            graph-batch objects with fields:
+              - data.edges: Tensor of shape [E, …]
+              - data.y:    Tensor of shape [E, C] where the 0th column
+                           indicates the “negative” class (y[:,0] == 0).
+
+    Returns:
+        float: (total number of edges) / (2 × number of positive edges).
+    """
     sum_edges = 0
     sum_pos = 0
     for data in loader:
@@ -16,11 +31,25 @@ def positive_edge_weight(loader):
     return sum_edges/(2*sum_pos)
 
 def positive_node_weight(loader):
+    """
+    Compute the ratio of total nodes to twice the number of “positive” nodes.
+
+    A node is considered “positive” if any of its incident edges (excluding
+    the background class at index 0) carry a positive label.
+
+    Args:
+        loader (Iterable): An iterator yielding graph-batch objects with:
+          - data.nodes:   Tensor of shape [N, …]
+          - data.y:       Tensor of shape [E, C]
+          - data.senders: LongTensor of shape [E] mapping edges to source nodes.
+
+    Returns:
+        float: (total number of nodes) / (2 × number of positive nodes).
+    """
     sum_nodes = 0
     sum_pos = 0
     for data in loader:
         num_nodes=data.nodes.shape[0]
-        #out = data.edges.new_zeros(num_nodes, 4)
         node_sum = scatter_add(data.y,data.senders,dim=0)
         ynodes = (1.*(torch.sum(node_sum[:,1:],1)>0)).unsqueeze(1)
         sum_nodes += num_nodes
@@ -29,9 +58,74 @@ def positive_node_weight(loader):
 
 
 class GNNTrainer(Trainer):
-    """ Class for training """
+    """
+    Trainer for graph-structured data leveraging both Cross-Entropy and
+    optional BCE losses on edges and nodes.
 
+    Inherits:
+        Trainer (abstract base class for epoch/train loop management).
+
+    Key Features:
+      - Four-class cross-entropy on edges.
+      - Optional BCE/BCEWithLogits weighting for edge/node imbalance.
+      - Tracks separate losses (CE, BCE-edges, BCE-nodes) for train & val.
+      - Per-epoch accuracy logging for four classes.
+
+    Args:
+        config (dict): Hyperparameter dict, must include:
+            - 'device':     'cuda' or 'cpu'
+            - (other keys as defined by base Trainer)
+        model (torch.nn.Module): GNN implementing a forward(data) → data
+            with updated `data.edges` logits/weights and `data.y`.
+        train_loader, val_loader (Iterable): DataLoaders yielding batched
+            graph objects with attributes:
+              - data.edges, data.nodes, data.y (edge labels), senders, receivers.
+        add_bce (bool, default=True): Include BCE edge/node losses.
+        use_bce_pos_weight (bool, default=False):
+            If True, use `positive_edge_weight` / `positive_node_weight`
+            to set `pos_weight` in `BCEWithLogitsLoss`; otherwise plain BCE.
+
+    Attributes:
+        optimizer:                Adam optimizer on `model.parameters()`.
+        criterion:                CrossEntropyLoss with class weights.
+        criterion_bce_edges:      BCE(BCEWithLogits) on edges.
+        criterion_bce_nodes:      BCE(BCEWithLogits) on nodes.
+        beta_bce_edges, beta_bce_nodes (float):
+                                  Scaling factors for BCE losses.
+        use_logits (bool):        True if using logits‐based BCEWithLogits.
+        add_bce (bool):           Whether to include BCE terms.
+        ce_train_loss, ce_val_loss,
+        bce_edges_train_loss, bce_edges_val_loss,
+        bce_nodes_train_loss, bce_nodes_val_loss (lists):
+                                  Loss histories.
+    """
     def __init__(self, config, model, train_loader, val_loader, add_bce=True, use_bce_pos_weight=False):
+        """
+        Initialize a GNNTrainer for graph‐structured learning with both
+        cross‐entropy and optional BCE losses.
+
+        Args:
+            config (dict):
+                A configuration dictionary. Must include at least:
+                  - 'device': str, either 'cuda' or 'cpu'
+                  - (other keys consumed by your model/trainer)
+            model (torch.nn.Module):
+                The GNN model instance. Must accept a BatchedData input
+                and return an output with updated `.edges`, `.nodes`, and `.y`.
+            train_loader (DataLoader):
+                Yields training graph batches with fields:
+                  - `.edges`, `.nodes`, `.y`, `.senders`, `.receivers`etc
+            val_loader (DataLoader):
+                Yields validation graph batches (same structure as train_loader).
+            add_bce (bool, default=True):
+                If True, include BCE (or BCEWithLogits) losses for
+                per-edge and per-node auxiliary supervision.
+            use_bce_pos_weight (bool, default=False):
+                If True, compute `pos_weight` from training data imbalance
+                (via `positive_edge_weight` / `positive_node_weight`) and
+                use `BCEWithLogitsLoss`. Otherwise use unweighted `BCELoss`.
+
+        """
         super().__init__(config, model, train_loader, val_loader)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
         weights = weight_four_class(self.train_loader)
@@ -69,12 +163,26 @@ class GNNTrainer(Trainer):
         self.bce_edges_val_loss = []
 
     def set_beta_bce_nodes(self, beta):
+        """Adjust weight of node-level BCE loss."""
         self.beta_bce_nodes = beta
 
     def set_beta_bce_edges(self, beta):
+        """Adjust weight of edge-level BCE loss."""
         self.beta_BCE_edges = beta
 
     def eval_one_epoch(self, train=True):
+        """
+        Run one epoch of forward (and backward if training).
+
+        - Computes CE loss on per-edge four-class logits.
+        - Optionally computes BCE/BCEWithLogits on per-edge weights and
+          per-node weights from each GNN block.
+        - Aggregates per-batch four-class accuracy via `acc_four_class`.
+
+        Returns:
+            last_loss (float): Average total loss of the last batch.
+            class_acc (Tensor[4]): Mean accuracy for each of four classes.
+        """
         running_loss = 0.
         running_ce_loss = 0.
         running_bce_edge_loss = 0.
@@ -153,6 +261,14 @@ class GNNTrainer(Trainer):
         return last_loss, acc_one_epoch.nanmean(dim=0)
 
     def train(self, epochs=10, starting_epoch=0, learning_rate=0.001):
+        """
+        Full training loop.
+
+        Args:
+            epochs (int): Total number of epochs to run (upper bound).
+            starting_epoch (int): Initial epoch index (for resume).
+            learning_rate (float): Learning rate for Adam optimizer.
+        """
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         for epoch in range(starting_epoch, epochs):
             print(f"At epoch {epoch}")
@@ -170,6 +286,19 @@ class GNNTrainer(Trainer):
             print(f'Val Acc: {val_acc}')
 
     def save_dataframe(self, file_name):
+        """
+        Export all tracked metrics to CSV and return the DataFrame.
+
+        Columns include:
+          - train_loss, val_loss
+          - train_acc_LCA{i}, val_acc_LCA{i} for i in 0..3
+          - (if add_bce) ce_train_loss, ce_val_loss,
+                        bce_edges_train_loss, bce_edges_val_loss,
+                        bce_nodes_train_loss, bce_nodes_val_loss
+
+        Returns:
+            pandas.DataFrame: Containing all history columns.
+        """
         data =  {
             "train_loss":self.train_loss,
             "val_loss":self.val_loss,

@@ -2,6 +2,21 @@ import torch
 from torch_scatter import scatter_add
 
 def hetero_positive_edge_weight(loader):
+    """
+    Computes the positive class weighting factor for edges in a heterogeneous graph
+    for binary classification (positive class = label 0).
+
+    Parameters
+    ----------
+    loader : DataLoader
+        A DataLoader yielding heterogeneous graphs with edge attributes
+        `y` for edge labels under key ('tracks', 'to', 'tracks').
+
+    Returns
+    -------
+    float
+        The ratio `total_edges / (2 * num_positive_edges)`, used for loss weighting.
+    """
     sum_edges = 0
     sum_pos = 0
     for data in loader:
@@ -10,11 +25,25 @@ def hetero_positive_edge_weight(loader):
     return sum_edges/(2*sum_pos)
 
 def hetero_positive_node_weight(loader):
+    """
+    Computes the positive class weighting factor for nodes in a heterogeneous graph.
+    A node is considered positive if any incoming edge has a positive label (nonzero).
+
+    Parameters
+    ----------
+    loader : DataLoader
+        A DataLoader yielding heterogeneous graphs with edge labels `y` and
+        edge_index under key ('tracks', 'to', 'tracks').
+
+    Returns
+    -------
+    float
+        The ratio `total_nodes / (2 * num_positive_nodes)`, used for loss weighting.
+    """
     sum_nodes = 0
     sum_pos = 0
     for data in loader:
         num_nodes=data['tracks'].x.shape[0]
-        #out = data.edges.new_zeros(num_nodes, 4)
         node_sum = scatter_add(data[('tracks','to','tracks')].y, data[('tracks','to','tracks')].edge_index[0],dim=0)
         ynodes = (1.*(torch.sum(node_sum[:,1:],1)>0)).unsqueeze(1)
         sum_nodes += num_nodes
@@ -23,6 +52,20 @@ def hetero_positive_node_weight(loader):
 
 
 def positive_edge_weight(loader):
+    """
+    Computes the positive class weighting factor for edges in a homogeneous graph
+    for binary classification (positive class = label 0).
+
+    Parameters
+    ----------
+    loader : DataLoader
+        A DataLoader yielding graphs with edge labels `y`.
+
+    Returns
+    -------
+    float
+        The ratio `total_edges / (2 * num_positive_edges)`, used for loss weighting.
+    """
     sum_edges = 0
     sum_pos = 0
     for data in loader:
@@ -31,11 +74,25 @@ def positive_edge_weight(loader):
     return sum_edges/(2*sum_pos)
 
 def positive_node_weight(loader):
+    """
+    Computes the positive class weighting factor for nodes in a homogeneous graph.
+    A node is considered positive if any of its incoming edges are positive
+    (nonzero labels).
+
+    Parameters
+    ----------
+    loader : DataLoader
+        A DataLoader yielding graphs with node features and edge labels `y`.
+
+    Returns
+    -------
+    float
+        The ratio `total_nodes / (2 * num_positive_nodes)`, used for loss weighting.
+    """
     sum_nodes = 0
     sum_pos = 0
     for data in loader:
         num_nodes=data.nodes.shape[0]
-        #out = data.edges.new_zeros(num_nodes, 4)
         node_sum = scatter_add(data.y,data.senders,dim=0)
         ynodes = (1.*(torch.sum(node_sum[:,1:],1)>0)).unsqueeze(1)
         sum_nodes += num_nodes
@@ -44,7 +101,21 @@ def positive_node_weight(loader):
 
 
 def acc_four_class(pred, label):
-    #     print("pred", pred)
+    """
+    Computes the per-class accuracy for a 4-class classification task.
+
+    Parameters
+    ----------
+    pred : torch.Tensor
+        The predicted logits or probabilities, shape [N, 4].
+    label : torch.Tensor
+        The true class labels, shape [N].
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor of shape [4] containing the accuracy for each class.
+    """
     correct = 0
     correct_class1 = 0
     correct_class2 = 0
@@ -52,8 +123,7 @@ def acc_four_class(pred, label):
     correct_class4 = 0
 
     pred_argmax = torch.argmax(pred, dim=1)
-    #     print("pred_argmax ", pred_argmax)
-    #     label_argmax = torch.argmax(data.y,dim=1)
+
 
     pred_class1 = (pred_argmax == 0).sum()
     pred_class2 = (pred_argmax == 1).sum()
@@ -85,6 +155,22 @@ def acc_four_class(pred, label):
 
 
 def weight_four_class(dataset,hetero=False):
+    """
+    Computes inverse-frequency class weights for a 4-class classification task.
+
+    Parameters
+    ----------
+    dataset : iterable
+        A dataset of graph objects with multi-class labels.
+    hetero : bool, optional
+        If True, assumes heterogeneous graph format and accesses labels via
+        `('tracks', 'to', 'tracks')`.
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor of shape [4] containing the class weights.
+    """
     true_class1 = 0
     true_class2 = 0
     true_class3 = 0
@@ -113,6 +199,15 @@ def weight_four_class(dataset,hetero=False):
     return weight
 
 def init_plot_style():
+    """
+    Initializes and returns a dictionary of matplotlib RC parameters for
+    producing clean, publication-quality plots.
+
+    Returns
+    -------
+    dict
+        Dictionary of matplotlib style parameters.
+    """
     my_rc_params = {
         "xtick.direction": "in",
         "xtick.major.size": 8.0,
