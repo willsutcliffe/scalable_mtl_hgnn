@@ -44,7 +44,7 @@ pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -
 
 #### Other dependencies
 ```bash
-pip install scikit-learn dm-tree torch_geometric==2.6.1 uncertainties numpy pandas matplotlib mplhep
+pip install scikit-learn dm-tree torch_geometric==2.6.1 uncertainties numpy pandas matplotlib mplhep pyyaml
 ```
 
 The list of required packages are avalaible in the file `environment.yml` 
@@ -82,6 +82,13 @@ python -m scripts.train neutrals_hgnn_run3.yaml
 ```
 
 All outputs files and figures can be found in `./weighterd_MP_gnn/outputs/`
+
+#### Remark  
+You need GPUs to run the framework in this state. On lxplus, you can access some GPU nodes with :
+```bash
+ssh <your_user_name>@lxplus-gpu.cern.ch
+```
+
 
 
 

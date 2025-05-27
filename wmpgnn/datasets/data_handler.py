@@ -3,7 +3,11 @@ from wmpgnn.datasets.hetero_graph_dataset import CustomHeteroDataset
 from wmpgnn.datasets.neutrals_hetero_graph_dataset import CustomNeutralsHeteroDataset
 from torch_geometric.loader import DataLoader
 import glob
+import re
 
+def natural_sort_key(s):
+    """ Sort strings using a human-friendly key (e.g., input_2.npy before input_10.npy) """
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 class DataHandler:
     """ Class which loads data using an appropriate
@@ -20,12 +24,12 @@ class DataHandler:
         data_path = self.config_loader.get("dataset.data_dir")
         data_type = self.config_loader.get("dataset.data_type")
         self.batch_size =  self.config_loader.get("training.batch_size")
-        files_input_tr = glob.glob(f'{data_path}/training_dataset/input_*')[:evt_max_train]
-        files_target_tr = glob.glob(f'{data_path}/training_dataset/target_*')[:evt_max_train]
-        files_input_vl = glob.glob(f'{data_path}/validation_dataset/input_*')[:evt_max_val]
-        files_target_vl = glob.glob(f'{data_path}/validation_dataset/target_*')[:evt_max_val]
-        files_input_tst = glob.glob(f'{data_path}/test_dataset/input_*')
-        files_target_tst = glob.glob(f'{data_path}/test_dataset/target_*')
+        files_input_tr = sorted(glob.glob(f'{data_path}/training_dataset/input_*'), key=natural_sort_key)[:evt_max_train]
+        files_target_tr = sorted(glob.glob(f'{data_path}/training_dataset/target_*'), key=natural_sort_key)[:evt_max_train]
+        files_input_vl = sorted(glob.glob(f'{data_path}/validation_dataset/input_*'), key=natural_sort_key)[:evt_max_val]
+        files_target_vl = sorted(glob.glob(f'{data_path}/validation_dataset/target_*'), key=natural_sort_key)[:evt_max_val]
+        files_input_tst = sorted(glob.glob(f'{data_path}/test_dataset/input_*'), key=natural_sort_key)
+        files_target_tst = sorted(glob.glob(f'{data_path}/test_dataset/target_*'), key=natural_sort_key)
         if data_type == "homogeneous":
             LCA_classes = self.config_loader.get('model.LCA_classes')
             self.train_dataset = CustomDataset(files_input_tr, files_target_tr, performance_mode=performance_mode, n_classes=LCA_classes)
