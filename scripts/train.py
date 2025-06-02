@@ -96,7 +96,7 @@ trainer.train(epochs = epochs, learning_rate = learning_rate,
 
 if dropped_lr_epochs > 0:
     print(f"Running {dropped_lr_epochs} epochs with learning rate {learning_rate/10}")
-    trainer.train(epochs=epochs+dropped_lr_epochs, starting_epoch=epochs,learning_rate=learning_rate/10)
+    trainer.train(epochs=epochs+dropped_lr_epochs, starting_epoch=epochs, learning_rate=learning_rate/10)
 
 print(f"Training finished. Saving model in {model_file}")
 trainer.save_model(output_folder+model_file, save_config=True)

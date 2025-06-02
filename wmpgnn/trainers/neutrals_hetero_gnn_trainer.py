@@ -120,10 +120,17 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
         if train == True:
             data_loader = self.train_loader
+            self.model.train()
+            torch.set_grad_enabled(True)
         else:
             data_loader = self.val_loader
+            self.model.eval()
+            torch.set_grad_enabled(False)
+
         last_batch = len(data_loader)
         # print(last_batch)
+
+        # with torch.no_grad():
         for i, data in enumerate(data_loader):
             # Zero gradients if training
             if train:
@@ -133,8 +140,6 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             # Forward pass through the model
             outputs = self.model(data)
             data = outputs
-
-            # TODO try add edges between neutrals
 
             # --- Edge classification loss for chargedtree -> neutrals ---
             # True labels: 0 = background, 1 = signal
@@ -152,29 +157,10 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             edge_probs = torch.sigmoid(
                 outputs[('chargedtree', 'to', 'neutrals')].edges
             )[:,0]
-
-
-            ### [DEBUG]
-            # pred=edge_probs
-            # print(f"Mean prediction {pred.float().mean()}")
-            # print(f"Median prediction {pred.float().median()}")
-            # print(f"Max prediction {pred.max()}")
-            # print(f"Min prediction {pred.min()}")
-
-
-
+            edge_probs = edge_probs.detach().cpu()
             # Boolean mask of predicted positive edges
             pred_positive = edge_probs > self.threshold
-            label_edges = label_edges.squeeze() # transforms from [N,1] to [N]
-            ### [DEBUG]
-            # print(f"Total elements: {len(pred_positive)}")
-            # print(f"Predicted as 1: {pred_positive.sum().item()}")
-            # print(f"Predicted as 0: {(~pred_positive).sum().item()}")
-            # print(f"True positive: {(pred_positive & label_edges.bool()).sum().item()}")
-            # print(f"False positive: {(pred_positive & ~label_edges.bool()).sum().item()}")
-            # print(f"False negative: {(~pred_positive & label_edges.bool()).sum().item()}")
-            # print(f"True negative: {(~pred_positive & ~label_edges.bool()).sum().item()}")
-
+            label_edges = label_edges.squeeze().detach().cpu() # transforms from [N,1] to [N]
 
             edge_index = data[('chargedtree', 'to', 'neutrals')].edge_index
 
@@ -193,12 +179,6 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             )
             # Build node-level labels: signal if count > 0, else background
             label_neutrals = (sig_count > 0).long()
-
-            # Optionally: node classification loss on neutrals
-            # Uncomment if training a node-level branch
-            # logits_neutrals = outputs[('neutrals', 'node_pred')]
-            # loss_node = self.criterion_nodes(logits_neutrals, label_neutrals)
-            # loss += loss_node
 
             ## Compute additional losses and metrics for the new edge type
             for block in self.model._blocks:
@@ -231,7 +211,8 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             preds_one_epoch.append(edge_probs)
             labels_one_epoch.append(label_edges)
 
-            if train:
+            # For training only
+            if train :
                 loss.backward()
                 self.optimizer.step()
 
@@ -250,8 +231,16 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             epoch_preds  = torch.cat(preds_one_epoch, dim=0)  # shape [total_edges_in_epoch]
             epoch_labels = torch.cat(labels_one_epoch, dim=0) # même shape
         else:
-            epoch_preds  = torch.tensor([], device='cuda')
-            epoch_labels = torch.tensor([], device='cuda')
+            # epoch_preds  = torch.tensor([], device='cuda')
+            # epoch_labels = torch.tensor([], device='cuda')
+            epoch_preds  = torch.tensor([], dtype=torch.float32)
+            epoch_labels = torch.tensor([], dtype=torch.long)
+
+        preds_one_epoch.clear()
+        labels_one_epoch.clear()
+        del data
+        del outputs
+        torch.cuda.empty_cache()
 
         if train:
             self.ce_train_loss.append(running_ce_loss / last_batch)
