@@ -164,21 +164,21 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
             edge_index = data[('chargedtree', 'to', 'neutrals')].edge_index
 
-            # --- Aggregate per neutral node: mark neutral as signal if any connecting edge is positive ---
-            num_neutrals = data['neutrals'].num_nodes
-            # For each edge, map to target neutral index
-            neutral_targets = edge_index[1]
-            # Create tensor of zeros for accumulative signal counts
-            sig_count = pred_positive.new_zeros(num_neutrals, dtype=torch.long)
-            # Scatter add boolean mask (converted to long) to count positives per neutral
-            sig_count = scatter_add(
-                pred_positive.long(),  # 1 for positive, 0 otherwise
-                neutral_targets,       # index per edge
-                dim=0,
-                out=sig_count
-            )
-            # Build node-level labels: signal if count > 0, else background
-            label_neutrals = (sig_count > 0).long()
+            # # --- Aggregate per neutral node: mark neutral as signal if any connecting edge is positive ---
+            # num_neutrals = data['neutrals'].num_nodes
+            # # For each edge, map to target neutral index
+            # neutral_targets = edge_index[1].detach().cpu()
+            # # Create tensor of zeros for accumulative signal counts
+            # sig_count = pred_positive.new_zeros(num_neutrals, dtype=torch.long)
+            # # Scatter add boolean mask (converted to long) to count positives per neutral
+            # sig_count = scatter_add(
+            #     pred_positive.long(),  # 1 for positive, 0 otherwise
+            #     neutral_targets,       # index per edge
+            #     dim=0,
+            #     out=sig_count
+            # )
+            # # Build node-level labels: signal if count > 0, else background
+            # label_neutrals = (sig_count > 0).long()
 
             ## Compute additional losses and metrics for the new edge type
             for block in self.model._blocks:
