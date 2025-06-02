@@ -88,6 +88,29 @@ def node_pruning(node_indices, graph, node_type, edge_types, device = "cuda"):
         edge_node_indices[edge_type] = edge_index
     return edge_node_indices
 
+
+def faster_node_pruning(node_indices, graph, node_type, edge_types, device="cuda"):
+    # Precompute a boolean mask for valid nodes.
+    num_nodes = graph[node_type].x.shape[0]
+    valid_mask = torch.zeros(num_nodes, dtype=torch.bool, device=device)
+    valid_mask[node_indices] = True
+
+    edge_node_indices = {}
+    for edge_type in edge_types:
+        if edge_type[0] == node_type and edge_type[1] == node_type:
+            # Use the valid mask directly for both source and target.
+            mask = valid_mask[graph[edge_type].edge_index[0]] & valid_mask[graph[edge_type].edge_index[1]]
+        elif edge_type[0] == node_type:
+            mask = valid_mask[graph[edge_type].edge_index[0]]
+        else:
+            mask = valid_mask[graph[edge_type].edge_index[1]]
+
+        graph[edge_type].edge_index = graph[edge_type].edge_index[:, mask]
+        graph[edge_type].edges = graph[edge_type].edges[mask, :]
+        graph[edge_type].y = graph[edge_type].y[mask]
+        edge_node_indices[edge_type] = mask
+    return edge_node_indices
+
 class HeteroGraphNetwork(AbstractModule):
     """
     Heterogeneous graph neural network that performs edge, node, and optional global updates,
@@ -233,9 +256,8 @@ class HeteroGraphNetwork(AbstractModule):
         if self.edge_prune:
             for edge_type in self.edge_types:
                 if edge_type == ('tracks', 'to', 'tracks'):
-                    edge_indices = self.edge_weights[edge_type] > self.edge_weight_cut
-                    edge_indices = torch.arange(0, node_input[edge_type].edges.shape[0]).to(self.device)[
-                        edge_indices.flatten()]
+                    mask = self.edge_weights[edge_type] > self.edge_weight_cut
+                    edge_indices = torch.nonzero(mask, as_tuple=True)[0]
                     self.edge_indices[edge_type] = edge_indices
                     self.edge_weights[edge_type] = self.edge_weights[edge_type][edge_indices, :]
                     edge_pruning(edge_indices, node_input, edge_type)
@@ -252,10 +274,10 @@ class HeteroGraphNetwork(AbstractModule):
         if self.node_prune:
             for node_type in self.node_types:
                 if node_type == "tracks":
-                    node_indices = self.node_weights[node_type] > self.node_weight_cut
-                    node_indices = torch.arange(0, graph[node_type].x.shape[0]).to(self.device)[node_indices.flatten()]
+                    mask = self.node_weights[node_type] > self.node_weight_cut
+                    node_indices = torch.nonzero(mask, as_tuple=True)[0]
                     self.node_indices[node_type] = node_indices
-                    edge_index = node_pruning(node_indices, global_input, node_type,
+                    edge_index = faster_node_pruning(node_indices, global_input, node_type,
                                               [('tracks', 'to', 'tracks')],
                                               device = self.device)
                     self.edge_node_pruning_indices[node_type] = edge_index

@@ -235,8 +235,8 @@ class GraphNetwork(AbstractModule):
 
         if self.edge_prune:
             if self.prune_by_cut:
-                edge_indices = self.edge_weights > self.edge_weight_cut
-                edge_indices = torch.arange(0, graph.edges.shape[0]).to(self.device)[edge_indices.flatten()]
+                mask = self.edge_weights > self.edge_weight_cut
+                edge_indices = torch.nonzero(mask, as_tuple=True)[0]
             else:
                 out = self.select(self.edge_weights, node_input.receivers)
                 edge_indices = out.node_index
@@ -253,8 +253,8 @@ class GraphNetwork(AbstractModule):
 
         if self.node_prune:
             if self.prune_by_cut:
-                node_indices = self.node_weights > self.node_weight_cut
-                node_indices = torch.arange(0, graph.nodes.shape[0]).to(self.device)[node_indices.flatten()]
+                mask = self.node_weights > self.node_weight_cut
+                node_indices = torch.nonzero(mask, as_tuple=True)[0]
             else:
                 out = self.select_nodes(self.node_weights, global_input.batch)
                 node_indices = out.node_index

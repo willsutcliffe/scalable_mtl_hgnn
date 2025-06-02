@@ -20,3 +20,7 @@ torch_spline_conv
 dm-tree
 scikit-learn
 matplotlib
+PyYAML
+pandas
+numpy
+particle

@@ -150,10 +150,9 @@ class GNNTrainer(Trainer):
         self.model.cuda()
 
         self.add_bce = add_bce
-        #self.beta_bce_nodes = 3.1
-        #self.beta_bce_edges =  33.2256
-        self.beta_bce_nodes = 1
-        self.beta_bce_edges = 1
+        self.beta_bce_nodes = 3.1
+        self.beta_bce_edges =  33.2256
+
 
         self.ce_train_loss = []
         self.ce_val_loss = []

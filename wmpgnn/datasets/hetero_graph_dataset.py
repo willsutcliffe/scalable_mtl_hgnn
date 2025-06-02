@@ -5,49 +5,148 @@ from torch_geometric.data import HeteroData
 
 
 def find_row_indices(t1, t2):
-    # Expand t1 and t2 to compare every row in t1 with every row in t2
-    t1_expanded = t1.unsqueeze(1)  # Shape (n1, 1, cols)
-    t2_expanded = t2.unsqueeze(0)  # Shape (1, n2, cols)
+    """
+    Find matching row indices between two tensors and return one-hot encoded results.
 
-    # Check for equality along the last dimension
-    matches = (t1_expanded == t2_expanded).all(dim=2)  # Shape (n1, n2)
+    This function finds which rows in t2 match each row in t1, returning both the
+    indices and a one-hot encoded representation. Used for matching tracks to
+    reconstructed primary vertices.
 
-    # Convert matches to an appropriate type for argmax
-    matches_int = matches.int()  # Convert to int
+    Args:
+        t1 (torch.Tensor): First tensor to match (e.g., true PV coordinates)
+        t2 (torch.Tensor): Second tensor to match against (e.g., reconstructed PVs)
 
-    # Find the indices in t2 for each row in t1
+    Returns:
+        tuple: A tuple containing:
+            - indices (torch.Tensor): Index of matching row in t2 for each row in t1,
+                                    or -1 if no match found
+            - one_hot_encoded (torch.Tensor): One-hot encoded representation of the matches
+    """
+    t1_expanded = t1.unsqueeze(1)
+    t2_expanded = t2.unsqueeze(0)
+
+    matches = (t1_expanded == t2_expanded).all(dim=2)
+
+    matches_int = matches.int()
+
     indices = torch.argmax(matches_int, dim=1)
 
-    # Verify matches exist (if no match, indices would be arbitrary)
     valid = matches.any(dim=1)
-    indices[~valid] = -1  # Set unmatched rows to -1
-    indice = torch.tensor([1, 0, 2])
+    indices[~valid] = -1
 
-    # Number of classes (largest value in the tensor + 1)
+
     num_classes = t2.shape[0]
 
-    # One-hot encoding
     one_hot_encoded = torch.nn.functional.one_hot(indices, num_classes=num_classes)
 
     return indices, one_hot_encoded
 
 class CustomHeteroDataset(Dataset):
+    """
+    A custom PyTorch dataset for loading heterogeneous graph data for particle physics applications.
+
+    This dataset processes particle tracking data by creating heterogeneous graphs with multiple
+    node types (tracks, primary vertices, globals) and edge types. It handles track-to-track
+    relationships and track-to-primary-vertex associations, computing impact parameters and
+    creating bipartite connections between tracks and reconstructed primary vertices.
+
+    The dataset is designed for particle physics vertex reconstruction tasks using heterogeneous
+    Graph Neural Networks with PyTorch Geometric.
+
+    Attributes:
+        filenames_input (list): List of file paths for input graph data
+        filenames_target (list): List of file paths for target/label data
+        performance_mode (bool): Whether to include additional performance evaluation data
+    """
     def __init__(self, filenames_input, filenames_target, performance_mode=False):
+        """
+        Initialize the CustomHeteroDataset.
+
+        Args:
+            filenames_input (list): List of file paths to input graph data (.npy files)
+            filenames_target (list): List of file paths to target/label data (.npy files)
+            performance_mode (bool, optional): If True, includes additional data for
+                                             performance evaluation and analysis. Defaults to False.
+        """
         self.filenames_input = filenames_input
         self.filenames_target = filenames_target
         self.performance_mode = performance_mode
 
-    # No. of graphs
+
     def __len__(self):
+        """
+        Get the number of samples in the dataset.
+
+        Returns:
+            int: Number of target files (dataset size)
+        """
         return len(self.filenames_target)
 
     def len(self):
+        """
+        Alternative method to get dataset length (PyTorch Geometric compatibility).
+
+        Returns:
+            int: Number of target files (dataset size)
+        """
         return len(self.filenames_target)
 
     def update(self, **kwargs):
+        """
+        Update dataset attributes with provided keyword arguments.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments to update instance attributes
+        """
         self.__dict__.update(kwargs)
 
     def get(self):
+        """
+        Load and process all heterogeneous graph data from files.
+
+        This method creates heterogeneous graphs with three node types:
+        - 'tracks': Particle tracks with position, momentum, and additional features
+        - 'pvs': Reconstructed primary vertices
+        - 'globals': Global event-level features
+
+        And two edge types:
+        - ('tracks', 'pvs'): Bipartite connections between tracks and primary vertices
+        - ('tracks', 'tracks'): Track-to-track relationships
+
+        The method computes impact parameters for track-PV associations and creates
+        one-hot encoded labels for track-PV matching.
+
+        Returns:
+            list: List of PyTorch Geometric HeteroData objects containing:
+
+            Node types and features:
+                - data['tracks'].x: Track features [position(3), momentum(3), additional(1)]
+                - data['pvs'].x: Primary vertex coordinates [x, y, z]
+                - data['globals'].x: Global features + number of PVs
+
+            Edge types and features:
+                - data['tracks', 'pvs'].edge_index: Bipartite track-PV connections
+                - data['tracks', 'pvs'].y: One-hot encoded track-PV associations
+                - data['tracks', 'pvs'].edges: Impact parameters between tracks and PVs
+                - data['tracks', 'tracks'].edge_index: Track-to-track connections
+                - data['tracks', 'tracks'].y: Track-track edge labels
+                - data['tracks', 'tracks'].edges: Track-track edge features
+
+        Additional fields when performance_mode=True:
+                - final_keys: Node key mappings
+                - moth_ids, part_ids: Particle identification
+                - lca_chain: Lowest common ancestor chain
+                - truth_*: Ground truth connectivity and labels
+                - true_origin: True origin information
+                - truth_reco_pv: True reconstructed primary vertex coordinates
+
+        Note:
+            - Performs node remapping for contiguous track indexing
+            - Computes impact parameters using 3D distance formula
+            - Handles NaN values in impact parameter calculations
+            - Creates Cartesian product for all track-PV combinations
+            - Extracts unique reconstructed primary vertices from track data
+        """
         data_set = []
         C = 0
         j = 0
@@ -68,11 +167,12 @@ class CustomHeteroDataset(Dataset):
             new_nodes = torch.from_numpy(new_nodes)
             new_edges = torch.from_numpy(new_edges)
 
-            recoPVs = torch.unique(new_nodes[:, 10:13], dim=0)
+
+            recoPVs = torch.unique(new_nodes[:, -3:], dim=0)
             nPVs = recoPVs.shape[0]
-           # nodes_PVs = new_nodes[:, -10:-7]
-            true_nodes_PVs = new_nodes[:, 10:13]
-            # print(torch.sum(torch.sum(nodes_PVs == true_nodes_PVs,dim=-1)==3)/nodes_PVs.shape[0])
+
+            true_nodes_PVs = new_nodes[:, -3:]
+
             y, y_one_hot = find_row_indices(true_nodes_PVs, recoPVs)
 
             xyz = new_nodes[:, :3]
@@ -89,7 +189,11 @@ class CustomHeteroDataset(Dataset):
 
             permutations = torch.cartesian_prod(torch.arange(true_nodes_PVs.shape[0]), torch.arange(recoPVs.shape[0]))
             data = HeteroData()
+
+
+            truth_reco_pv = new_nodes[:, -3:]
             new_nodes = torch.hstack([new_nodes[:, :6], new_nodes[:, 9:10]])
+
             data['tracks'].x = new_nodes
 
             data['pvs'].x = recoPVs
@@ -106,12 +210,6 @@ class CustomHeteroDataset(Dataset):
             data['tracks', 'tracks'].edges = new_edges
 
             if self.performance_mode:
-                data['init_senders'] = torch.from_numpy(graph["init_y"]["senders"]).long()
-                data['init_receivers'] = torch.from_numpy(graph["init_y"]["receivers"]).long()
-                data['init_y'] = torch.from_numpy(graph["init_y"]["edges"])
-                data['init_keys'] = torch.from_numpy(graph["init_keys"])
-                data['init_moth_ids'] = torch.from_numpy(graph["init_ids"])
-                data['init_partids'] = torch.from_numpy(graph["init_part_ids"])
                 data['final_keys'] = torch.from_numpy(graph["keys"])
                 data['moth_ids'] = torch.from_numpy(graph["ids"])
                 data['part_ids'] = torch.from_numpy(graph["part_ids"])
@@ -122,14 +220,9 @@ class CustomHeteroDataset(Dataset):
                 data['truth_moth_ids'] = torch.from_numpy(graph["truth_ids"])
                 data['truth_part_ids'] = torch.from_numpy(graph["truth_part_ids"])
                 data['truth_part_keys'] = torch.from_numpy(graph["truth_part_keys"])
-                init_senders = data.init_keys[data.init_senders]
-                init_receivers = data.init_keys[data.init_receivers]
-                senders =  data.final_keys[torch.from_numpy(old_senders).long()]
-                receivers =  data.final_keys[torch.from_numpy(old_receivers).long()]
-                init_cantor = 0.5 * (init_senders + init_receivers - 2) * (
-                            init_senders + init_receivers - 1) + init_senders
-                final_cantor = 0.5 * (senders + receivers - 2) * (senders + receivers - 1) + senders
-                data['old_y'] = data.init_y[~torch.isin(init_cantor, final_cantor)]
+                data['true_origin'] = torch.from_numpy(graph["nodes"][indices][:, 13:])
+                data['truth_reco_pv'] = truth_reco_pv
+
 
             data_set.append(data)
 

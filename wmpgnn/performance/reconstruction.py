@@ -7,6 +7,29 @@ import networkx as nx
 # This file contains important reconstruction methods from the original DFEI paper.
 
 def particle_name(id_):
+    """
+    Maps a particle ID to its corresponding human-readable name.
+
+    This function provides specific names for a few predefined particle IDs
+    and falls back to a general particle naming utility (e.g., from the `particle`
+    package) for other IDs.
+
+    Args:
+        id_ : int
+            The integer ID of the particle (e.g., PDG ID).
+
+    Returns:
+        str
+            The name of the particle.
+
+    Examples:
+        >>> particle_name(0)
+        'ghost'
+        >>> particle_name(10413)
+        'D1(2420)+'
+        >>> particle_name(211) # Assuming Particle.from_pdgid(211).name returns 'pi+'
+        'pi+'
+    """
     if id_ == 0:
         return 'ghost'
     elif id_ == 10413:
@@ -25,6 +48,26 @@ def particle_name(id_):
         return Particle.from_pdgid(id_).name
 
 def make_decay_dict(decay):
+    """
+    Creates a frequency dictionary from a list of particles in a decay.
+
+    This dictionary counts the occurrences of each unique particle in the
+    provided `decay` list.
+
+    Args:
+        decay : list
+            A list of particles (e.g., strings representing particle names or IDs)
+            in a decay chain.
+
+    Returns:
+        dict
+            A dictionary where keys are unique particles from the `decay` list
+            and values are their respective counts.
+
+    Examples:
+        >>> make_decay_dict(['pi+', 'K-', 'pi+', 'gamma'])
+        {'pi+': 2, 'K-': 1, 'gamma': 1}
+    """
     decay_dict ={}
     for particle in decay:
         if particle not in decay_dict.keys():
@@ -34,6 +77,30 @@ def make_decay_dict(decay):
     return decay_dict
 
 def match_decays(decay1, decay2):
+    """
+    Compares two decay lists to determine if they represent the same set of
+    particles with the same multiplicities, regardless of order.
+
+    This function converts each decay list into a frequency dictionary using
+    `make_decay_dict` and then compares these dictionaries for equivalence.
+
+    Args:
+        decay1 : list
+            The first list of particles representing a decay.
+        decay2 : list
+            The second list of particles representing a decay.
+
+    Returns:
+        bool
+            True if the two decay lists contain the same particles with the same
+            counts; False otherwise.
+
+    Examples:
+        >>> match_decays(['pi+', 'K-'], ['K-', 'pi+'])
+        True
+        >>> match_decays(['pi+', 'pi-'], ['pi+', 'pi+', 'K-'])
+        False
+    """
     decay_dict1 = make_decay_dict(decay1)
     decay_dict2 = make_decay_dict(decay2)
     if len(decay_dict1.keys()) != len(decay_dict2.keys()):
@@ -47,9 +114,52 @@ def match_decays(decay1, decay2):
     return True
 
 def flatten(t):
+    """
+    Flattens a list of lists into a single, one-dimensional list.
+
+    Args:
+        t : list
+            A list containing sublists.
+
+    Returns:
+        list
+            A new list containing all elements from the sublists in `t`,
+            in the order they appeared.
+    """
     return [item for sublist in t for item in sublist]
 
 def compute_LCA(anc1, anc2, max_depth):
+    """
+    Computes the Lowest Common Ancestor (LCA) value between two lists of ancestors.
+
+    The LCA value represents the "depth" of the lowest common ancestor in a
+    hierarchical structure, relative to the maximum possible depth. A higher
+    LCA value indicates a common ancestor further down the decay chain (closer
+    to the final state particles).
+
+    Args:
+        anc1 : list
+            A list of ancestor indices for the first particle, ordered from
+            the "root" (earliest ancestor) to the particle itself.
+        anc2 : list
+            A list of ancestor indices for the second particle, ordered from
+            the "root" (earliest ancestor) to the particle itself.
+        max_depth : int
+            The maximum possible depth of a decay chain in the event. This is used
+            to normalize the LCA value.
+
+    Returns:
+        int
+            The LCA value, calculated as `max_depth - lowest_common_ancestor_generation`.
+            Returns 0 if either ancestor list is empty or if no common ancestors are found.
+
+    Notes:
+        - The `intersect1d` function is assumed to be imported (e.g., from NumPy).
+        - The ancestor indices are expected to be ordered such that reversing
+          `common_ancestors` places the lowest common ancestor at the end of the list.
+        - The `lowest_common_ancestor_generation` is the index of the LCA within
+          the longer of the two ancestor lists, representing its depth.
+    """
 
     if (anc1 == []) or (anc2 == []):
         return 0
@@ -74,14 +184,74 @@ def compute_LCA(anc1, anc2, max_depth):
 
 
 def reconstruct_decay(triang_LCA_matrix, particle_keys, ax=0, particle_ids=[], truth_level_simulation=0):
-    '''
-    Function used to reconstruct the decay chain
-    '''
-    # Nmax = np.max(np.unique( np.array( list(triang_LCA_matrix['senders']) + list(triang_LCA_matrix['receivers']))))
+    """
+    Reconstructs decay chains from a Lowest Common Ancestor (LCA) matrix
+    and associated particle information. It identifies clusters of connected
+    particles and their hierarchical relationships, which can be visualized
+    as a decay tree.
+
+    This function processes the LCA matrix to build a graph representation
+    of decay chains. It can handle both reconstructed data and truth-level
+    simulations, and optionally plots the reconstructed trees.
+
+    Args:
+        triang_LCA_matrix : pandas.DataFrame or numpy.ndarray
+            A matrix containing LCA information for pairs of particles. Expected
+            columns/structure are 'senders', 'receivers', and 'LCA_dec'
+            (LCA decay depth). For `truth_level_simulation=1`, it also expects
+            'LCA_id_label' and 'TrueFullChainLCA'.
+        particle_keys : list
+            A list of unique identifiers (keys) for the particles in the event.
+            These keys are used to reference particles in the LCA matrix.
+        ax : matplotlib.axes.Axes, optional
+            A Matplotlib Axes object to draw the reconstructed decay tree on.
+            If 0 (default), no plot is generated.
+        particle_ids : list, optional
+            A list of particle IDs (e.g., PDG IDs or names) corresponding to
+            `particle_keys`. Used for more descriptive labels in truth-level
+            simulations. If empty, generic 'k' + key labels are used. Defaults
+            to an empty list.
+        truth_level_simulation : int, optional
+            A flag indicating whether the input data is from a truth-level
+            simulation.
+            - If 1, the function extracts additional truth-level information
+              like `LCA_id_label` and `TrueFullChainLCA` for cluster labeling
+              and max full chain depth calculation.
+            - If 0 (default), it treats the data as reconstructed and uses
+              generic 'reco_c' labels for composite particles.
+
+    Returns:
+        tuple
+            A tuple containing:
+            - cluster_dict : dict
+                A dictionary where keys are the smallest particle key in each
+                reconstructed decay chain, and values are dictionaries containing
+                'node_keys' (list of particle keys in the cluster), 'LCA_values'
+                (list of concatenated LCA values for pairs within the cluster),
+                and 'labels' (labels for all nodes, including composite particles).
+            - num_clusters_per_order : dict
+                A dictionary tracking the number of composite clusters found at
+                each decay order (depth). Keys are decay orders (0, 1, 2, 3),
+                and values are the counts.
+            - max_full_chain_depth_in_event : int
+                The maximum true full chain LCA depth found in the event.
+                Only relevant if `truth_level_simulation` is 1; otherwise, -1.
+
+    Notes
+    -----
+    - This function assumes the existence of `compute_LCA`, `particle_name`
+      (if `particle_ids` is used), and `flatten` (if used to process
+      `truth_cluster_dict` or `reco_cluster_dict` in calling functions).
+      These helper functions are not defined within `reconstruct_decay`.
+    - The `_append` method for pandas DataFrames used in the original code
+      is deprecated. For newer pandas versions, `pd.concat` should be used
+      for appending rows to a DataFrame. The provided docstring reflects
+      the original code's behavior.
+    """
     num_clusters_per_order = {}
     for order_ in range(4):
         num_clusters_per_order[order_] = 0
-    # particle_keys = list(range(0,Nmax+1))
+
     if particle_ids == []:
         labels = list(map(lambda x: 'k' + str(x), particle_keys))
     else:
@@ -127,7 +297,6 @@ def reconstruct_decay(triang_LCA_matrix, particle_keys, ax=0, particle_ids=[], t
 
     for order in range(max_depth):
 
-        # print('order',order)
 
         LCA_matrix_subset = current_LCA_matrix[current_LCA_matrix['LCA_dec'] == 1]
         if LCA_matrix_subset.empty == False:
@@ -149,7 +318,6 @@ def reconstruct_decay(triang_LCA_matrix, particle_keys, ax=0, particle_ids=[], t
             cl_counter = 0
             for indices_in_cluster in connected_components:
 
-                # print('cluster counter',cl_counter)
                 cl_counter += 1
 
                 # Label the new cluster

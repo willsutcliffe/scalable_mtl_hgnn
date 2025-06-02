@@ -1,0 +1,32 @@
+# Example config to train a 4 layer GNN 
+#  standard message passing
+#  with bce node and edge pruning constraints
+model:
+  type: "mpgnn"
+  gnn_layers: 4
+  mlp_output_size: 16
+  mlp_layers: 4
+  mlp_channels: 128
+  weight_mlp_layers: 4
+  weight_mlp_channels: 16
+  weighted_mp: False
+  use_edge_weights: True
+  use_node_weights: True
+  norm: "batch_norm"
+loss:
+  add_bce: True
+  beta_bce_nodes : 3
+  beta_bce_edges : 33 
+  beta_bce_pvs : None
+dataset:
+  data_type : "homogeneous"
+  data_dir: "../cached_data"
+training:
+  train: True
+  starting_learning_rate: 0.001
+  batch_size: 8
+  epochs: 2
+  dropped_lr_epochs: 2
+  model_file: "GNN_4block_message_passing_BCE.pt" 
+inference:
+  inference: False

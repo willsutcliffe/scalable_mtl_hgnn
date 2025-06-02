@@ -97,15 +97,15 @@ class HeteroGNNTrainer(Trainer):
         self.add_pv = add_pv
         self.no_lca_task = no_lca_task
 
-    def set_beta_BCE_nodes(self, beta):
+    def set_beta_bce_nodes(self, beta):
         """Set scaling factor for node-level BCE loss."""
         self.beta_BCE_nodes = beta
 
-    def set_beta_BCE_edges(self, beta):
+    def set_beta_bce_edges(self, beta):
         """Set scaling factor for edge-level BCE loss."""
         self.beta_BCE_edges = beta
 
-    def set_beta_BCE_pvs(self, beta):
+    def set_beta_bce_pvs(self, beta):
         """Set scaling factor for PV-association BCE loss."""
         self.beta_BCE_pvs= beta
 

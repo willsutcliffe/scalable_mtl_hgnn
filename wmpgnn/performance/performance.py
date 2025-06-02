@@ -19,10 +19,60 @@ from sklearn.metrics import roc_curve, roc_auc_score
 
 
 class Performance:
-    """ Class responsible for determining performance given a dataset and
-    a configuration for both homogeneous and heterogeneous GNNs. """
+    """
+    A class to evaluate the performance of a Graph Neural Network (GNN) model
+    on various tasks, including Link Classification Accuracy (LCA),
+    Primary Vertex (PV) association, track pruning, and decay chain reconstruction.
 
+    It handles loading data, the pre-trained model, and provides methods
+    for evaluating different aspects of the model's performance on test data.
+
+    Attributes:
+        config_loader : object
+            The configuration object passed during initialization.
+        data_loader : wmpgnn.datasets.data_handler.DataHandler
+            An instance of `DataHandler` responsible for loading and managing datasets.
+        full_graphs : bool
+            Indicates whether full graphs are being processed.
+        data_type : str
+            The type of graph data ("homogeneous" or "heterogeneous") as specified
+            in the configuration.
+        dataset : torch.utils.data.DataLoader
+            A PyTorch DataLoader for the test dataset.
+        model : torch.nn.Module
+            The loaded GNN model (`GNN` or `HeteroGNN`).
+        name : str
+            A name for the inference run, typically used for saving results.
+        results_dir : str
+            The directory where performance plots and results will be saved.
+        cuda : bool
+            Indicates if CUDA is being used.
+        roc_auc_list : list
+            A list to store ROC AUC scores, populated after calling `plot_roc_curve`.
+        signal_df : pandas.DataFrame
+            DataFrame to store detailed signal reconstruction performance metrics.
+        event_df : pandas.DataFrame
+            DataFrame to store detailed event-level performance metrics.
+
+    """
     def __init__(self, config, full_graphs=False, cuda=True):
+        """
+                Initializes the Performance evaluation class, setting up data loaders,
+                loading the pre-trained GNN model, and configuring plotting styles.
+
+                Args:
+                    config : object
+                        A configuration object (e.g., from `config_loader`) that provides
+                        parameters for data loading, model architecture, and inference.
+                        It is expected to have a `get()` method to retrieve values.
+                    full_graphs : bool, optional
+                        If True, indicates that full graphs are being used. This might influence
+                        how data is handled or interpreted by the model. Defaults to False.
+                    cuda : bool, optional
+                        If True, the model and data will be moved to a CUDA-enabled GPU for
+                        computation, if available. Defaults to True.
+
+                """
         self.config_loader = config
         self.data_loader = DataHandler(self.config_loader, performance_mode=True)
         self.data_loader.load_data()
@@ -46,6 +96,29 @@ class Performance:
 
 
     def evaluate_hetero_lca_accuracy(self, prune_layer=3, bdt_pruned_data=False, batch_size=8):
+        """
+        Evaluates the Link Classification Accuracy (LCA) for a heterogeneous GNN model.
+
+        This method calculates the accuracy of edge classifications, potentially
+        considering pruning applied at a specific GNN layer.
+
+        Args:
+            prune_layer : int, optional
+                The index of the GNN block (layer) where edge pruning might be applied.
+                Defaults to 3.
+            bdt_pruned_data : bool, optional
+                If True, assumes that the data was pre-pruned by a BDT (Boosted Decision Tree)
+                and concatenates original labels/edges with the current model's outputs
+                for accuracy calculation. Defaults to False.
+            batch_size : int, optional
+                The batch size to use for the test DataLoader. Defaults to 8.
+
+        Returns:
+            torch.Tensor
+                A tensor containing the mean accuracy across all batches,
+                typically a 4-element tensor representing accuracy for each class
+                or a combined accuracy. Returns `nanmean` to handle potential NaN values.
+        """
         self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
         acc_one_epoch = []
 
@@ -88,6 +161,29 @@ class Performance:
         return acc_one_epoch.nanmean(dim=0)
 
     def evaluate_homog_lca_accuracy(self, prune_layer=3, bdt_pruned_data=False, batch_size=8):
+        """
+        Evaluates the Link Classification Accuracy (LCA) for a homogeneous GNN model.
+
+        This method calculates the accuracy of edge classifications, potentially
+        considering pruning applied at a specific GNN layer for homogeneous graphs.
+
+        Args:
+            prune_layer : int, optional
+                The index of the GNN block (layer) where edge pruning might be applied.
+                Defaults to 3.
+            bdt_pruned_data : bool, optional
+                If True, assumes that the data was pre-pruned by a BDT and concatenates
+                original labels/edges with the current model's outputs for accuracy calculation.
+                Defaults to False.
+            batch_size : int, optional
+                The batch size to use for the test DataLoader. Defaults to 8.
+
+        Returns:
+            torch.Tensor
+                A tensor containing the mean accuracy across all batches,
+                typically a 4-element tensor representing accuracy for each class
+                or a combined accuracy. Returns `nanmean` to handle potential NaN values.
+        """
         self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
         acc_one_epoch = []
 
@@ -139,6 +235,19 @@ class Performance:
         return acc_one_epoch.nanmean(dim=0)
 
     def set_edge_pruning(self, layer, cut, device='cuda'):
+        """
+        Enables and configures edge pruning for a specific GNN layer.
+
+        Args:
+            layer : int
+                The index of the GNN block (layer) to apply edge pruning to.
+            cut : float
+                The threshold value for pruning edges. Edges with weights below this
+                cut might be pruned.
+            device : str, optional
+                The device on which pruning operations should be performed ('cuda' or 'cpu').
+                Defaults to 'cuda'.
+        """
         if self.data_type == "homogeneous":
             self.model._blocks[layer]._network.edge_prune = True
             self.model._blocks[layer]._network.edge_weight_cut = cut
@@ -151,6 +260,13 @@ class Performance:
             self.model._blocks[layer].device = device
 
     def unset_pruning(self, layer):
+        """
+        Disables both edge and node pruning for a specific GNN layer.
+
+        Args:
+            layer : int
+                The index of the GNN block (layer) to disable pruning for.
+        """
         if self.data_type == "homogeneous":
             self.model._blocks[layer]._network.edge_prune = False
             self.model._blocks[layer]._network.node_prune = False
@@ -160,6 +276,19 @@ class Performance:
 
 
     def set_node_pruning(self, layer, cut, device='cuda'):
+        """
+        Enables and configures node pruning for a specific GNN layer.
+
+        Args:
+            layer : int
+                The index of the GNN block (layer) to apply node pruning to.
+            cut : float
+                The threshold value for pruning nodes. Nodes with weights below this
+                cut might be pruned.
+            device : str, optional
+                The device on which pruning operations should be performed ('cuda' or 'cpu').
+                Defaults to 'cuda'.
+        """
         if self.data_type == "homogeneous":
             self.model._blocks[layer]._network.node_prune = True
             self.model._blocks[layer]._network.node_weight_cut = cut
@@ -172,10 +301,42 @@ class Performance:
             self.model._blocks[layer].device = device
 
     def set_pruning(self, layer, cut, device='cuda'):
+        """
+        Enables and configures both edge and node pruning for a specific GNN layer.
+
+        This is a convenience method that calls `set_edge_pruning` and `set_node_pruning`.
+
+        Args:
+            layer : int
+                The index of the GNN block (layer) to apply pruning to.
+            cut : float
+                The threshold value for pruning.
+            device : str, optional
+                The device on which pruning operations should be performed ('cuda' or 'cpu').
+                Defaults to 'cuda'.
+        """
         self.set_edge_pruning(layer, cut, device=device)
         self.set_node_pruning(layer, cut, device=device)
 
     def lca_reco_matrix(self, graph):
+        """
+        Generates a pandas DataFrame representing the reconstructed Link Classification
+        Analysis (LCA) results from a GNN output graph.
+
+        The DataFrame contains sender and receiver node indices, predicted LCA probabilities,
+        and the predicted LCA decision (argmax of probabilities). It also filters
+        for unique edge pairs (sender < receiver).
+
+        Args:
+            graph : torch_geometric.data.Data or torch_geometric.data.HeteroData
+                The output graph object from the GNN model, containing edge information
+                and predicted LCA probabilities.
+
+        Returns:
+            pandas.DataFrame
+                A DataFrame with columns: 'senders', 'receivers', 'LCA_probs' (list of probabilities),
+                and 'LCA_dec' (predicted class index).
+        """
         if self.data_type == "homogeneous":
             senders = graph.senders
             receivers = graph.receivers
@@ -188,17 +349,9 @@ class Performance:
         pd_matrix = pd.DataFrame(np.vstack(
             (edge_index[0], edge_index[1])).transpose(), columns=['senders', 'receivers'])
         pd_matrix["LCA_probs"] = list(edges.detach().numpy())
-        # Re-define the LCA-class probabilities, using a threshold for the bkg-like LCA class
-        # pd_matrix['LCA_prob0'] = np.vstack(
-        #     pd_matrix['LCA_probs'].values.tolist())[:, 0]
-        # pd_matrix.loc[pd_matrix['LCA_prob0'] < LCA_bkg_thrs, 'LCA_prob0'] = 0.
-        # probs_array = np.concatenate((np.vstack(pd_matrix['LCA_prob0']), np.vstack(
-        #     pd_matrix['LCA_probs'].values.tolist())[:, 1:]), axis=1)
-        # probs_array /= probs_array.sum(axis=1)[:, np.newaxis]
-        # pd_matrix['LCA_probs'] = probs_array.tolist()
+
 
         pd_matrix["LCA_dec"] = list(np.argmax(edges.detach().numpy(), axis=-1))
-        #pd_matrix["LCA_dec"][pd_matrix["LCA_dec"]==0]=1
         pd_matrix.set_index(['senders', 'receivers'], inplace=True)
         pd_matrix = pd_matrix.reset_index()
         pd_matrix = pd_matrix[pd_matrix['senders'] < pd_matrix['receivers']]
@@ -206,14 +359,22 @@ class Performance:
         return pd_matrix
 
     def lca_truth_matrix(self, graph):
-        # if self.data_type == "homogeneous":
-        #     senders = graph.init_senders
-        #     receivers = graph.init_receivers
-        #     init_y = graph["init_y"]
-        # elif self.data_type == "heterogeneous":
-        #     senders = graph.init_senders
-        #     receivers = graph.init_receivers
-        #     init_y = graph["init_y"]
+        """
+        Generates a pandas DataFrame representing the ground truth Link Classification
+        Analysis (LCA) for a given graph.
+
+        This DataFrame includes true sender and receiver indices, true LCA decisions,
+        particle names based on mother IDs, and the full LCA chain truth.
+
+        Args:
+            graph : torch_geometric.data.Data or torch_geometric.data.HeteroData
+                The input graph object containing ground truth edge and particle information.
+
+        Returns:
+            pandas.DataFrame
+                A DataFrame with columns: 'senders', 'receivers', 'LCA_dec' (true class index),
+                'LCA_id_label' (particle name from mother ID), and 'TrueFullChainLCA' (boolean).
+        """
         if self.data_type == "homogeneous":
             senders = graph.truth_senders
             receivers = graph.truth_receivers
@@ -228,12 +389,18 @@ class Performance:
                 np.reshape(init_y, (init_y.shape[0], 4)), axis=-1),
             (-1,))
         truth_lca = truth_lca[truth_lca['senders'] < truth_lca['receivers']]
-        #truth_lca['LCA_id_label'] = list(map(particle_name, graph['init_moth_ids'].numpy()))
         truth_lca['LCA_id_label'] = list(map(particle_name, graph['truth_moth_ids'].numpy()))
         truth_lca['TrueFullChainLCA'] = graph['lca_chain']
         return truth_lca
 
     def init_reco_dataframes(self):
+        """
+        Initializes the pandas DataFrames used for storing reconstruction performance
+        metrics at both signal and event levels.
+
+        This method sets up `self.signal_df` and `self.event_df` with predefined
+        columns and data types.
+        """
         self.signal_df = pd.DataFrame(
             columns=['EventNumber', 'NumParticlesInEvent', 'NumSignalParticles', 'PerfectSignalReconstruction',
                      'AllParticles', 'PerfectReco',
@@ -244,7 +411,6 @@ class Performance:
              'AllParticles': np.int32, 'PerfectReco': np.int32,
              'NoneIso': np.int32, 'PartReco': np.int32, 'NotFound': np.int32})
 
-        # 'NumSelectedParticlesFromHeavyHadronInEventNPOnly', 'NumSelectedParticlesFromHeavyHadronInEventNPAndEPOnly'
         self.event_df = pd.DataFrame(
             columns=['EventNumber', 'NumParticlesInEvent', 'NumParticlesFromHeavyHadronInEvent',
                      'NumBackgroundParticlesInEvent', 'NumSelectedParticlesInEvent',
@@ -259,6 +425,31 @@ class Performance:
                      'TimeModel', 'TimeReco', 'TimeTruth'])
 
     def evaluate_pv_association(self, batch_size=8, b_tracks=True):
+        """
+        Evaluates the Primary Vertex (PV) association accuracy of the model.
+
+        This method assesses how well the model associates tracks with their
+        correct primary vertices.
+
+        Args:
+            batch_size : int, optional
+                The batch size to use for the test DataLoader. Defaults to 8.
+            b_tracks : bool, optional
+                If True, only considers tracks associated with B-mesons (derived from
+                `data[('tracks', 'to', 'tracks')].y[:, 0] == 0`). If False, considers all tracks.
+                Defaults to True.
+
+        Returns:
+            tuple
+                A tuple containing:
+                - acc : float
+                    The average accuracy of PV association across all processed batches.
+                - npvs : list
+                    A list of the number of primary vertices in each processed event.
+                - associated : list
+                    A list of integers (0 or 1) indicating whether each unique track
+                    was correctly associated with its PV.
+        """
         self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
         running_acc = 0
         npvs = []
@@ -291,6 +482,33 @@ class Performance:
 
     def evaluate_homog_track_pruning_performance(self, layers=[0, 1, 2, 7], batch_size=8,
                                                  edge_pruning=True, plot_roc=False):
+        """
+        Evaluates the track (edge or node) pruning performance for a homogeneous GNN model.
+
+        This method calculates and optionally plots histograms of weights and ROC curves
+        to assess how effectively the model prunes tracks based on edge or node weights.
+
+        Parameters:
+            layers : list of int, optional
+                A list of GNN layer indices for which to evaluate pruning performance.
+                Defaults to [0, 1, 2, 7].
+            batch_size : int, optional
+                The batch size to use for the test DataLoader. Defaults to 8.
+            edge_pruning : bool, optional
+                If True, evaluates edge pruning; otherwise, evaluates node pruning.
+                Defaults to True.
+            plot_roc : bool, optional
+                If True, generates and plots ROC curves for the pruning performance.
+                Defaults to False.
+
+        Returns:
+            tuple
+                A tuple containing:
+                - true : numpy.ndarray
+                    The concatenated ground truth labels (0 or 1) for edges/nodes.
+                - pred : list of numpy.ndarray
+                    A list of concatenated predicted weights for each specified layer.
+        """
         trues = []
         self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
 
@@ -344,7 +562,39 @@ class Performance:
         return true, pred
 
     def evaluate_hetero_track_pruning_performance(self, layers=[0, 1, 2, 7], batch_size=8,
-                                                  edge_pruning=True, plot_roc=False, pv_tr_edges = False):
+                                                  edge_pruning=True, plot_roc=False, pv_tr_edges = False,
+                                                  show_plots = False):
+        """
+        Evaluates the track (edge or node) pruning performance for a heterogeneous GNN model.
+
+        This method calculates and optionally plots histograms of weights and ROC curves
+        to assess how effectively the model prunes tracks based on edge or node weights
+        in a heterogeneous graph context. It can also evaluate pruning for PV-track edges.
+
+        Args:
+            layers : list of int, optional
+                A list of GNN layer indices for which to evaluate pruning performance.
+                Defaults to [0, 1, 2, 7].
+            batch_size : int, optional
+                The batch size to use for the test DataLoader. Defaults to 8.
+            edge_pruning : bool, optional
+                If True, evaluates edge pruning; otherwise, evaluates node pruning.
+                Defaults to True.
+            plot_roc : bool, optional
+                If True, generates and plots ROC curves for the pruning performance.
+                Defaults to False.
+            pv_tr_edges : bool, optional
+                If True, evaluates pruning performance specifically for 'tracks' to 'pvs'
+                (Primary Vertex) edges. Defaults to False.
+
+        Returns:
+            tuple
+                A tuple containing:
+                - true : numpy.ndarray
+                    The concatenated ground truth labels (0 or 1) for edges/nodes.
+                - pred : list of numpy.ndarray
+                    A list of concatenated predicted weights for each specified layer.
+        """
         trues = []
         self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
 
@@ -398,18 +648,42 @@ class Performance:
             plt.xlabel("Weights")
             plt.savefig(f"{self.results_dir}/{identifier}_{names[i]}_histogram.png", dpi=300)
             plt.savefig(f"{self.results_dir}/{identifier}_{names[i]}_histogram.pdf", dpi=300)
-            plt.show()
+            if show_plots:
+                plt.show()
         if plot_roc:
             if edge_pruning:
                 if pv_tr_edges:
-                    self.plot_roc_curve(true, pred, names, file_name="hetero_pv_edge_pruning_roc", title="PV Edge")
+                    self.plot_roc_curve(true, pred, names, file_name="hetero_pv_edge_pruning_roc", title="PV Edge", show_plots=show_plots)
                 else:
-                    self.plot_roc_curve(true, pred, names, file_name="hetero_edge_pruning_roc", title="Edge")
+                    self.plot_roc_curve(true, pred, names, file_name="hetero_edge_pruning_roc", title="Edge", show_plots=show_plots)
             else:
-                self.plot_roc_curve(true, pred, names, file_name="hetero_node_pruning_roc", title="Node")
+                self.plot_roc_curve(true, pred, names, file_name="hetero_node_pruning_roc", title="Node", show_plots=show_plots)
         return true, pred
 
-    def plot_roc_curve(self, y_true, y_scores, names, file_name="test_edge_pruning_roc", title="Edge"):
+    def plot_roc_curve(self, y_true, y_scores, names, file_name="test_edge_pruning_roc", title="Edge", show_plots=False):
+        """
+        Generates and plots ROC (Receiver Operating Characteristic) curves for pruning performance.
+
+        This method takes true labels and predicted scores (weights) for multiple scenarios
+        (e.g., different layers) and plots their corresponding ROC curves,
+        calculating and displaying the Area Under the Curve (AUC) for each.
+
+        Args:
+            y_true : numpy.ndarray
+                Ground truth binary labels (0 or 1).
+            y_scores : list of numpy.ndarray
+                A list where each element is an array of predicted scores (weights)
+                corresponding to `y_true`. Each array represents a different curve to plot.
+            names : list of str
+                A list of names for each ROC curve, corresponding to `y_scores`, used
+                in the legend.
+            file_name : str, optional
+                The base name for the output image files (PNG and PDF).
+                Defaults to "test_edge_pruning_roc".
+            title : str, optional
+                The title for the plot. Defaults to "Edge".
+
+        """
         plt.figure(figsize=(8, 6))
 
         line_styles = ["dashed", "dotted","dashdot", "solid",(0, (5, 10))]
@@ -433,20 +707,51 @@ class Performance:
         plt.grid()
         plt.savefig(f"{self.results_dir}/{self.name}_{file_name}.png", dpi=300)
         plt.savefig(f"{self.results_dir}/{self.name}_{file_name}.pdf")
-        plt.show()
+        if show_plots:
+            plt.show()
 
     def evaluate_reco_performance(self, event_max=-1, plot_perfect_decaychains=2,
                                   pruning_cut=0, ref_signal = None):
-        # should eventually include BDT timing and perf. in filtering when caching dataset
         self.dataset = self.data_loader.get_test_dataloader(batch_size=1)
+        """
+            Evaluates the full reconstruction performance of the model, including decay chain
+            reconstruction and various signal/event-level metrics.
+
+            This method iterates through the test dataset, performs inference, reconstructs
+            decay chains, and populates internal DataFrames (`signal_df`, `event_df`)
+            with detailed performance statistics. It can optionally plot perfectly
+            reconstructed decay chains.
+
+            Args:
+                event_max : int, optional
+                    The maximum number of events to process for evaluation. If -1, all
+                    events in the dataset are processed. Defaults to -1.
+                plot_perfect_decaychains : int, optional
+                    The number of perfectly reconstructed decay chains to plot and save.
+                    If 0, no plots are generated. Defaults to 2.
+                pruning_cut : float, optional
+                    A pruning cut value to apply to the model's output (specifically for
+                    layer 7, if applicable) during inference. If 0, no pruning is applied.
+                    Defaults to 0.
+                ref_signal : list of dict, optional
+                    A reference signal definition, typically a list of dictionaries. Each dictionary
+                    should contain 'mothers' and 'daughters' keys, with lists of particle names.
+                    This is used for matching reconstructed decays to a specific signal
+                    (e.g., specific B-meson decay channels). Defaults to None.
+
+            Returns
+            -------
+            None
+                This method does not return any value. Instead, it populates
+                `self.signal_df` and `self.event_df` with performance metrics and
+                saves them as CSV files. It also calls `self.performance_table`
+                to generate a LaTeX table summary.
+            """
         self.init_reco_dataframes()
         time_node_filtering = 0
         time_edge_filtering = 0
         time_LCA_reconstruction = 0
         event = 0
-        count = 0
-        count2 = 0
-        count3 = 0
         time_model = 0
         time_reco = 0
         if self.cuda:
@@ -458,7 +763,7 @@ class Performance:
                 break
             if event % 100 == 0:
                 print(event)
-            Bparts = float(torch.sum(torch.argmax(vdata.init_y, -1) > 0))
+            Bparts = float(torch.sum(torch.argmax(vdata.truth_y, -1) > 0))
             if Bparts < 1:
                 continue
             if self.data_type == "homogeneous":
@@ -467,7 +772,6 @@ class Performance:
                 vdata.senders = vdata.senders - torch.min(vdata.senders)
                 vdata.edgepos = vdata.edgepos - torch.min(vdata.edgepos)
 
-            count3 += 1
             if self.cuda:
                 vdata.cuda()
                 self.model.cuda()
@@ -493,15 +797,15 @@ class Performance:
                 time_model = end_time - start_time
 
             if self.cuda:
-                self.model.cpu()
+                #self.model.cpu()
                 gout.cpu()
                 vdata.cpu()
             if self.data_type == "homogeneous":
                 Bparts_after = float(torch.sum(torch.argmax(vdata.y, -1) > 0))
             elif self.data_type == "heterogeneous":
                 Bparts_after = float(torch.sum(torch.argmax(vdata[('tracks', 'to', 'tracks')].y, -1) > 0))
-            if Bparts_after < Bparts:
-                print("Bparts lost, before had ", Bparts, " and now ", Bparts_after)
+            #if Bparts_after < Bparts:
+            #    print("Bparts lost, before had ", Bparts, " and now ", Bparts_after)
 
             start_time = time.time()
             reco_LCA = self.lca_reco_matrix(gout)
@@ -514,8 +818,6 @@ class Performance:
             start_time = time.time()
             true_LCA = self.lca_truth_matrix(vdata)
 
-            #particle_keys = list(vdata["init_keys"].numpy())
-            #particle_ids = list(map(particle_name, vdata['init_partids'].numpy()))
             particle_keys = list(vdata["truth_part_keys"].numpy())
             particle_ids = list(map(particle_name, vdata['truth_part_ids'].numpy()))
             truth_cluster_dict, truth_num_clusters_per_order, max_full_chain_depth_in_event = reconstruct_decay(
@@ -525,16 +827,13 @@ class Performance:
             time_node_filtering = 0
             time_edge_filtering = 0
             time_LCA_reconstruction = time_reco
-            #total_number_of_particles = len(particle_keys)
 
             if truth_cluster_dict != {}:
-                count += 1
                 # Compute performance metrics
                 particles_from_heavy_hadron = flatten(
                     [truth_cluster_dict[tc_firstkey]['node_keys'] for tc_firstkey in truth_cluster_dict.keys()])
                 number_of_particles_from_heavy_hadron = len(particles_from_heavy_hadron)
-                # number_of_selected_particles_from_heavy_hadron_NPonly = number_of_particles_from_heavy_hadron
-                # number_of_selected_particles_from_heavy_hadron_NPandEPonly = number_of_particles_from_heavy_hadron
+
                 number_of_background_particles = total_number_of_particles - number_of_particles_from_heavy_hadron
                 if reco_cluster_dict != {}:
                     selected_particles = flatten(
@@ -554,7 +853,7 @@ class Performance:
 
                 for tc_firstkey in truth_cluster_dict.keys():
                     signal_match = 1
-                    #print(truth_cluster_dict[tc_firstkey])
+
                     if ref_signal != None:
                         labels = truth_cluster_dict[tc_firstkey]['labels']
                         mothers = [label[3:] for label in labels if 'c' == label[0]]
@@ -603,13 +902,10 @@ class Performance:
                     none_associated = 0
                     reco = []
                     for cluster in reco_cluster_dict.values():
-                        #print("True cluster ",true_cluster['node_keys'])
-                        #print("Reco cluster ", cluster['node_keys'])
                         reco.append(cluster['node_keys'])
                         true_in_reco = np.sum(np.isin(true_cluster['node_keys'], cluster['node_keys'])) / len(
                             true_cluster['node_keys'])
-                        # reco_in_true = np.sum( np.isin(cluster['node_keys'],true_cluster['node_keys']))/len(true_cluster['node_keys'])
-                        # print(val)
+
                         if cluster['node_keys'] == true_cluster['node_keys']:
                             all_particles = 1
                             if cluster['LCA_values'] == true_cluster['LCA_values']:
@@ -620,21 +916,17 @@ class Performance:
                             break
                         elif true_in_reco >= 0.2 and true_in_reco < 1:
                             part_reco = 1
-                        # elif val >= 0.2 and len(cluster['node_keys']) > len(true_cluster['node_keys']):
-                        #    none_iso = 1
+
                     if all_particles == 1:
                         none_iso = 0
                         part_reco = 0
                     if none_iso == 1:
                         part_reco = 0
-                    #print("all_particles ", all_particles)
-                    #print("none_iso ", none_iso)
+
                     if all_particles == 0 and none_iso == 0 and part_reco == 0:
                         none_associated = 1
 
-                    # if part_reco == 1 or none_associated == 1:
-                    #     print("True ", true_cluster['node_keys'])
-                    #     print("Reco ", reco)
+
 
                     self.signal_df = self.signal_df._append({'EventNumber': event,
                                                              'NumParticlesInEvent': total_number_of_particles,
@@ -647,10 +939,7 @@ class Performance:
                                                              'NotFound': none_associated,
                                                              'SigMatch': signal_match},
                                                             ignore_index=True)
-                    count2 += 1
                     if perfect_signal_reconstruction and plot_perfect_decaychains > 0:
-                    #if all_particles and plot_perfect_decaychains > 0:
-                    #if (part_reco or none_associated) and plot_perfect_decaychains > 0:
                         plt.clf()
                         fix, axs = plt.subplots(2, figsize=(10, 10))
                         axs[0].set_title('Reco trees in event',
@@ -660,13 +949,11 @@ class Performance:
                             reco_LCA, particle_keys, axs[0])
                         axs[1].set_title('Truth-level trees in event',
                                          fontweight='bold', fontsize=14)
-                        #particle_keys = list(vdata["init_keys"].numpy())
-                        #particle_ids = list(map(particle_name, vdata['init_partids'].numpy()))
+
                         particle_keys = list(vdata["truth_part_keys"].numpy())
                         particle_ids = list(map(particle_name, vdata['truth_part_ids'].numpy()))
                         truth_cluster_dict, truth_num_clusters_per_order, max_full_chain_depth_in_event = reconstruct_decay(
                             true_LCA, particle_keys, axs[1], particle_ids=particle_ids, truth_level_simulation=1)
-                        # plt.show()
                         plt.savefig(f"{self.results_dir}/{self.name}_perfect_reco_decay_chain_{plot_perfect_decaychains}.png",dpi=300)
                         plt.savefig(f"{self.results_dir}/{self.name}_perfect_reco_decay_chain_{plot_perfect_decaychains}.pdf")
                         plot_perfect_decaychains = plot_perfect_decaychains - 1
@@ -683,8 +970,7 @@ class Performance:
                                                        'NumBackgroundParticlesInEvent': number_of_background_particles,
                                                        'NumSelectedParticlesInEvent': number_of_selected_particles,
                                                        'NumSelectedParticlesFromHeavyHadronInEvent': number_of_selected_particles_from_heavy_hadron,
-                                                       # 'NumSelectedParticlesFromHeavyHadronInEventNPOnly': number_of_selected_particles_from_heavy_hadron_NPonly,
-                                                       # 'NumSelectedParticlesFromHeavyHadronInEventNPAndEPOnly': number_of_selected_particles_from_heavy_hadron_NPandEPonly,
+
                                                        'NumSelectedBackgroundParticlesInEvent': number_of_selected_background_particles,
                                                        'NumTruthClustersGen1': truth_num_clusters_per_order[0],
                                                        'NumTruthClustersGen2': truth_num_clusters_per_order[1],
@@ -712,10 +998,7 @@ class Performance:
                                                        'TimeReco': time_reco,
                                                        'TimeTruth': time_truth},
                                                       ignore_index=True)
-        print("count ", count)
-        print("count2 ", count2)
-        print("count3 ", count3)
-        print("event", event)
+
         if ref_signal != None:
             self.performance_table(signal_match=True)
         else:
@@ -725,6 +1008,28 @@ class Performance:
 
 
     def performance_table(self, signal_match=False):
+        """
+        Generates and prints a LaTeX-formatted performance table summarizing
+        the decay chain reconstruction results at both signal and event levels.
+
+        The table includes metrics such as "Perfect hierarchy", "Wrong hierarchy",
+        "None isolated", and "Part reco" (partially reconstructed/not found).
+        These metrics are calculated as percentages based on the data in
+        `self.signal_df` and `self.event_df`.
+
+        Args:
+            signal_match : bool, optional
+                If True, only signal instances that match a predefined reference signal
+                (as determined during `evaluate_reco_performance` if `ref_signal` was provided)
+                are considered for the "True b" scope. If False, all signal instances
+                are included. Defaults to False.
+
+        Returns:
+            None
+                This method does not return any value. It prints the LaTeX table to
+                the console and saves it to a file named
+                `{self.results_dir}/{self.name}_performance_table.tex`.
+        """
         perf_numbers = pd.DataFrame(columns=["Scope", "Perfect hierarchy", "Wrong hierarchy", "None isolated", "Part reco"])
 
         if signal_match:
@@ -760,6 +1065,23 @@ class Performance:
 
 
     def heterogeneous_performance(self):
+        """
+        Evaluates the performance of the GNN model on heterogeneous graph data.
+
+        This method assesses various aspects of the model's performance specific
+        to heterogeneous graphs, including Link Classification Accuracy (LCA)
+        with and without edge pruning, track pruning performance (both edge
+        and node-based), and Primary Vertex (PV) association accuracy for
+        different track types.
+
+        It prints intermediate results to the console.
+
+        Returns:
+            None
+                This method does not return any value. It performs evaluations
+                and prints the results directly. The `roc_auc_list` attribute
+                is populated internally during track pruning evaluations.
+        """
         val_acc_no_pruning = None
         if self.full_graphs:
             val_acc_no_pruning = self.evaluate_hetero_lca_accuracy(bdt_pruned_data=False)
@@ -783,6 +1105,25 @@ class Performance:
 
 
     def homogeneous_performance(self):
+        """
+        Evaluates the performance of the GNN model on homogeneous graph data.
+
+        This method assesses various aspects of the model's performance specific
+        to homogeneous graphs, including Link Classification Accuracy (LCA)
+        with and without edge pruning, and track pruning performance (both edge
+        and node-based).
+
+        It prints intermediate results to the console and compiles key performance
+        metrics into a Pandas DataFrame.
+
+        Returns:
+            None
+                This method does not return any value. It performs evaluations,
+                prints the results, and creates a Pandas DataFrame named `performance`
+                containing summarized metrics, though this DataFrame is not explicitly
+                returned or saved within this method. The `roc_auc_list` attribute
+                is populated internally during track pruning evaluations.
+        """
         val_acc_no_pruning = None
         if self.full_graphs:
             val_acc_no_pruning = self.evaluate_homog_lca_accuracy(bdt_pruned_data=False)

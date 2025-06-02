@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from wmpgnn.gnn.hetero_graph_network import HeteroGraphNetwork
 from wmpgnn.gnn.hetero_graphcoder import HeteroGraphCoder
-from wmpgnn.gnn.hetero_graph_network import edge_pruning, node_pruning
+from wmpgnn.gnn.hetero_graph_network import edge_pruning, node_pruning, faster_node_pruning
 
 def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm"):
     """
@@ -175,7 +175,7 @@ class HeteroGNN(nn.Module):
                 for node_type in self.node_types:
                     if node_type == "tracks":
                         node_indices = core.node_indices['tracks']
-                        node_pruning(node_indices, latent0, node_type, [('tracks', 'to', 'tracks')], device=core.device)
+                        faster_node_pruning(node_indices, latent0, node_type, [('tracks', 'to', 'tracks')], device=core.device)
             if b < (len(self._blocks) - 1):
                 core_input = hetero_graph_concat(latent0, latent)
                 latent = core_input

@@ -123,7 +123,6 @@ class HeteroNodeBlock(AbstractModule):
             if self._use_globals:
                 nodes_to_collect.append(graph['globals'].x[graph[node_type].batch])
 
-
             collected_nodes = torch.cat(nodes_to_collect, axis=-1)
             updated_nodes = self._node_models[node_type](collected_nodes, graph[node_type].batch)
 

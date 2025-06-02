@@ -138,8 +138,6 @@ class EdgesToGlobalsAggregator(AbstractModule):
     functions (e.g., sum, mean, max), and handling of multiple graphs in a batch.
 
     Attributes:
-        _num_graphs (int or None): Number of graphs in the batch. If `None`,
-            the aggregator collapses all edges into a single global vector.
         _b_edges (bool): Flag indicating how to apply edge weights:
                          - If True: use `edge_weights` directly.
                          - If False: use `1 - edge_weights` for weighting.
@@ -152,9 +150,6 @@ class EdgesToGlobalsAggregator(AbstractModule):
         Initialize the EdgesToGlobalsAggregator.
 
         Args:
-            num_graphs (int, optional): Number of graphs in the batch. If provided,
-                each graph’s edges are aggregated separately into a [num_graphs, D_e]
-                tensor. If `None`, all edges are aggregated into a single [D_e] vector.
             weighted (bool): Whether to apply per‐edge weights during aggregation.
             b_edges (bool): If True, use `edge_weights` directly; if False, use
                 `(1 - edge_weights)` when weighting edge features.
@@ -162,7 +157,6 @@ class EdgesToGlobalsAggregator(AbstractModule):
                 `scatter_mean`, or `scatter_max`.
         """
         super(EdgesToGlobalsAggregator, self).__init__()
-        self._num_graphs = num_graphs
         self._b_edges = b_edges
         self._weighted = weighted
         self._scatter_func = scatter_func
@@ -204,8 +198,6 @@ class NodesToGlobalsAggregator(AbstractModule):
     functions (e.g., sum, mean, max), and handling of multiple graphs in a batch.
 
     Attributes:
-        _num_graphs (int or None): Number of graphs in the batch. If `None`, the aggregator
-            collapses all nodes into a single global vector.
         _b_nodes (bool): Flag indicating how to apply node weights:
                          - If True: use `node_weights` directly.
                          - If False: use `1 - node_weights` for weighting.
@@ -218,9 +210,6 @@ class NodesToGlobalsAggregator(AbstractModule):
         Initialize the NodesToGlobalsAggregator.
 
         Args:
-            num_graphs (int, optional): Number of graphs in the batch. If provided,
-                each graph’s nodes are aggregated separately into a [num_graphs, D_n]
-                tensor. If `None`, all nodes are aggregated into a single [D_n] vector.
             weighted (bool): Whether to apply per‐node weights during aggregation.
             b_nodes (bool): If True, use `node_weights` directly; if False, use
                 `(1 - node_weights)` when weighting node features.
@@ -238,10 +227,13 @@ class NodesToGlobalsAggregator(AbstractModule):
 
         Args:
             graph: A graph‐like object with attributes:
-                - `nodes`: Tensor [N, D_n], node feature matrix.
-                - `batch`: LongTensor [N], graph index (0…G-1) for each node.
-                - `graph_globals`: Tensor [G, D_g], used only to infer G if `num_graphs` is None.
-            node_weights (Tensor [N]): Optional weights for each node (required if `weighted=True`).
+                - `edges`:      Tensor [E, D_e] of current edge features.
+                - `senders`:    LongTensor [E] of sender node indices.
+                - `receivers`:  LongTensor [E] of receiver node indices.
+                - `graph_globals`: Tensor [G, D_g] of per‐graph globals.
+                - `batch`:      LongTensor [N], graph indices for each node.
+                - `edgepos`:    LongTensor [E] mapping each edge to a graph index.
+                - `nodes`:      Tensor [N, D_n] of node features.
 
         Returns:
             Tensor of aggregated global features:
