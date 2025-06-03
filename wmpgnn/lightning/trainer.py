@@ -3,7 +3,10 @@ import os
 import glob
 from optparse import OptionParser
 
+from tqdm import tqdm
+from multiprocessing import Pool
 from itertools import chain
+import time
 
 import torch
 from torch.utils.data import Dataset
@@ -49,11 +52,16 @@ class LazyTorchDataset(Dataset):  # this doesnt seem to work that well...
         
         return self._cache_data[local_idx]
 
+def load_file(path):
+    files = torch.load(path, weights_only=False)
+    print(f"file load: {path.split('/')[-1]}")
+    return files
 
 if __name__ == "__main__":
     # python trainer.py --indir /eos/user/y/yukaiz/DFEI_data/inclusive/ --config /afs/cern.ch/work/y/yukaiz/public/weighted_MP_gnn/config_files/simple.yaml --bs 3 --gacc 4 --ngpu 4
     # python trainer.py --indir /eos/user/y/yukaiz/DFEI_data/inclusive/ --config  ../../config_files//simple.yaml --bs 12 --gacc 1 --ngpu 1 --cpt /eos/user/y/yukaiz/SWAN_projects/weighted_MP_gnn/wmpgnn/lightning/lightning_logs/version_2/checkpoints/epoch-epoch=07.ckpt
     # bash /afs/cern.ch/work/y/yukaiz/public/jobs/train_hgnn.sh /eos/user/y/yukaiz/DFEI_data/inclusive/ /afs/cern.ch/work/y/yukaiz/public/weighted_MP_gnn/config_files/simple.yaml 6 2 1
+    #  python trainer.py --indir /eos/user/y/yukaiz/DFEI_data/inclusive --config  ../../config_files/simple.yaml --bs 12 --gacc 1 --ngpu 1 --ncpu 8 --cw
     usage = "usage: %prog [options]"
     parser = OptionParser(usage)
     parser.add_option("", "--indir", type=str, default=None,
@@ -62,6 +70,8 @@ if __name__ == "__main__":
                       dest="CONFIG", help="Config file path")
     parser.add_option("", "--ngpu", type=int, default=1,
                       dest="NGPU", help="number of used gpu")
+    parser.add_option("", "--ncpu", type=int, default=1,
+                      dest="NCPU", help="number of cpu for multi processing")
     parser.add_option("", "--bs", type=int, default=12,
                       dest="BS", help="batch size")
     parser.add_option("", "--gacc", type=int, default=1,
@@ -82,32 +92,45 @@ if __name__ == "__main__":
     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)  # changing from batchnorm to sync batchnorm
     checkpoint_path = option.CHECKPOINT  # load the previous last model to retrain
     print(model)
+    print("="*30)
 
     # Get the dataset glob it and load
+    print("Start reading in the data")
+    start = time.time()
     trn_paths = sorted(glob.glob(f'{option.INDIR}/training_data_*'))
-    trn_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in trn_paths))
+    trn_dataset = []
+    for path in tqdm(trn_paths, desc="Training dataset"):
+        trn_dataset.extend(torch.load(path, weights_only=False))
+    # trn_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in trn_paths))
     # trn_dataset = LazyTorchDataset(f'{option.INDIR}/training_data_*')
 
     val_paths = sorted(glob.glob(f'{option.INDIR}/validation_data_*'))
-    val_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in val_paths))
+    val_dataset = []
+    for path in tqdm(val_paths, desc="Validation dataset"):
+        val_dataset.extend(torch.load(path, weights_only=False))
+    # val_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in val_paths))
     # val_dataset = LazyTorchDataset(f'{option.INDIR}/validation_data_*')
-    print("data read in")
+    end = time.time()
+
+    print(f"data read in, time needed {(end - start):.2f}")
     print(f"Train dataset: {len(trn_dataset)}")
     print(f"Validation dataset: {len(val_dataset)}")
-    
+    print("="*30)
+
     # here we can check what kind of gpu it is to specify bs, also num_workers = num_cpu * 2
-    trn_loader = DataLoader(trn_dataset, batch_size=option.BS, num_workers=6, drop_last=True) 
-    val_loader = DataLoader(val_dataset, batch_size=option.BS, num_workers=6, drop_last=True) 
+    trn_loader = DataLoader(trn_dataset, batch_size=option.BS, num_workers=option.NCPU*2, drop_last=True) 
+    val_loader = DataLoader(val_dataset, batch_size=option.BS, num_workers=option.NCPU*2, drop_last=True) 
 
     # Either recalculate the positive weight or take the old ones
+    print("Getting pos weight:")
     if option.CW:  # CW = calculate pos weights
         pos_weight = get_hetero_weight(trn_loader)
     else:
-        pos_weight = {'t_nodes': torch.tensor(12.3976),'tt_edges': torch.tensor(481.3673), 'LCA': torch.tensor([2.5026e-01, 1.0037e+03, 3.4153e+02, 4.3406e+03]) }
-        # {'t_nodes': tensor(12.3371), 'tt_edges': tensor(480.1262), 'LCA': tensor([2.5026e-01, 9.8915e+02, 3.4080e+02, 4.5415e+03])}
-        # {'t_nodes': tensor(12.3976), 'tt_edges': tensor(481.3673), 'LCA': tensor([2.5026e-01, 1.0037e+03, 3.4153e+02, 4.3406e+03])}
+        pos_weight = {'t_nodes': torch.tensor(12.2783), 'tt_edges': torch.tensor(612.2586), 'LCA': torch.tensor([2.5020e-01, 4.8452e+02, 8.9243e+02, 1.2172e+04]), 'frag': torch.tensor(0.6540), 'FT': torch.tensor([0.4930, 0.0106, 0.4964])}
+        # {'t_nodes': tensor(12.3976), 'tt_edges': tensor(481.3673), 'LCA': tensor([2.5026e-01, 1.0037e+03, 3.4153e+02, 4.3406e+03]), 'frag': tensor(586.7446), 'FT': tensor([0.4938, 0.0105, 0.4957])}
     print(pos_weight)
+    print("="*30)
 
     # Start the training here
     epochs = 30
-    training(model, pos_weight, epochs, option.NGPU, trn_loader, val_loader, accumulate_grad_batches=option.GACC, checkpoint=checkpoint_path)
+    training(model, pos_weight, epochs, option.NGPU, trn_loader, val_loader, accumulate_grad_batches=option.GACC, checkpoint_path=checkpoint_path)
