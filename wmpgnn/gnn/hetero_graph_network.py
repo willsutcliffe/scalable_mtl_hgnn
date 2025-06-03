@@ -215,6 +215,9 @@ class HeteroGraphNetwork(AbstractModule):
         self._node_mlps['frag'] = weight_mlp(1, hidden_channels=weight_mlp_channels,
                                                num_layers=weight_mlp_layers,
                                                norm=norm)()  # MLPs for fragmentation classification after each block
+        self._node_mlps['ft'] = weight_mlp(3, hidden_channels=weight_mlp_channels,
+                                               num_layers=weight_mlp_layers,
+                                               norm=norm)()  # MLPs for FT after each block
 
         self._edge_models_model_dict = torch.nn.ModuleDict({str(i): j for i, j in self._edge_mlps.items()})
         self._node_models_model_dict = torch.nn.ModuleDict({str(i): j for i, j in self._node_mlps.items()})
@@ -226,8 +229,6 @@ class HeteroGraphNetwork(AbstractModule):
         self.node_weights = {}
         self.edge_logits = {}
         self.node_logits = {}
-        self.node_frag_logits = {}  # logits for fragmentation
-        self.node_frag_weights = {}
         self.edge_indices = {}
         self.node_indices = {}
         self.edge_node_pruning_indices = {}
@@ -276,9 +277,14 @@ class HeteroGraphNetwork(AbstractModule):
             else:
                 self.node_weights[node_type] = torch.ones((graph[node_type].x.shape[0], 1)).to(self.device)
         
-        if True:
-            self.node_frag_logits["frag"] = self._node_mlps["tracks"](global_input["tracks"].x, global_input["tracks"].batch)
-            self.node_frag_weights["frag"] = self._sigmoid(self.node_frag_logits["frag"])  # I think in every interferencee step the weights should be used and not the logits
+        if True:  # Additional Layers for fragmentation particle identification and FT
+            # Fragmentation
+            self.node_logits["frag"] = self._node_mlps["frag"](global_input["tracks"].x, global_input["tracks"].batch)
+            self.node_weights["frag"] = self._sigmoid(self.node_logits["frag"])
+            # FT
+            self.node_logits["ft"] = self._node_mlps["ft"](global_input["tracks"].x, global_input["tracks"].batch)
+            self.node_weights["ft"] = self._sigmoid(self.node_logits["ft"])
+
 
         if self.node_prune:
             for node_type in self.node_types:
