@@ -175,9 +175,12 @@ class CustomNeutralsHeteroDataset(Dataset):
                     charged_nodes[['sum_pt','sum_pz','mean_eta','DOCA','theta','trdist']].values,
                     dtype=torch.float
                 )
+                #px, py and sum(px,py,pz), theta wrt p_B
 
                 # Neutral features
                 neutral_feats = torch.tensor(neutral_df[['pt','pz','eta']].values, dtype=torch.float)
+
+                #px, py
 
                 # Build full cross between neutrals and charged trees
                 neutral_keys = neutral_df[['key']].rename(columns={'key':'neutral_key'}).assign(tmp=1)

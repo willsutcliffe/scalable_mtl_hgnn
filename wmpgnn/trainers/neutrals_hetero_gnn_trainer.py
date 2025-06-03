@@ -120,12 +120,12 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
         if train:
             data_loader = self.train_loader
-            self.model.train()
+            # self.model.train()
             # torch.set_grad_enabled(True)
         else:
             data_loader = self.val_loader
             # self.model.eval()
-            self.model.train()
+            # self.model.train()
             # torch.set_grad_enabled(False)
 
         last_batch = len(data_loader)
