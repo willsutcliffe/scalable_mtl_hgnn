@@ -118,14 +118,15 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         preds_one_epoch =[]
         labels_one_epoch = []
 
-        if train == True:
+        if train:
             data_loader = self.train_loader
             self.model.train()
-            torch.set_grad_enabled(True)
+            # torch.set_grad_enabled(True)
         else:
             data_loader = self.val_loader
-            self.model.eval()
-            torch.set_grad_enabled(False)
+            # self.model.eval()
+            self.model.train()
+            # torch.set_grad_enabled(False)
 
         last_batch = len(data_loader)
         # print(last_batch)
@@ -157,9 +158,16 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             edge_probs = torch.sigmoid(
                 outputs[('chargedtree', 'to', 'neutrals')].edges
             )[:,0]
+
+            ### [DEBUG]
             edge_probs = edge_probs.detach().cpu()
+
             # Boolean mask of predicted positive edges
             pred_positive = edge_probs > self.threshold
+            # label_edges = label_edges.squeeze() # transforms from [N,1] to [N]
+
+
+            ### [DEBUG]
             label_edges = label_edges.squeeze().detach().cpu() # transforms from [N,1] to [N]
 
             edge_index = data[('chargedtree', 'to', 'neutrals')].edge_index
@@ -233,6 +241,8 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         else:
             # epoch_preds  = torch.tensor([], device='cuda')
             # epoch_labels = torch.tensor([], device='cuda')
+
+            ## [DEBUG]
             epoch_preds  = torch.tensor([], dtype=torch.float32)
             epoch_labels = torch.tensor([], dtype=torch.long)
 
