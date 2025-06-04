@@ -159,7 +159,7 @@ class CustomNeutralsHeteroDataset(Dataset):
 
                 # Charged-tree node aggregates
                 charged_stats = charged_df.groupby('decay_id').agg(
-                    sum_pz=('pz','sum'), sum_pt=('pt','sum'), mean_eta=('eta','mean')
+                    sum_px=('px','sum'), sum_py=('py','sum'), sum_pz=('pz','sum'), sum_pt=('pt','sum'), mean_eta=('eta','mean')
                 )
                 # intra-decay-edge means
                 ef = edge_feats.copy()
@@ -172,14 +172,15 @@ class CustomNeutralsHeteroDataset(Dataset):
                 intra = same.groupby('decay_id_s')[['DOCA','theta','trdist']].mean()
                 charged_nodes = charged_stats.join(intra, how='left').fillna(0).reset_index()
                 charged_feats = torch.tensor(
-                    charged_nodes[['sum_pt','sum_pz','mean_eta','DOCA','theta','trdist']].values,
+                    charged_nodes[['sum_pt','sum_px','sum_py','sum_pz','mean_eta','DOCA','theta','trdist']].values,
                     dtype=torch.float
                 )
-                #px, py and sum(px,py,pz), theta wrt p_B
 
                 # Neutral features
-                neutral_feats = torch.tensor(neutral_df[['pt','pz','eta']].values, dtype=torch.float)
+                neutral_feats = torch.tensor(neutral_df[['pt','px','py','pz','eta']].values, dtype=torch.float)
 
+                #TODO
+                #px, py and sum(px,py,pz), theta wrt p_B
                 #px, py
 
                 # Build full cross between neutrals and charged trees
