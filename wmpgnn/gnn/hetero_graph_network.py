@@ -3,6 +3,7 @@ from wmpgnn.blocks.hetero_edge_block  import HeteroEdgeBlock
 from wmpgnn.blocks.hetero_global_block import HeteroGlobalBlock
 from wmpgnn.blocks.hetero_node_block import HeteroNodeBlock
 import torch
+import torch.nn as nn
 from torch_geometric.nn.models import MLP
 from torch.nn import Linear, Sigmoid, Softmax
 from torch_geometric.nn import knn
@@ -57,6 +58,7 @@ class HeteroGraphNetwork(AbstractModule):
                  use_edge_weights=True, use_node_weights=True, weight_mlp_layers=4, weight_mlp_channels=128,
                  weighted_mp = False, norm="batch_norm"):
         super(HeteroGraphNetwork, self).__init__()
+
         self._use_globals = use_globals
         self.edge_types = edge_types
         self.node_types = node_types

@@ -2,11 +2,11 @@ import sys
 import os
 import glob
 from optparse import OptionParser
-
 from tqdm import tqdm
+import time
+
 from multiprocessing import Pool
 from itertools import chain
-import time
 
 import torch
 from torch.utils.data import Dataset
@@ -113,8 +113,8 @@ if __name__ == "__main__":
     end = time.time()
 
     print(f"data read in, time needed {(end - start):.2f}")
-    print(f"Train dataset: {len(trn_dataset)}")
-    print(f"Validation dataset: {len(val_dataset)}")
+    print(f"Train dataset       : {len(trn_dataset)}")
+    print(f"Validation dataset  : {len(val_dataset)}")
     print("="*30)
 
     # here we can check what kind of gpu it is to specify bs, also num_workers = num_cpu * 2
@@ -126,8 +126,9 @@ if __name__ == "__main__":
     if option.CW:  # CW = calculate pos weights
         pos_weight = get_hetero_weight(trn_loader)
     else:
-        pos_weight = {'t_nodes': torch.tensor(12.2783), 'tt_edges': torch.tensor(612.2586), 'LCA': torch.tensor([2.5020e-01, 4.8452e+02, 8.9243e+02, 1.2172e+04]), 'frag': torch.tensor(0.6540), 'FT': torch.tensor([0.4930, 0.0106, 0.4964])}
-        # {'t_nodes': tensor(12.3976), 'tt_edges': tensor(481.3673), 'LCA': tensor([2.5026e-01, 1.0037e+03, 3.4153e+02, 4.3406e+03]), 'frag': tensor(586.7446), 'FT': tensor([0.4938, 0.0105, 0.4957])}
+        pos_weight = {'t_nodes': torch.tensor(12.387213706970215), 'tt_edges': torch.tensor(481.53240966796875),
+                      'LCA': torch.tensor([0.2502596080303192, 1005.6044921875, 341.3268127441406, 4364.5322265625]),
+                      'frag': torch.tensor(478.3134460449219), 'FT': torch.tensor([0.4957561790943146, 0.01050918735563755, 0.49373456835746765])}
     print(pos_weight)
     print("="*30)
 

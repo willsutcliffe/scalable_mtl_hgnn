@@ -22,7 +22,7 @@ def make_loggable(hparams_dict):
     return loggable
 
 
-def get_ref_signal(ref_signal):
+def get_ref_signal(ref_signal):  # Here we can define them all
     if 'Bs_JpsiPhi':
         signal_decay = {'daughters' : ['mu+','mu-','K+','K-'], 'mothers' : ['B(s)0'] }
         cc_signal_decay = {'daughters' : ['mu+','mu-','K+','K-'], 'mothers' : ['B(s)~0'] }
@@ -59,7 +59,6 @@ def lca_reco_matrix(graph):
         (edge_index[0], edge_index[1])).transpose(), columns=['senders', 'receivers'])
     pd_matrix["LCA_probs"] = list(edges)
     pd_matrix["LCA_dec"] = list(np.argmax(edges, axis=-1))  # LCA decision
-    import pdb; pdb.set_trace()
     pd_matrix.set_index(['senders', 'receivers'], inplace=True)
     pd_matrix = pd_matrix.reset_index()
     pd_matrix = pd_matrix[pd_matrix['senders'] < pd_matrix['receivers']]
@@ -102,7 +101,7 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
     Bparts = float(torch.sum(torch.argmax(graph['tracks', 'to', 'tracks'].y, -1) > 0))
     if Bparts < 1:
         print("no B reco")
-        #continue  # but should still continue
+        #continue  # but should still continue, check if also the reco found no B
     
     # Reco
     reco_LCA = lca_reco_matrix(output)
@@ -181,6 +180,7 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
 
             # Classify the reconstruction type of the event
             true_cluster = truth_cluster_dict[tc_firstkey]
+            FT = 0
             perfect_reco = 0
             all_particles = 0
             none_iso = 0
@@ -218,8 +218,9 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
             signal_LCA_id = true_LCA[true_LCA['senders'].isin(indices) | true_LCA['receivers'].isin(indices)]["LCA_id"]
             values, counts = np.unique(signal_LCA_id, return_counts=True)
             origin_B_id = values[np.argmax(counts)]
-            
+            import pdb; pdb.set_trace()
             # Log whether true B is reco or not
+            # Easiest here is to asign the PV w/ corr and wrong
             signal_df = signal_df._append({'EventNumber': event,
                                             'NumParticlesInEvent': total_number_of_particles,
                                             'NumSignalParticles': number_of_signal_particles,
@@ -234,7 +235,7 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
                                             'Pred_FT': FT,
                                             'B_id': origin_B_id},
                                             ignore_index=True)
-            print(signal_df)
+        # Add condition that signal perfect/all particles w/ part/noniso or better on opposite side
         # Log for event df
         if number_of_background_particles <=0:
             number_of_background_particles = -1
