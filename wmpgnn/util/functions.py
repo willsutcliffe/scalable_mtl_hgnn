@@ -416,13 +416,13 @@ def ks_test(responses):
             f'{signal:.3f} ({bkg:.3f})')
 
 
-def select_epoch_indices(n_epochs, n_samples=5):
+def select_epoch_indices(n_epochs, n_dropped_epochs, n_samples=5):
     """
     Return `n_samples` epoch indices (0-based, going up to n_epochs+1),
     including the first (0) and last (n_epochs+1), and equally spaced values in between.
     """
     # Include the first and last epochs
-    total_epochs = n_epochs + 1
+    total_epochs = n_epochs + n_dropped_epochs -1 
 
     if n_samples < 2:
         raise ValueError("At least two samples are needed (first and last).")

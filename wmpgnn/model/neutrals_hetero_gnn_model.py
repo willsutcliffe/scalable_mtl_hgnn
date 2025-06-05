@@ -7,9 +7,9 @@ from wmpgnn.gnn.neutrals_hetero_graph_network import NeutralsHeteroGraphNetwork
 from wmpgnn.gnn.hetero_graphcoder import HeteroGraphCoder
 from wmpgnn.gnn.neutrals_hetero_graph_network import edge_pruning, node_pruning
 
-def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm"):
+def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm", dropout=0.0):
     return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
-              out_channels=output_size, num_layers=num_layers, norm=norm)
+              out_channels=output_size, num_layers=num_layers, norm=norm, dropout=dropout)
 
 def hetero_graph_concat(g1,g2):
     graph = g1.clone()
@@ -36,16 +36,17 @@ class NeutralsHeteroGNN(nn.Module):
                  weight_mlp_channels=16,
                  weight_mlp_layers=4,
                  weighted_mp=False,
-                 norm="batch_norm"):
+                 norm="batch_norm",
+                 dropout=0.0):
         super(NeutralsHeteroGNN, self).__init__()
 
         self.edge_types = edge_types
         self.node_types = node_types
-        mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm)
+        mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm, dropout=dropout)
         if norm == "graph_norm":
-            global_mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm="batch_norm")
+            global_mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm="batch_norm", dropout=dropout)
         else:
-            global_mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm)
+            global_mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm, dropout=dropout)
         self._encoder = HeteroGraphCoder(node_types, edge_types,
                                          edge_models={edge_type: mlp for edge_type in edge_types},
                                          node_models={node_type: mlp for node_type in node_types}, global_model=global_mlp)
@@ -56,7 +57,7 @@ class NeutralsHeteroGNN(nn.Module):
                 NeutralsHeteroGraphNetwork(node_types, edge_types, edge_model=mlp, node_model=mlp, global_model=mlp,
                                    use_node_weights=use_node_weights, use_edge_weights=use_edge_weights,
                                    weight_mlp_channels=weight_mlp_channels, weight_mlp_layers=weight_mlp_layers,
-                                   weighted_mp=weighted_mp, norm=norm))
+                                   weighted_mp=weighted_mp, norm=norm, dropout=dropout))
         self._blocks = nn.ModuleList(self._blocks)
 
         self._decoder = HeteroGraphCoder(node_types, edge_types,
@@ -82,10 +83,15 @@ class NeutralsHeteroGNN(nn.Module):
             global_fn = lambda: nn.Linear(mlp_output_size, global_op)
 
         ## Here some change for debug -> to check
+        # edge_models = {
+        #     ('chargedtree', 'to', 'neutrals'): lambda: nn.Linear(mlp_output_size, 1)
+        # }
         edge_models = {
-            ('chargedtree', 'to', 'neutrals'): lambda: nn.Linear(mlp_output_size, 1)
+            ('chargedtree', 'to', 'neutrals'): lambda: nn.Sequential(
+                nn.Linear(mlp_output_size, 1),
+                nn.Dropout(dropout)
+            )
         }
-
         # edge_models ={('tracks',
         #                 'to',
         #                 'tracks') : lambda: nn.Linear(mlp_output_size, 4).cuda()}

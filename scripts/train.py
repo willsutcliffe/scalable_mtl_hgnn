@@ -123,12 +123,17 @@ trainer.plot_balanced_accuracy(output_folder+plot_name, show=False)
 plot_name = model_file.replace(".pt", "_pre.png")
 trainer.plot_precision(output_folder+plot_name, show=False)
 
-for i in select_epoch_indices(epochs,5):
+for i in select_epoch_indices(epochs,dropped_lr_epochs,5):
     plot_name = model_file.replace(".pt", f"_pred_epoch{i}.png")
     trainer.plot_predictions(output_folder, plot_name, epoch=i, show=False)
     plot_name = model_file.replace(".pt", f"_roc_auc_epoch{i}.png")
     trainer.plot_roc_auc(output_folder, plot_name, epoch=i, show=False)
+    plot_name = model_file.replace(".pt", f"_threshold_epoch{i}.png")
+    trainer.plot_tpr_thresholds(output_folder, plot_name, key_prefix='val', epoch=i, show=False)
+    plot_name = model_file.replace(".pt", f"_fom_epoch{i}.png")
+    trainer.plot_fom_vs_threshold(output_folder, plot_name, key_prefix='val', epoch=i, show=False)
 #python scripts/train.py mp_gnn_run3.yaml | tee logs/homo.log
 
 csv_file = model_file.replace(".pt", "_metrics.csv")
 trainer.save_metrics(output_folder+csv_file)
+

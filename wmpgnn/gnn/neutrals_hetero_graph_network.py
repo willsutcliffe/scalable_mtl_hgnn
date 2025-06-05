@@ -11,9 +11,9 @@ from torch_scatter.composite import scatter_softmax
 import contextlib
 
 
-def weight_mlp(output_size, hidden_channels=16, num_layers=4, norm="batch_norm"):
+def weight_mlp(output_size, hidden_channels=16, num_layers=4, norm="batch_norm", dropout=0.0):
     return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
-                       out_channels=output_size, num_layers=num_layers, norm=norm)
+                       out_channels=output_size, num_layers=num_layers, norm=norm, dropout=dropout)
 
 
 def ones(device):
@@ -55,7 +55,7 @@ class NeutralsHeteroGraphNetwork(AbstractModule):
                  node_types, edge_types, edge_model, node_model,
                  global_model=None, use_globals=True, hidden_size=8, device="cuda",
                  use_edge_weights=True, use_node_weights=True, weight_mlp_layers=4, weight_mlp_channels=128,
-                 weighted_mp = False, norm="batch_norm"):
+                 weighted_mp = False, norm="batch_norm", dropout=0.0):
         super(NeutralsHeteroGraphNetwork, self).__init__()
         self._use_globals = use_globals
         self.edge_types = edge_types
@@ -86,14 +86,15 @@ class NeutralsHeteroGraphNetwork(AbstractModule):
         for edge_type in edge_types:
             self._edge_mlps[edge_type] = weight_mlp(1, hidden_channels=weight_mlp_channels,
                                                     num_layers=weight_mlp_layers,
-                                                    norm=norm)()
+                                                    norm=norm, dropout=dropout)()
         # self._node_mlp = weight_mlp(1)()
         for node_type in self.node_types:
             self._node_mlps[node_type] = weight_mlp(
                 1,
                 hidden_channels=weight_mlp_channels,
                 num_layers=weight_mlp_layers,
-                norm=norm
+                norm=norm,
+                dropout=dropout
             )()
         #self._node_mlps['pvs'] = ones(device)
         # self._edge_mlp = weight_mlp(1)()

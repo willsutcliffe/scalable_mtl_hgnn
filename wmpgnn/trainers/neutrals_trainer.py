@@ -677,7 +677,7 @@ class NeutralsTrainer(ABC):
         plt.tight_layout()
         output_path = os.path.join(path, "thresholds", file_name)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        figure.savefig(output_path)
+        plt.savefig(output_path)
         plt.close()
 
     def plot_fom_vs_threshold(self, path, file_name, key_prefix: str = 'val', epoch: int = -1, show: bool = True):
@@ -716,7 +716,7 @@ class NeutralsTrainer(ABC):
 
         output_path = os.path.join(path, "fom", file_name)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        figure.savefig(output_path)
+        plt.savefig(output_path)
 
         plt.close()
 
