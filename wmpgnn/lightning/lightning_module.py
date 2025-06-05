@@ -5,6 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 
 from collections import defaultdict
+import copy
 
 import pandas as pd
 import numpy as np
@@ -15,7 +16,7 @@ from torch import nn
 from torch_scatter import scatter_add
 
 from helper import make_loggable, eval_reco_performance, get_ref_signal
-from plot_helper import plot_fragmentation, plot_ft_nodes
+from plot_helper import plot_gn_block_dist, plot_ft_nodes
 from wmpgnn.util.functions import acc_four_class
 
 
@@ -39,7 +40,7 @@ class HGNNLightningModule(L.LightningModule):
         self.tt_edges_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights["tt_edges"])
         self.tPV_edges_criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([6.1118]))  # Average no. of PVs for each track one PV is correct
 
-        # trn, val logging
+        # trn, val, tst logging
         self.trn_log = {"LCA_loss": [], "t_nodes_loss": [], "frag_loss": [], "ft_loss": [], "tt_edges_loss": [], "tPV_edges_loss": [], "combined_loss": [],
                         "tPV_edge_acc": [], "PV_has_B_acc": []}
         self.val_log = {"LCA_loss": [], "t_nodes_loss": [], "frag_loss": [], "ft_loss": [], "tt_edges_loss": [], "tPV_edges_loss": [], "combined_loss": [],
@@ -54,11 +55,14 @@ class HGNNLightningModule(L.LightningModule):
                 self.trn_log[f"LCA_class{i}_pred_class{j}"] = []
                 self.val_log[f"LCA_class{i}_pred_class{j}"] = []
                 self.tst_log[f"LCA_class{i}_pred_class{j}"] = []
+        for i in range(6):
+            self.trn_log[f"w_{i}"] = []
+            self.val_log[f"w_{i}"] = []
 
-        # Eval flags which can be turned on and off
+        # Eval flags on tst sample which can be turned on and off
         self.version = version
         self.ref_signal = get_ref_signal(ref_signal)
-        self.get_node_performance = True
+        self.get_node_performance = True  # HOnestly this hsould be always true like everything but what ever...
         self.get_edge_performance = True
         self.get_PV_performance = True
         self.get_reco_performance = True
@@ -66,7 +70,14 @@ class HGNNLightningModule(L.LightningModule):
 
     
     def init_tst_log(self):
+        # Add tensors to dict for logging
         for i in range(len(self.model._blocks)):
+            if self.get_node_performance:
+                self.tst_log[f"sig_nodes_score_{i}"] = torch.tensor([])
+                self.tst_log[f"bkg_nodes_score_{i}"] = torch.tensor([])
+            if self.get_edge_performance:
+                self.tst_log[f"sig_edges_score_{i}"] = torch.tensor([])
+                self.tst_log[f"bkg_edges_score_{i}"] = torch.tensor([])
             if self.get_frag_performance:
                 self.tst_log[f"frag_pos_part_score_{i}"] = torch.tensor([])
                 self.tst_log[f"frag_neg_part_score_{i}"] = torch.tensor([])
@@ -75,6 +86,8 @@ class HGNNLightningModule(L.LightningModule):
                 self.tst_log[f"bbar_ft_score_{i}"] = torch.tensor([])
                 self.tst_log[f"none_ft_score_{i}"] = torch.tensor([])
                 self.tst_log[f"b_ft_score_{i}"] = torch.tensor([])
+
+        # Initiate the dataframes for reco performance eval
         self.signal_df = pd.DataFrame(
         columns=['EventNumber', 'NumParticlesInEvent', 'NumSignalParticles', 'NumBkgParticles_noniso', 
                 'PerfectSignalReconstruction', 'AllParticles', 'PerfectReco', 'NoneIso', 'PartReco', 'NotFound', 'SigMatch', 
@@ -149,13 +162,15 @@ class HGNNLightningModule(L.LightningModule):
             loss_tPV_edges += self.tPV_edges_criterion(block.edge_logits[('tracks', 'to', 'pvs')], y_tPV_edges)
 
         """Combing the loss"""
-        loss = (  # Here we can add the weights
-                loss_LCA +
-                3*loss_t_nodes +
-                30*loss_tt_edges +
-                loss_tPV_edges + 
-                loss_frag_nodes +
-                loss_ft_nodes
+        w = torch.exp(-self.model.loss_weights)
+        loss = 1/2 * (  # Here we can add the weights, TODO add trainable weight to combine them
+                w[0] * loss_LCA +
+                w[1] * loss_t_nodes +
+                w[2] * loss_tt_edges +
+                w[3] * loss_tPV_edges + 
+                w[4] * loss_frag_nodes +
+                w[5] * loss_ft_nodes +
+                torch.sum(self.model.loss_weights)
         )
 
         """Getting the accuracy"""
@@ -176,6 +191,8 @@ class HGNNLightningModule(L.LightningModule):
             log_dict[key].append(values)
         log_dict["tPV_edge_acc"].append(acc_tPV_edge)
         log_dict["PV_has_B_acc"].append(acc_PV_has_B)
+        for i, weight in enumerate(self.model.loss_weights):
+            log_dict[f"w_{i}"].append(weight.item())
 
         return loss
         
@@ -183,26 +200,15 @@ class HGNNLightningModule(L.LightningModule):
     def training_step(self, batch, batch_idx): 
         loss = self.shared_step(batch, log_dict=self.trn_log)
         return loss
+
     
     def validation_step(self, batch, batch_idx): 
         loss = self.shared_step(batch, log_dict=self.val_log)
         return loss
 
-    def test_step(self, batch, batch_idx):
-        print(batch_idx)
-        """Initialize timing"""
-        start = torch.cuda.Event(enable_timing=True)
-        end = torch.cuda.Event(enable_timing=True)
-        
-        """Model output"""
-        torch.cuda.synchronize()
-        start.record()
-        outputs = self.model(batch)
-        end.record()
-        torch.cuda.synchronize()
-        time_model = start.elapsed_time(end)
 
-        """Getting the accuracy"""
+    def test_step(self, batch, batch_idx):
+        """Getting the true value"""
         # Variables for accuracy calculation
         y_tt_LCA = batch[('tracks', 'to', 'tracks')].y.argmax(dim=1)  # for LCA multi classification
         y_tPV_edges = batch[('tracks', 'to', 'pvs')].y.to(dtype=torch.float32)
@@ -213,25 +219,59 @@ class HGNNLightningModule(L.LightningModule):
         num_nodes = batch['tracks'].x.shape[0]
         out = batch[('tracks', 'to', 'tracks')].edges.new_zeros(num_nodes, batch[('tracks', 'to', 'tracks')].y.shape[1])
         node_sum = scatter_add(batch[('tracks', 'to', 'tracks')].y, batch[('tracks', 'to', 'tracks')].edge_index[0], out=out, dim=0)
-        y_t_nodes = ((torch.sum(node_sum[:, 1:], 1) > 0)).unsqueeze(1).float()  # node pruning label
+        y_t_nodes = ((torch.sum(node_sum[:, 1:], 1) > 0))  # node pruning labels
+        y_tt_edges = (batch[('tracks', 'to', 'tracks')].y[:, 0] == 0)  # edge pruning labels 
         # General track to PV, TODO need to check it, I think its about finding the PV which produce B
         yb = y_t_nodes[batch[('tracks', 'to', 'pvs')]['edge_index'][0]] * batch[('tracks', 'to', 'pvs')].y
         pv_sum = scatter_add(yb, batch[('tracks', 'to', 'pvs')].edge_index[1], dim=0)
+        
 
-        acc_LCA = acc_four_class(outputs[('tracks', 'to', 'tracks')].edges, y_tt_LCA)
+        """Model output"""
+        # Get the output w/o any pruning, later one w/ pruning for performance eval
+        reco_batch = copy.deepcopy(batch)  # copying it for the reco peformance model w/ pruning
+        outputs_np = self.model(batch)
+
+        """Evaluate for the case whithout pruning, as pruning changes edge weights and output edges, nodes"""
+        acc_LCA = acc_four_class(outputs_np[('tracks', 'to', 'tracks')].edges, y_tt_LCA)
         acc_tPV_edge = torch.sum(y_tPV_edges == (self.model._blocks[-1].edge_weights[('tracks', 'to', 'pvs')] > 0.5)) / y_tPV_edges.shape[0]
         pv_target = 1. * (pv_sum > 0)
         acc_PV_has_B = torch.sum(pv_target == (self.model._blocks[-1].node_weights['pvs'] > 0.5)) / pv_target.shape[0]
-
-        """Edge node prediciont plots output"""
-        for i, block in enumerate(self.model._blocks):  # check if .item() is necessary
-            # Obtain the fragmentation accuracy/block output
+        
+        # Get the block wide output
+        for i, block in enumerate(self.model._blocks): 
+            if self.get_node_performance:
+                sig_nodes_selbool = y_t_nodes == 1
+                sig_nodes_score = block.node_weights['tracks'].squeeze()[sig_nodes_selbool]
+                bkg_nodes_score = block.node_weights['tracks'].squeeze()[~sig_nodes_selbool]
+                self.tst_log[f"sig_nodes_score_{i}"] = torch.cat([self.tst_log[f"sig_nodes_score_{i}"], sig_nodes_score.cpu()], dim=0)
+                self.tst_log[f"bkg_nodes_score_{i}"] = torch.cat([self.tst_log[f"bkg_nodes_score_{i}"], bkg_nodes_score.cpu()], dim=0)
+            if self.get_edge_performance:
+                sig_edges_selbool = y_tt_edges == 1
+                sig_edges_score = block.edge_weights[('tracks', 'to', 'tracks')].squeeze()[sig_edges_selbool]
+                bkg_edges_score = block.edge_weights[('tracks', 'to', 'tracks')].squeeze()[~sig_edges_selbool]
+                self.tst_log[f"sig_edges_score_{i}"] = torch.cat([self.tst_log[f"sig_edges_score_{i}"], sig_edges_score.cpu()], dim=0)
+                self.tst_log[f"bkg_edges_score_{i}"] = torch.cat([self.tst_log[f"bkg_edges_score_{i}"], bkg_edges_score.cpu()], dim=0)
             if self.get_frag_performance:
                 true_frag_selbool = y_frag == 1
-                frag_pos_part_score = torch.sigmoid(block.node_logits['frag'][true_frag_selbool])
+                frag_pos_part_score = torch.sigmoid(block.node_logits['frag'][true_frag_selbool]) # change to node weights
                 frag_neg_part_score = torch.sigmoid(block.node_logits['frag'][~true_frag_selbool])
                 self.tst_log[f"frag_pos_part_score_{i}"] = torch.cat([self.tst_log[f"frag_pos_part_score_{i}"], frag_pos_part_score.cpu()], dim=0)
                 self.tst_log[f"frag_neg_part_score_{i}"] = torch.cat([self.tst_log[f"frag_neg_part_score_{i}"], frag_neg_part_score.cpu()], dim=0)
+        
+        # removing the output of the unprunded model
+        del outputs_np
+
+        """Start the study for reco performance"""
+        # Activate the pruning for reco performance studies, needs to grab it form somewhere
+        self.model._blocks[3].node_prune = True
+        self.model._blocks[3].edge_prune = True
+        outputs = self.model(reco_batch)
+        self.model._blocks[3].node_prune = False
+        self.model._blocks[3].edge_prune = False
+        import pdb; pdb.set_trace()
+
+        """Edge node prediciont plots output"""
+        for i, block in enumerate(self.model._blocks):  # check if .item() is necessary
             # Obtain FT accuracy/block ouput
             if self.get_reco_performance:  # for confusion matrix
                 bbar_ft_selbool = y_ft == 0
@@ -261,6 +301,9 @@ class HGNNLightningModule(L.LightningModule):
 
     def on_test_epoch_start(self):
         self.init_tst_log()
+        self.model._blocks[3].node_weight_cut = 0.3
+        self.model._blocks[3].prune_by_cut = True
+        self.model._blocks[3].edge_weight_cut = 0.3
 
 
     def on_train_epoch_end(self):
@@ -270,17 +313,24 @@ class HGNNLightningModule(L.LightningModule):
         self.trn_log = defaultdict(list)
 
     def on_validation_epoch_end(self):
+        import pdb; pdb.set_trace()
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.val_log.items()}
         for key, val in avg_losses.items():
             self.log(f"val/{key}", val, prog_bar=True, on_epoch=True, on_step=False)
         self.val_log = defaultdict(list)
     
     def on_test_epoch_end(self):
-        if self.get_frag_performance:
-            plot_fragmentation(self.tst_log, len(self.model._blocks), self.version)
         if self.get_reco_performance:
             plot_ft_nodes(self.tst_log, len(self.model._blocks), self.version)
-        import pdb; pdb.set_trace()
+            self.signal_df.to_csv(f'lightning_logs/version_{self.version}/signal_df.csv', index=False)
+            self.event_df.to_csv(f'lightning_logs/version_{self.version}/event_df.csv', index=False)
+            del self.signal_df, self.event_df
+        if self.get_node_performance:
+            plot_gn_block_dist(self.tst_log, "nodes", len(self.model._blocks), self.version)
+        if self.get_edge_performance:
+            plot_gn_block_dist(self.tst_log, "edges", len(self.model._blocks), self.version)
+        if self.get_frag_performance:
+            plot_gn_block_dist(self.tst_log, "frag", len(self.model._blocks), self.version)
 
 
 # Here is a trainer wrapper
@@ -303,6 +353,7 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulat
 
     early_stopping = EarlyStopping(
         monitor="val/combined_loss",
+        verbose=True,
         mode="min",
         patience=5,
     )

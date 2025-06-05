@@ -1,10 +1,11 @@
-from IPython.core.completer import not_found
+# from IPython.core.completer import not_found
 
 from wmpgnn.performance.reconstruction import reconstruct_decay, make_decay_dict
 from wmpgnn.performance.reconstruction import particle_name, flatten, match_decays
 from wmpgnn.util.functions import init_plot_style
 from wmpgnn.util.functions import acc_four_class
 from wmpgnn.model.model_loader import ModelLoader
+from wmpgnn.lightning.lightning_module import HGNNLightningModule
 from wmpgnn.datasets.data_handler import DataHandler
 import pandas as pd
 import numpy as np
@@ -15,8 +16,11 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 
 
-
-
+from itertools import chain
+import os
+import sys
+import glob
+from torch_geometric.loader import DataLoader
 
 class Performance:
     """
@@ -74,17 +78,32 @@ class Performance:
 
                 """
         self.config_loader = config
-        self.data_loader = DataHandler(self.config_loader, performance_mode=True)
-        self.data_loader.load_data()
+
+        model_loader = ModelLoader(self.config_loader)
+        model = model_loader.get_model()
+
+        pos_weight = {'t_nodes': torch.tensor(11.3371),'tt_edges': torch.tensor(480.6347), 'LCA': torch.tensor([2.5026e-01, 4.8915e+02, 7.4080e+02, 7.5415e+03]) }
+
+        module = HGNNLightningModule.load_from_checkpoint(
+                checkpoint_path="/eos/user/y/yukaiz/SWAN_projects/weighted_MP_gnn/wmpgnn//lightning/lightning_logs/version_3/checkpoints/epoch-epoch=05.ckpt",
+                model=model,
+                pos_weights=pos_weight,
+                optimizer_class=torch.optim.Adam,
+                optimizer_params={"lr": 1e-3})
+        self.model = module.model
+        self.model.eval()
+
+        indir = "/eos/user/y/yukaiz/DFEI_data/Bs_JpsiPhi"
+        tst_paths = sorted(glob.glob(f'{indir}/testing_data_*'))
+        tst_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in tst_paths))
+
+        self.data_loader = DataLoader(tst_dataset, batch_size=12, num_workers=1, drop_last=True)
+
         self.full_graphs = full_graphs
         self.data_type = config.get("dataset.data_type")
-        self.dataset = self.data_loader.get_test_dataloader(batch_size=8)
-        model_loader = ModelLoader(self.config_loader)
-        self.model = model_loader.get_model()
+        self.dataset = DataLoader(tst_dataset, batch_size=8, num_workers=1, drop_last=True)
+
         self.full_graphs = full_graphs
-        model_weights = config.get("inference.model_file")
-        self.model.load_state_dict(torch.load(model_weights))
-        self.model.eval()
         self.name = config.get("inference.name")
         self.results_dir = config.get("inference.results_dir")
         self.cuda = cuda

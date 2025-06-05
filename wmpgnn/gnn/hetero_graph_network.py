@@ -3,6 +3,7 @@ from wmpgnn.blocks.hetero_edge_block  import HeteroEdgeBlock
 from wmpgnn.blocks.hetero_global_block import HeteroGlobalBlock
 from wmpgnn.blocks.hetero_node_block import HeteroNodeBlock
 import torch
+import torch.nn as nn
 from torch_geometric.nn.models import MLP
 from torch.nn import Sigmoid
 
@@ -182,6 +183,7 @@ class HeteroGraphNetwork(AbstractModule):
             norm (str): Normalization type ("batch_norm", etc.) for weighting MLPs.
         """
         super(HeteroGraphNetwork, self).__init__()
+
         self._use_globals = use_globals
         self.edge_types = edge_types
         self.node_types = node_types

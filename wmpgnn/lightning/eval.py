@@ -2,6 +2,7 @@ import sys
 import os
 import glob
 from optparse import OptionParser
+from tqdm import tqdm
 
 from itertools import chain
 
@@ -37,7 +38,8 @@ if __name__ == "__main__":
 
 
     """Load config file"""
-    config_loader = ConfigLoader(option.CONFIG, environment_prefix="DL")
+    config_loader = ConfigLoader(option.CONFIG, environment_prefix="DL")  # One can include if it is included in the config loader and take that
+    config_file = config_loader._load_config()  # pass this to the lightning module
 
     """Load model"""
     model_loader = ModelLoader(config_loader)
@@ -59,9 +61,11 @@ if __name__ == "__main__":
     print(model)
 
     """Load data"""
-    import pdb; pdb.set_trace()
     tst_paths = sorted(glob.glob(f'{option.INDIR}/testing_data_*'))[:1]
-    tst_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in tst_paths))
+    tst_dataset = []
+    for path in tqdm(tst_paths, desc="Validation dataset"):
+        tst_dataset.extend(torch.load(path, weights_only=False))
+
     print("Data read in:")
     print(f"Test dataset       : {len(tst_dataset)}")
     tst_loader = DataLoader(tst_dataset, batch_size=1, num_workers=6, drop_last=True)
@@ -72,6 +76,7 @@ if __name__ == "__main__":
     file_path = f"lightning_logs/version_{version}"
     df = pd.read_csv(f"{file_path}/metrics.csv")
     df = df.groupby('epoch').agg(lambda x: x.dropna().iloc[0] if not x.dropna().empty else None).reset_index()
+    
     # Plot the loss
     plot_loss(df, version)
     # Obtain the LCA accuracy of the different classes as a function of the epochs
@@ -79,7 +84,7 @@ if __name__ == "__main__":
 
     # Obtain the accuracy and peformance of the model
     trainer = Trainer(
-        default_root_dir=f"lightning_logs/version_{version}",
+        default_root_dir=f"lightning_logs/version_{version}", # save the eval stuff in the dir of the model
     )
     trainer.test(module, dataloaders=tst_loader)
 

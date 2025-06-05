@@ -1,6 +1,10 @@
 import torch
 from torch_scatter import scatter_add
 
+from tqdm import tqdm
+from itertools import islice
+
+
 def hetero_positive_edge_weight(loader):
     """
     Computes the positive class weighting factor for edges in a heterogeneous graph
@@ -121,37 +125,34 @@ def acc_four_class(pred, label):
     correct_class2 = 0
     correct_class3 = 0
     correct_class4 = 0
+    class0_selbool = label == 0
+    class1_selbool = label == 1
+    class2_selbool = label == 2
+    class3_selbool = label == 3
+    
 
     pred_argmax = torch.argmax(pred, dim=1)
 
+    res = {}
+    for i in range(4):
+        classi_selbool = label == i
 
-    pred_class1 = (pred_argmax == 0).sum()
-    pred_class2 = (pred_argmax == 1).sum()
-    pred_class3 = (pred_argmax == 2).sum()
-    pred_class4 = (pred_argmax == 3).sum()
+        res[f"LCA_class{i}_num"] = torch.sum(classi_selbool).float().item()
+        if res[f"LCA_class{i}_num"] == 0:
+            res[f"LCA_class{i}_pred_class0"] = 0.
+            res[f"LCA_class{i}_pred_class1"] = 0.
+            res[f"LCA_class{i}_pred_class2"] = 0.
+            res[f"LCA_class{i}_pred_class3"] = 0.
+        else:
+            try:
+                res[f"LCA_class{i}_pred_class0"] = torch.sum(pred_argmax[classi_selbool] == 0).item() / res[f"LCA_class{i}_num"]
+                res[f"LCA_class{i}_pred_class1"] = torch.sum(pred_argmax[classi_selbool] == 1).item() / res[f"LCA_class{i}_num"]
+                res[f"LCA_class{i}_pred_class2"] = torch.sum(pred_argmax[classi_selbool] == 2).item() / res[f"LCA_class{i}_num"]
+                res[f"LCA_class{i}_pred_class3"] = torch.sum(pred_argmax[classi_selbool] == 3).item() / res[f"LCA_class{i}_num"]
+            except:
+                import pdb; pdb.set_trace()
 
-    true_class1 = (label == 0).sum()
-    true_class2 = (label == 1).sum()
-    true_class3 = (label == 2).sum()
-    true_class4 = (label == 3).sum()
-
-    if len(pred) != len(label):
-        print("something goes wrong in acc_four_class")
-        print(len(pred), len(label))
-
-    else:
-        correct_class1 = torch.sum(pred_argmax[label == 0] == label[label == 0])
-        correct_class2 = torch.sum(pred_argmax[label == 1] == label[label == 1])
-        correct_class3 = torch.sum(pred_argmax[label == 2] == label[label == 2])
-        correct_class4 = torch.sum(pred_argmax[label == 3] == label[label == 3])
-
-    correct_preds = torch.Tensor([correct_class1, correct_class2, correct_class3, correct_class4])
-    all_preds = torch.Tensor((pred_class1, pred_class2, pred_class3, pred_class4))
-    all_label = torch.Tensor((true_class1, true_class2, true_class3, true_class4))
-
-    acc = torch.div(correct_preds, all_label)
-
-    return acc
+    return res
 
 
 def weight_four_class(dataset,hetero=False):
@@ -199,7 +200,7 @@ def weight_four_class(dataset,hetero=False):
     return weight
 
 
-def get_hetero_weight(loader, node_weight=True, edge_weight=True, LCA_weight=True):
+def get_hetero_weight(loader, node_weight=True, edge_weight=True, LCA_weight=True, frag_weight=True, ft_weight=True):
     true_class = torch.zeros(4)
     num_sample = 0
 
@@ -209,11 +210,15 @@ def get_hetero_weight(loader, node_weight=True, edge_weight=True, LCA_weight=Tru
     sum_edges = 0
     sum_edges_pos = 0
 
-    for data in loader:
-    
+    pos_frag = 0
+    neg_frag = 0
+
+    ft_counts = torch.zeros(3)
+
+    for data in tqdm(islice(loader, 10000), total=10000): # not sure why it takes so long need to be optimized to save at least some time
         if node_weight:
-            node_sum = scatter_add(data[('tracks','to','tracks')].y, data[('tracks','to','tracks')].edge_index[0],dim=0)
-            ynodes = (1.*(torch.sum(node_sum[:,1:],1)>0)).unsqueeze(1)
+            node_sum = scatter_add(data[('tracks','to','tracks')].y, data[('tracks','to','tracks')].edge_index[0], dim=0)
+            ynodes = (torch.sum(node_sum[:,1:],1) > 0).unsqueeze(1)
             sum_nodes += data['tracks'].x.shape[0]
             sum_nodes_pos  += torch.sum(ynodes==1).item()
 
@@ -223,19 +228,29 @@ def get_hetero_weight(loader, node_weight=True, edge_weight=True, LCA_weight=Tru
 
         if LCA_weight:
             y = data[('tracks','to','tracks')].y
-            for i in range(true_class.shape[0]):
-                true_class[i] += (y.argmax(dim=1) == i).sum()
-            num_sample += len(y)
+            classes = y.argmax(dim=1)
+            binc = torch.bincount(classes, minlength=4) 
+            true_class += binc
+            num_sample += classes.size(0)
+
+        if frag_weight:
+            y = data['tracks'].frag
+            pos_frag += torch.sum(data['tracks'].frag.squeeze() != 0)
+            neg_frag += y.shape[0] - torch.sum(y)
+        
+        if ft_weight:
+            y = data['tracks'].ft + 1
+            ft_counts = ft_counts + torch.bincount(y)
         
     weight_class = num_sample / (4*true_class)
     weight_nodes = torch.tensor(sum_nodes/(2*sum_nodes_pos))
     weight_edges = torch.tensor(sum_edges/(2*sum_edges_pos))
+    weight_frag = neg_frag / pos_frag
+    ft_counts = 1.0 / ft_counts.float()
+    weight_ft = ft_counts / ft_counts.sum()
 
-    pos_weight ={"t_nodes": weight_nodes, "tt_edges": weight_edges, "LCA": weight_class}
-
-
+    pos_weight ={"t_nodes": weight_nodes, "tt_edges": weight_edges, "LCA": weight_class, "frag": weight_frag, "FT": weight_ft}
     return pos_weight
-
 
 def init_plot_style():
     """

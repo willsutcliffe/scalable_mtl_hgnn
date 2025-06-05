@@ -91,6 +91,8 @@ class HeteroGNN(nn.Module):
         """
         super(HeteroGNN, self).__init__()
 
+        self.loss_weights = nn.Parameter(torch.zeros(6, dtype=torch.float32))  # Adding a trainable weight for loss combination arXiv:1705.07115 
+
         self.edge_types = edge_types
         self.node_types = node_types
         mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm)
