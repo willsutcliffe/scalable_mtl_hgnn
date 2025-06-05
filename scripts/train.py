@@ -136,6 +136,16 @@ os.makedirs(output_folder, exist_ok=True)
 print(f"Training finished. Saving model in {model_file}")
 trainer.save_model(output_folder+model_file, save_config=True)
 
+save_prediction = True
+
+if save_prediction:
+    trainer.model.cuda()
+    data_loader = val_loader
+    for i, data in enumerate(data_loader):
+        data.to('cuda')
+        outputs = trainer.model(data)
+        import pdb; pdb.set_trace()
+
 csv_file = model_file.replace(".pt", ".csv")
 trainer.save_dataframe(output_folder+csv_file)
 
@@ -152,4 +162,3 @@ trainer.plot_efficiency(output_folder+plot_name, show=False)
 plot_name = model_file.replace(".pt", "_rej.png")
 trainer.plot_rejection(output_folder+plot_name, show=False)
 
-#python scripts/train.py mp_gnn_run3.yaml | tee logs/homo.log

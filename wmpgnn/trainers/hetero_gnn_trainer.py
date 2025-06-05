@@ -210,7 +210,7 @@ class HeteroGNNTrainer(Trainer):
             data.to('cuda')
 
             outputs = self.model(data)
-
+            
             data = outputs
 
             label = data[('tracks', 'to', 'tracks')].y.argmax(dim=1)
