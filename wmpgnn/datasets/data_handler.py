@@ -4,6 +4,7 @@ from wmpgnn.datasets.neutrals_hetero_graph_dataset import CustomNeutralsHeteroDa
 from torch_geometric.loader import DataLoader
 import glob
 import re
+import os
 
 def natural_sort_key(s):
     """ Sort strings using a human-friendly key (e.g., input_2.npy before input_10.npy) """
@@ -22,10 +23,18 @@ class DataHandler:
         if evt_max_val is not None:
             print(f"Using {evt_max_val} events for validation")
         data_path = self.config_loader.get("dataset.data_dir")
+        polarity = self.config_loader.get("dataset.polarity")
         data_type = self.config_loader.get("dataset.data_type")
+        data_path = os.path.join(data_path, polarity, data_type)
         self.batch_size =  self.config_loader.get("training.batch_size")
-        files_input_tr = sorted(glob.glob(f'{data_path}/training_dataset/input_*'), key=natural_sort_key)[:evt_max_train]
-        files_target_tr = sorted(glob.glob(f'{data_path}/training_dataset/target_*'), key=natural_sort_key)[:evt_max_train]
+        # Training set: split across two folders
+        files_input_tr_1 = sorted(glob.glob(f'{data_path}/training_dataset/input_*'), key=natural_sort_key)
+        files_target_tr_1 = sorted(glob.glob(f'{data_path}/training_dataset/target_*'), key=natural_sort_key)
+        files_input_tr_2 = sorted(glob.glob(f'{data_path}/training_dataset_2/input_*'), key=natural_sort_key)
+        files_target_tr_2 = sorted(glob.glob(f'{data_path}/training_dataset_2/target_*'), key=natural_sort_key)
+        # Combine the two lists and limit to evt_max_train
+        files_input_tr = (files_input_tr_1 + files_input_tr_2)[:evt_max_train]
+        files_target_tr = (files_target_tr_1 + files_target_tr_2)[:evt_max_train]
         files_input_vl = sorted(glob.glob(f'{data_path}/validation_dataset/input_*'), key=natural_sort_key)[:evt_max_val]
         files_target_vl = sorted(glob.glob(f'{data_path}/validation_dataset/target_*'), key=natural_sort_key)[:evt_max_val]
         files_input_tst = sorted(glob.glob(f'{data_path}/test_dataset/input_*'), key=natural_sort_key)

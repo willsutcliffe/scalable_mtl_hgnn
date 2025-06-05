@@ -5,6 +5,8 @@ from torch import nn
 from torch_scatter import scatter_add
 import numpy as np
 import pandas as pd
+from sklearn.metrics import roc_curve, auc, confusion_matrix
+
 
 class NeutralsHeteroGNNTrainer(NeutralsTrainer):
     """ Class for training """
@@ -41,11 +43,12 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         self.add_bce = add_bce
         self.beta_bce_edges = 33.2256  # You may want to recompute for new setup
 
-        # Metrics tracking
         self.ce_train_loss = []
         self.ce_val_loss = []
         self.bce_edges_train_loss = []
         self.bce_edges_val_loss = []
+
+        # Metrics tracking
 
     
     def save_checkpoint(self,file_path:str):
@@ -210,12 +213,12 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                         loss += bce_edges_loss
 
             # Accuracy/effectiveness/rejection metrics for new edge type
-            acc_one_batch = acc_binary(pred_positive, label_edges)
-            eff_one_batch = eff_binary(pred_positive, label_edges)
-            rej_one_batch = rej_binary(pred_positive, label_edges)
-            acc_one_epoch.append(acc_one_batch)
-            eff_one_epoch.append(eff_one_batch)
-            rej_one_epoch.append(rej_one_batch)
+            # acc_one_batch = acc_binary(pred_positive, label_edges)
+            # eff_one_batch = eff_binary(pred_positive, label_edges)
+            # rej_one_batch = rej_binary(pred_positive, label_edges)
+            # acc_one_epoch.append(acc_one_batch)
+            # eff_one_epoch.append(eff_one_batch)
+            # rej_one_epoch.append(rej_one_batch)
             preds_one_epoch.append(edge_probs)
             labels_one_epoch.append(label_edges)
 
@@ -231,9 +234,10 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                 print(info_msg)
                 running_loss = 0.
 
-        acc_one_epoch = torch.stack(acc_one_epoch)
-        eff_one_epoch = torch.stack(eff_one_epoch)
-        rej_one_epoch = torch.stack(rej_one_epoch)
+        # Aggregate epoch-wise tensors/lists
+        # acc_one_epoch = torch.stack(acc_one_epoch) if acc_one_epoch else torch.tensor([])
+        # eff_one_epoch = torch.stack(eff_one_epoch) if eff_one_epoch else torch.tensor([])
+        # rej_one_epoch = torch.stack(rej_one_epoch) if rej_one_epoch else torch.tensor([])
 
         if len(preds_one_epoch) > 0:
             epoch_preds  = torch.cat(preds_one_epoch, dim=0)  # shape [total_edges_in_epoch]
@@ -267,12 +271,12 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             'preds' : epoch_preds,
             'labels': epoch_labels,
             'loss': last_loss,
-            'acc': acc_one_epoch.nanmean(dim=0),
-            'acc_err': acc_one_epoch.std(dim=0),
-            'eff': eff_one_epoch.nanmean(dim=0),
-            'eff_err': eff_one_epoch.std(dim=0),
-            'rej': rej_one_epoch.nanmean(dim=0),
-            'rej_err': rej_one_epoch.std(dim=0),
+            # 'acc': acc_one_epoch.nanmean(dim=0),
+            # 'acc_err': acc_one_epoch.std(dim=0),
+            # 'eff': eff_one_epoch.nanmean(dim=0),
+            # 'eff_err': eff_one_epoch.std(dim=0),
+            # 'rej': rej_one_epoch.nanmean(dim=0),
+            # 'rej_err': rej_one_epoch.std(dim=0),
         }
 
         return metrics
@@ -293,36 +297,45 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             # Append metrics
             self.train_predictions.append(train_metrics['preds'])
             self.train_labels.append(train_metrics['labels'])
-
             self.train_loss.append(train_metrics['loss'])
-            self.train_acc.append(train_metrics['acc'])
-            self.train_eff.append(train_metrics['eff'])
-            self.train_rej.append(train_metrics['rej'])
-            self.train_acc_err.append(train_metrics['acc_err'])
-            self.train_eff_err.append(train_metrics['eff_err'])
-            self.train_rej_err.append(train_metrics['rej_err'])
-
             self.val_predictions.append(val_metrics['preds'])
             self.val_labels.append(val_metrics['labels'])
-
             self.val_loss.append(val_metrics['loss'])
-            self.val_acc.append(val_metrics['acc'])
-            self.val_eff.append(val_metrics['eff'])
-            self.val_rej.append(val_metrics['rej'])
-            self.val_acc_err.append(val_metrics['acc_err'])
-            self.val_eff_err.append(val_metrics['eff_err'])
-            self.val_rej_err.append(val_metrics['rej_err'])
 
-            # Logging
-            print(f"Train Loss: {train_metrics['loss']:.6f}")
-            print(f"Val Loss: {val_metrics['loss']:.6f}")
-            print(f"Train Acc: {train_metrics['acc']} +/- {train_metrics['acc_err']}")
-            print(f"Val Acc: {val_metrics['acc']} +/- {val_metrics['acc_err']}")
-            print(f"Train Eff: {train_metrics['eff']} +/- {train_metrics['eff_err']}")
-            print(f"Val Eff: {val_metrics['eff']} +/- {val_metrics['eff_err']}")
-            print(f"Train Rej: {train_metrics['rej']} +/- {train_metrics['rej_err']}")
-            print(f"Val Rej: {val_metrics['rej']} +/- {val_metrics['rej_err']}")
+            # --- Compute thresholds and per-threshold metrics for TRAIN and VAL ---
+            train_preds_np = train_metrics['preds'].numpy()
+            train_labels_np = train_metrics['labels'].numpy()
+            val_preds_np   = val_metrics['preds'].numpy()
+            val_labels_np  = val_metrics['labels'].numpy()
 
+            train_dict = self.compute_thresholds_and_metrics(
+                train_labels_np, train_preds_np, key_prefix='train', epoch=epoch
+            )
+            val_dict   = self.compute_thresholds_and_metrics(
+                val_labels_np,   val_preds_np,   key_prefix='val', epoch=epoch
+            )
+
+            # Merge the two dicts to form this epoch's row
+            epoch_metric_dict = {**train_dict, **val_dict}
+            epoch_series = pd.Series(epoch_metric_dict, name=epoch)
+            self.epoch_metrics_df = pd.concat(
+                [self.epoch_metrics_df, epoch_series.to_frame().T],
+                axis=0
+            )
+
+            # --- Print metrics (manual threshold) via get_epoch_metric ---
+            tm_acc  = self.get_epoch_metric('train_manual_accuracy', epoch=epoch)
+            vm_acc  = self.get_epoch_metric('val_manual_accuracy', epoch=epoch)
+            tm_tpr  = self.get_epoch_metric('train_manual_TPR', epoch=epoch)
+            vm_tpr  = self.get_epoch_metric('val_manual_TPR', epoch=epoch)
+            tm_rej  = self.get_epoch_metric('train_manual_rej', epoch=epoch)
+            vm_rej  = self.get_epoch_metric('val_manual_rej', epoch=epoch)
+
+            print(f"Epoch {epoch} | Manual threshold:")
+            print(f"  Train - Acc: {tm_acc:.4f}, Eff: {tm_tpr:.4f}, Rej: {tm_rej:.4f}")
+            print(f"  Val   - Acc: {vm_acc:.4f}, Eff: {vm_tpr:.4f}, Rej: {vm_rej:.4f}")
+
+           
             # Checkpoint saving
             if save_checkpoint:
                 safe_epoch_frac = int(checkpoint_freq * epochs)
@@ -333,11 +346,6 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                     self.epoch_warmstart = epoch
                     file_path = f'{checkpoint_path}checkpoint_{epoch}.pt'
                     self.save_checkpoint(file_path)
-
-        # self.train_predicitions = torch.cat(self.train_predictions)
-        # self.val_predicitions = torch.cat(self.val_predictions)
-        # self.train_labels = torch.cat(self.train_labels)
-        # self.val_labels = torch.cat(self.val_labels)
 
 
     def save_dataframe(self, file_name):
@@ -367,46 +375,131 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         return df
 
 
-    # def save_dataframe(self, file_name):
-    #     data = {
-    #         "train_loss": self.train_loss,
-    #         "val_loss": self.val_loss,
-    #     }
+    def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, key_prefix: str, epoch=-1):
+        """
+        Given true labels (0/1) and scores (float) for the entire epoch,
+        compute for 4 thresholds (manuel, opt, TPR=0.9, TPR=0.99) :
+          - confusion matrix (TP, FP, TN, FN)
+          - TPR (efficiency), Rejection (1 - FPR), Precision, Accuracy, Balanced accuracy
+        key_prefix = 'train' or 'val' to differentiate keys in the final DataFrame.
+        Returns a dict whose keys are, for example:
+          "train_manual_TP", "train_manual_FP", "train_manual_TN", "train_manual_FN",
+          "train_manual_TPR", "train_manual_rej", "train_manual_precision",
+          "train_manual_accuracy", "train_manual_balanced_accuracy",
+          "train_manual_threshold_value", and similarly for 'opt', 'tpr0.9', 'tpr0.99'.
+        """
+        metrics_dict = {}
 
-    #     def safe_extract(metric_list, index):
-    #         values = []
-    #         for x in metric_list:
-    #             if torch.is_tensor(x):
-    #                 x = x.cpu()
-    #                 if x.ndim == 0:
-    #                     # Scalar tensor
-    #                     values.append(x.item())
-    #                 else:
-    #                     # Vector tensor
-    #                     values.append(x[index].item())
-    #             else:
-    #                 # Not a tensor (e.g., float or list)
-    #                 if isinstance(x, (list, tuple, np.ndarray)):
-    #                     values.append(x[index])
-    #                 else:
-    #                     values.append(x)
-    #         return values
+        # Ensure labels are int
+        y_true = y_true.astype(int)
 
-    #     for nClasse in range(self.neutrals_classes):
-    #         data[f"train_acc_Class{nClasse}"] = safe_extract(self.train_acc, nClasse)
-    #         data[f"val_acc_Class{nClasse}"] = safe_extract(self.val_acc, nClasse)
-    #         data[f"train_eff_Class{nClasse}"] = safe_extract(self.train_eff, nClasse)
-    #         data[f"val_eff_Class{nClasse}"] = safe_extract(self.val_eff, nClasse)
-    #         data[f"train_rej_Class{nClasse}"] = safe_extract(self.train_rej, nClasse)
-    #         data[f"val_rej_Class{nClasse}"] = safe_extract(self.val_rej, nClasse)
+        # Compute ROC curve (fpr, tpr, thresholds)
+        fpr, tpr, thresholds = roc_curve(y_true, y_score)
+        thresholds = thresholds[1:]
+        fpr = fpr[1:]
+        tpr = tpr[1:]
 
-    #     if self.add_bce:
-    #         data["ce_train_loss"] = [x.cpu().item() if torch.is_tensor(x) else x for x in self.ce_train_loss]
-    #         data["ce_val_loss"]  = [x.cpu().item() if torch.is_tensor(x) else x for x in self.ce_val_loss]
-    #         data["bce_edges_train_loss"] = [x.cpu().item() if torch.is_tensor(x) else x for x in self.bce_edges_train_loss]
-    #         data["bce_edges_val_loss"]   = [x.cpu().item() if torch.is_tensor(x) else x for x in self.bce_edges_val_loss]
+        # Number of signal/background
+        N_signal = int((y_true == 1).sum())
+        N_background = int((y_true == 0).sum())
 
-    #     df = pd.DataFrame(data)
-    #     df.to_csv(file_name)
-    #     return df
+        # Compute S and B for each threshold
+        S_arr = tpr * N_signal
+        B_arr = fpr * N_background
+        fom = np.divide(S_arr, np.sqrt(S_arr + B_arr), out=np.zeros_like(S_arr), where=(S_arr + B_arr) > 0)
+        opt_idx = np.nanargmax(fom)
+        opt_threshold = thresholds[opt_idx]
+        tpr_at_opt = tpr[opt_idx]
 
+
+        # Helper to find the largest threshold that yields tpr >= target
+        def find_threshold_for_tpr(target_tpr):
+            idxs = np.where(tpr >= target_tpr)[0]
+            if idxs.size == 0:
+                # If no threshold reaches that TPR, pick the smallest threshold
+                return thresholds[-1]
+            else:
+                # Return the last threshold in thresholds where tpr >= target_tpr
+                return thresholds[idxs[0]]
+
+        tpr09_threshold = find_threshold_for_tpr(0.9)
+        tpr099_threshold = find_threshold_for_tpr(0.99)
+
+        threshold_info = [
+            ('manual', self.threshold),
+            ('opt',    opt_threshold),
+            ('tpr0.9', tpr09_threshold),
+            ('tpr0.99',tpr099_threshold),
+        ]
+
+        total_samples = y_true.shape[0]
+
+        for name, thr in threshold_info:
+            # Binarize predictions at this threshold
+            y_pred_bin = (y_score > thr).astype(int)
+            tn, fp, fn, tp = confusion_matrix(y_true, y_pred_bin, labels=[0, 1]).ravel()
+
+            # TPR = TP / (TP + FN)
+            tpr_val  = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            # Rejection = TN / (TN + FP)
+            rej_val  = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+            # Precision = TP / (TP + FP)
+            prec_val = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            # Accuracy = (TP + TN) / total_samples
+            acc_val  = (tp + tn) / total_samples if total_samples > 0 else 0.0
+            # Balanced accuracy = 0.5 * (TPR + TN/(TN + FP))
+            bal_acc_val = 0.5 * (tpr_val + rej_val)
+
+            prefix = f"{key_prefix}_{name}"
+            metrics_dict[f"{prefix}_TP"]                = int(tp)
+            metrics_dict[f"{prefix}_FP"]                = int(fp)
+            metrics_dict[f"{prefix}_TN"]                = int(tn)
+            metrics_dict[f"{prefix}_FN"]                = int(fn)
+            metrics_dict[f"{prefix}_TPR"]               = float(tpr_val)
+            metrics_dict[f"{prefix}_rej"]               = float(rej_val)
+            metrics_dict[f"{prefix}_precision"]         = float(prec_val)
+            metrics_dict[f"{prefix}_accuracy"]          = float(acc_val)
+            metrics_dict[f"{prefix}_balanced_accuracy"] = float(bal_acc_val)
+
+        # Also store the numeric threshold values themselves
+        metrics_dict[f"{key_prefix}_manual_threshold_value"]   = float(self.threshold)
+        metrics_dict[f"{key_prefix}_opt_threshold_value"]      = float(opt_threshold)
+        metrics_dict[f"{key_prefix}_tpr0.9_threshold_value"]  = float(tpr09_threshold)
+        metrics_dict[f"{key_prefix}_tpr0.99_threshold_value"] = float(tpr099_threshold)
+        
+        self.tpr_and_threshold[key_prefix][epoch] = {
+            'fpr': fpr,
+            'tpr': tpr,
+            'thresholds': thresholds,
+            'threshold_manual': self.threshold,
+            'threshold_opt': opt_threshold,
+            'tpr_at_opt': tpr_at_opt,
+            'threshold_tpr_90': tpr09_threshold,
+            'threshold_tpr_99': tpr099_threshold,
+            'fom': fom
+        }
+        return metrics_dict
+
+    def save_metrics(self, file_name: str):
+        """
+        Save the per-epoch metrics DataFrame to CSV and return le DataFrame.
+        """
+        self.epoch_metrics_df.to_csv(file_name, index_label='epoch')
+        return self.epoch_metrics_df
+
+    def get_epoch_metric(self, column_name: str, epoch=None):
+        """
+        If epoch is None, returns the entire column as a NumPy array.
+        Otherwise, returns the single value at (epoch, column_name).
+        """
+        if column_name not in self.epoch_metrics_df.columns:
+            raise KeyError(f"Column '{column_name}' not found in epoch_metrics_df.")
+
+        if epoch is None:
+            # Return the whole column
+            return self.epoch_metrics_df[column_name].values
+        else:
+            if epoch in self.epoch_metrics_df.index:
+                return self.epoch_metrics_df.loc[epoch, column_name]
+            else:
+                raise KeyError(f"Epoch {epoch} not found in epoch_metrics_df.")

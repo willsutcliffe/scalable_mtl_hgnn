@@ -7,6 +7,12 @@ import math
 from torch_geometric.data import Dataset, Data
 from torch_geometric.data import HeteroData
 
+def angle_phi(v1,v2):
+    dot = (v1 * v2).sum(dim=1)
+    norm1 = v1.norm(dim=1)
+    norm2 = v2.norm(dim=1)
+    cos_theta = torch.clamp(dot / (norm1 * norm2 + 1e-8), -1.0, 1.0)
+    return torch.acos(cos_theta)
 
 def find_row_indices(t1, t2):
     # Expand t1 and t2 to compare every row in t1 with every row in t2
@@ -88,7 +94,7 @@ class CustomNeutralsHeteroDataset(Dataset):
 
         save_graph = self.config_loader.get("dataset.save_graph", False)
         load_graph = self.config_loader.get("dataset.load_graph", False)
-        dir = self.config_loader.get("dataset.data_dir")
+        dir = os.path.join(self.config_loader.get("dataset.data_dir"), self.config_loader.get("dataset.polarity"), self.config_loader.get("dataset.data_type"))
         balanced = self.config_loader.get("dataset.balanced_classes", False)
         subdir = "graphs_balanced" if balanced else "graphs"
         cache_dir = os.path.join(dir, subdir, f"{self.split}_graphs/")
@@ -172,12 +178,12 @@ class CustomNeutralsHeteroDataset(Dataset):
                 intra = same.groupby('decay_id_s')[['DOCA','theta','trdist']].mean()
                 charged_nodes = charged_stats.join(intra, how='left').fillna(0).reset_index()
                 charged_feats = torch.tensor(
-                    charged_nodes[['sum_pt','sum_px','sum_py','sum_pz','mean_eta','DOCA','theta','trdist']].values,
+                    charged_nodes[['sum_px','sum_py','sum_pz','sum_pt','mean_eta','DOCA','theta','trdist']].values,
                     dtype=torch.float
                 )
 
                 # Neutral features
-                neutral_feats = torch.tensor(neutral_df[['pt','px','py','pz','eta']].values, dtype=torch.float)
+                neutral_feats = torch.tensor(neutral_df[['px','py','pz','pt','eta']].values, dtype=torch.float)
 
                 #TODO
                 #px, py and sum(px,py,pz), theta wrt p_B
@@ -209,15 +215,19 @@ class CustomNeutralsHeteroDataset(Dataset):
                 agg['c_idx'] = agg['decay_id'].map(dec2idx)
                 agg['n_idx'] = agg['neutral_key'].map(neu2idx)
                 edge_index = torch.tensor(agg[['c_idx','n_idx']].values.T, dtype=torch.long)
-                cvals = charged_feats[agg['c_idx'].values]
-                nvals = neutral_feats[agg['n_idx'].values]
+                cval = charged_feats[agg['c_idx'].values]
+                nval = neutral_feats[agg['n_idx'].values]
                 edge_attr = torch.stack([
-                    cvals[:,0],cvals[:,1],
-                    torch.abs(cvals[:,0]-nvals[:,0]),
-                    torch.abs(cvals[:,1]-nvals[:,1]),
-                    # torch.tensor(agg['DOCA'].values),
-                    torch.tensor(agg['theta'].values),
-                    # torch.tensor(agg['trdist'].values)
+                    cval[:, 3] + nval[:, 3],                                # sum_pt
+                    cval[:, 0] + nval[:, 0],                                # sum_px
+                    cval[:, 1] + nval[:, 1],                                # sum_py
+                    cval[:, 2] + nval[:, 2],                                # sum_pz
+                    torch.abs(cval[:, 3] - nval[:, 3]),                     # |Δpt|
+                    torch.abs(cval[:, 0] - nval[:, 0]),                     # |Δpx|
+                    torch.abs(cval[:, 1] - nval[:, 1]),                     # |Δpy|
+                    torch.abs(cval[:, 2] - nval[:, 2]),                     # |Δpz|
+                    torch.tensor(agg['theta'].values),                      # theta mean (among charged part and neutral)
+                    angle_phi(cval[:, 0:2], nval[:, 0:2])                   # phi (between heavy hadron and neutral)
                 ], dim=1)
                 edge_labels = torch.tensor(agg['label'].values, dtype=torch.float).unsqueeze(-1)
 
