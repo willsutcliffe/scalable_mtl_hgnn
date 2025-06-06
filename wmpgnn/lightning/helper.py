@@ -199,9 +199,10 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
                 elif true_in_reco == 1 and len(cluster['node_keys']) > len(true_cluster['node_keys']):
                     none_iso = 1  # background tracks in signal
                     FT = get_pred_ft(output, cluster, ft_score)
-                    none_iso_n_bkg = len(true_cluster['node_keys']) - len(cluster['node_keys'])  # 'purity of bkg in non iso'
+                    none_iso_n_bkg = len(cluster['node_keys']) - len(true_cluster['node_keys'])   # 'purity of bkg in non iso'
                     break
                 elif true_in_reco >= 0.2 and true_in_reco < 1:
+                    # TODO: here we need to change some stuff include ft and none_iso_bkg
                     FT = -10
                     part_reco = 1
             if all_particles == 1:
@@ -218,7 +219,6 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
             signal_LCA_id = true_LCA[true_LCA['senders'].isin(indices) | true_LCA['receivers'].isin(indices)]["LCA_id"]
             values, counts = np.unique(signal_LCA_id, return_counts=True)
             origin_B_id = values[np.argmax(counts)]
-            import pdb; pdb.set_trace()
             # Log whether true B is reco or not
             # Easiest here is to asign the PV w/ corr and wrong
             signal_df = signal_df._append({'EventNumber': event,
@@ -235,7 +235,8 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
                                             'Pred_FT': FT,
                                             'B_id': origin_B_id},
                                             ignore_index=True)
-        # Add condition that signal perfect/all particles w/ part/noniso or better on opposite side
+            import pdb; pdb.set_trace()
+        # Add same PV frag particle found, add same PV opposite side B reco type, add signal B reco type
         # Log for event df
         if number_of_background_particles <=0:
             number_of_background_particles = -1

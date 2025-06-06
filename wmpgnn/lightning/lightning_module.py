@@ -122,7 +122,7 @@ class HGNNLightningModule(L.LightningModule):
     # def on_train_epoch_start(self):
     #     self.trainer.train_dataloader.sampler.set_epoch(self.current_epoch)
 
-    def shared_step(self, batch, log_dict):  # Runs 1 batch
+    def shared_step(self, batch, batch_idx, log_dict):  # Runs 1 batch
         loss_t_nodes = 0.
         loss_tt_edges = 0.
         loss_tPV_edges = 0.
@@ -154,16 +154,16 @@ class HGNNLightningModule(L.LightningModule):
         """Getting the loss"""
         loss_LCA = self.LCA_criterion(outputs[('tracks', 'to', 'tracks')].edges, y_tt_LCA)
         # Looping over all the GN blocks to grab the interference
-        for block in self.model._blocks:  # Changed here the interference from logits (not even sure why they are called logits but anyways) to weights
+        for block in self.model._blocks:
             loss_t_nodes += self.t_nodes_criterion(block.node_logits['tracks'], y_t_nodes)
             loss_frag_nodes += self.frag_nodes_criterion(block.node_logits['frag'], y_frag)
             loss_ft_nodes += self.ft_nodes_criterion(block.node_logits['ft'], y_ft)
             loss_tt_edges += self.tt_edges_criterion(block.edge_logits[('tracks', 'to', 'tracks')], y_tt_edges)
             loss_tPV_edges += self.tPV_edges_criterion(block.edge_logits[('tracks', 'to', 'pvs')], y_tPV_edges)
-
+        
         """Combing the loss"""
         w = torch.exp(-self.model.loss_weights)
-        loss = 1/2 * (  # Here we can add the weights, TODO add trainable weight to combine them
+        loss = 1/2 * (
                 w[0] * loss_LCA +
                 w[1] * loss_t_nodes +
                 w[2] * loss_tt_edges +
@@ -198,12 +198,12 @@ class HGNNLightningModule(L.LightningModule):
         
 
     def training_step(self, batch, batch_idx): 
-        loss = self.shared_step(batch, log_dict=self.trn_log)
+        loss = self.shared_step(batch, batch_idx, log_dict=self.trn_log)
         return loss
 
     
     def validation_step(self, batch, batch_idx): 
-        loss = self.shared_step(batch, log_dict=self.val_log)
+        loss = self.shared_step(batch, batch_idx,log_dict=self.val_log)
         return loss
 
 
@@ -268,7 +268,6 @@ class HGNNLightningModule(L.LightningModule):
         outputs = self.model(reco_batch)
         self.model._blocks[3].node_prune = False
         self.model._blocks[3].edge_prune = False
-        import pdb; pdb.set_trace()
 
         """Edge node prediciont plots output"""
         for i, block in enumerate(self.model._blocks):  # check if .item() is necessary
@@ -301,9 +300,9 @@ class HGNNLightningModule(L.LightningModule):
 
     def on_test_epoch_start(self):
         self.init_tst_log()
-        self.model._blocks[3].node_weight_cut = 0.3
+        self.model._blocks[3].node_weight_cut = 0.01
         self.model._blocks[3].prune_by_cut = True
-        self.model._blocks[3].edge_weight_cut = 0.3
+        self.model._blocks[3].edge_weight_cut = 0.01
 
 
     def on_train_epoch_end(self):
@@ -313,7 +312,6 @@ class HGNNLightningModule(L.LightningModule):
         self.trn_log = defaultdict(list)
 
     def on_validation_epoch_end(self):
-        import pdb; pdb.set_trace()
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.val_log.items()}
         for key, val in avg_losses.items():
             self.log(f"val/{key}", val, prog_bar=True, on_epoch=True, on_step=False)
@@ -349,7 +347,7 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulat
         pos_weights=pos_weight,
         optimizer_class=torch.optim.Adam,
         optimizer_params={"lr": 1e-3}
-    )
+        )
 
     early_stopping = EarlyStopping(
         monitor="val/combined_loss",

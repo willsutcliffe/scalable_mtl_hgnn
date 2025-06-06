@@ -135,7 +135,7 @@ def plot_gn_block_dist(df, feature, nlayers, version):
     pos_key = {"frag": "frag_pos_part", "nodes": "sig_nodes", "edges": "sig_edges"}
     neg_key = {"frag": "frag_neg_part", "nodes": "bkg_nodes", "edges": "bkg_edges"}
     pos_label = {"frag": "Fragmentation", "nodes": "Signal", "edges": "Signal"}
-    neg_label = {"frag:": "Remaining", "nodes": "Background", "edges": "Background"}
+    neg_label = {"frag": "Remaining", "nodes": "Background", "edges": "Background"}
 
     if feature not in pos_key.keys():
         print("Got undefined feature")
