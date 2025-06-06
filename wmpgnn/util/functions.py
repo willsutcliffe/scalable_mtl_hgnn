@@ -144,14 +144,10 @@ def acc_four_class(pred, label):
             res[f"LCA_class{i}_pred_class2"] = 0.
             res[f"LCA_class{i}_pred_class3"] = 0.
         else:
-            try:
-                res[f"LCA_class{i}_pred_class0"] = torch.sum(pred_argmax[classi_selbool] == 0).item() / res[f"LCA_class{i}_num"]
-                res[f"LCA_class{i}_pred_class1"] = torch.sum(pred_argmax[classi_selbool] == 1).item() / res[f"LCA_class{i}_num"]
-                res[f"LCA_class{i}_pred_class2"] = torch.sum(pred_argmax[classi_selbool] == 2).item() / res[f"LCA_class{i}_num"]
-                res[f"LCA_class{i}_pred_class3"] = torch.sum(pred_argmax[classi_selbool] == 3).item() / res[f"LCA_class{i}_num"]
-            except:
-                import pdb; pdb.set_trace()
-
+            res[f"LCA_class{i}_pred_class0"] = torch.sum(pred_argmax[classi_selbool] == 0).item() / res[f"LCA_class{i}_num"]
+            res[f"LCA_class{i}_pred_class1"] = torch.sum(pred_argmax[classi_selbool] == 1).item() / res[f"LCA_class{i}_num"]
+            res[f"LCA_class{i}_pred_class2"] = torch.sum(pred_argmax[classi_selbool] == 2).item() / res[f"LCA_class{i}_num"]
+            res[f"LCA_class{i}_pred_class3"] = torch.sum(pred_argmax[classi_selbool] == 3).item() / res[f"LCA_class{i}_num"]
     return res
 
 
@@ -204,10 +200,10 @@ def get_hetero_weight(loader, node_weight=True, edge_weight=True, LCA_weight=Tru
     true_class = torch.zeros(4)
     num_sample = 0
 
-    sum_nodes = 0
+    sum_nodes_neg = 0
     sum_nodes_pos = 0
 
-    sum_edges = 0
+    sum_edges_neg = 0
     sum_edges_pos = 0
 
     pos_frag = 0
@@ -215,16 +211,16 @@ def get_hetero_weight(loader, node_weight=True, edge_weight=True, LCA_weight=Tru
 
     ft_counts = torch.zeros(3)
 
-    for data in tqdm(islice(loader, 10000), total=10000): # not sure why it takes so long need to be optimized to save at least some time
+    for data in tqdm(islice(loader, 1000), total=1000): # not sure why it takes so long need to be optimized to save at least some time
         if node_weight:
             node_sum = scatter_add(data[('tracks','to','tracks')].y, data[('tracks','to','tracks')].edge_index[0], dim=0)
             ynodes = (torch.sum(node_sum[:,1:],1) > 0).unsqueeze(1)
-            sum_nodes += data['tracks'].x.shape[0]
             sum_nodes_pos  += torch.sum(ynodes==1).item()
+            sum_nodes_neg  += torch.sum(ynodes==0).item()
 
         if edge_weight:
-            sum_edges += data[('tracks','to','tracks')].edges.shape[0]
             sum_edges_pos  += torch.sum(data[('tracks','to','tracks')].y[:,0]==0).item()
+            sum_edges_neg  += torch.sum(data[('tracks','to','tracks')].y[:,0]==1).item()
 
         if LCA_weight:
             y = data[('tracks','to','tracks')].y
@@ -240,14 +236,14 @@ def get_hetero_weight(loader, node_weight=True, edge_weight=True, LCA_weight=Tru
         
         if ft_weight:
             y = data['tracks'].ft + 1
-            ft_counts = ft_counts + torch.bincount(y)
+            ft_counts += torch.bincount(y)
         
-    weight_class = num_sample / (4*true_class)
-    weight_nodes = torch.tensor(sum_nodes/(2*sum_nodes_pos))
-    weight_edges = torch.tensor(sum_edges/(2*sum_edges_pos))
+    weight_class = num_sample / (4 * true_class)
+    weight_nodes = torch.tensor(sum_nodes_neg/sum_nodes_pos)
+    weight_edges = torch.tensor(sum_edges_neg/sum_edges_pos)
     weight_frag = neg_frag / pos_frag
-    ft_counts = 1.0 / ft_counts.float()
-    weight_ft = ft_counts / ft_counts.sum()
+    weight_ft = torch.sum(ft_counts) / (3 * ft_counts)
+
 
     pos_weight ={"t_nodes": weight_nodes, "tt_edges": weight_edges, "LCA": weight_class, "frag": weight_frag, "FT": weight_ft}
     return pos_weight

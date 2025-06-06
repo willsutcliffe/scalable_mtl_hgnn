@@ -49,8 +49,10 @@ if __name__ == "__main__":
         print("Please specifiy checkpoint")
         exit()
     checkpoint_path = F"lightning_logs/version_{option.VERSION}/checkpoints/{option.CHECKPOINT}"   # load the previous last model to retrain
+    # the pos weight arent used but are requried to be passed on
     pos_weight = {'t_nodes': torch.tensor(12.2783), 'tt_edges': torch.tensor(612.2586), 'LCA': torch.tensor([2.5020e-01, 4.8452e+02, 8.9243e+02, 1.2172e+04]), 'frag': torch.tensor(0.6540), 'FT': torch.tensor([0.4930, 0.0106, 0.4964])} # need to be load in from the hyperparams
-    module = HGNNLightningModule(
+    module = HGNNLightningModule.load_from_checkpoint(
+            checkpoint_path=checkpoint_path,
             model=model,
             pos_weights=pos_weight,
             optimizer_class=torch.optim.Adam,
@@ -68,7 +70,7 @@ if __name__ == "__main__":
 
     print("Data read in:")
     print(f"Test dataset       : {len(tst_dataset)}")
-    tst_loader = DataLoader(tst_dataset, batch_size=1, num_workers=6, drop_last=True)
+    tst_loader = DataLoader(tst_dataset[:500], batch_size=1, num_workers=6, drop_last=True)
 
     """Start evaluation"""
     # Getting the data frame

@@ -126,9 +126,10 @@ if __name__ == "__main__":
     if option.CW:  # CW = calculate pos weights
         pos_weight = get_hetero_weight(trn_loader)
     else:
-        pos_weight = {'t_nodes': torch.tensor(12.387213706970215), 'tt_edges': torch.tensor(481.53240966796875),
-                      'LCA': torch.tensor([0.2502596080303192, 1005.6044921875, 341.3268127441406, 4364.5322265625]),
-                      'frag': torch.tensor(478.3134460449219), 'FT': torch.tensor([0.4957561790943146, 0.01050918735563755, 0.49373456835746765])}
+        pos_weight = {'t_nodes': torch.tensor(23.54585), 'tt_edges': torch.tensor(944.7520),
+                      'LCA': torch.tensor([2.5026e-01, 9.7058e+02, 3.3759e+02, 4.2255e+03]),
+                      'frag': torch.tensor(593.7332), 'FT': torch.tensor([16.1860,  0.3476, 16.2423])}
+        # {'t_nodes': tensor(23.5458), 'tt_edges': tensor(944.7520), 'LCA': tensor([2.5026e-01, 9.7058e+02, 3.3759e+02, 4.2255e+03]), 'frag': tensor(593.7332), 'FT': tensor([16.1860,  0.3476, 16.2423])}
     print(pos_weight)
     print("="*30)
 
