@@ -50,7 +50,7 @@ if __name__ == "__main__":
         exit()
     checkpoint_path = F"lightning_logs/version_{option.VERSION}/checkpoints/{option.CHECKPOINT}"   # load the previous last model to retrain
     # the pos weight arent used but are requried to be passed on
-    pos_weight = {'t_nodes': torch.tensor(12.2783), 'tt_edges': torch.tensor(612.2586), 'LCA': torch.tensor([2.5020e-01, 4.8452e+02, 8.9243e+02, 1.2172e+04]), 'frag': torch.tensor(0.6540), 'FT': torch.tensor([0.4930, 0.0106, 0.4964])} # need to be load in from the hyperparams
+    pos_weight = {'t_nodes': torch.tensor(0.), 'tt_edges': torch.tensor(0.), 'LCA': torch.tensor([0., 0., 0., 0.]), 'frag': torch.tensor(0.), 'FT': torch.tensor([0., 0., 0.])} # need to be load in from the hyperparams
     module = HGNNLightningModule.load_from_checkpoint(
             checkpoint_path=checkpoint_path,
             model=model,
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     """Load data"""
     tst_paths = sorted(glob.glob(f'{option.INDIR}/testing_data_*'))[:1]
     tst_dataset = []
-    for path in tqdm(tst_paths, desc="Validation dataset"):
+    for path in tqdm(tst_paths, desc="Test dataset"):
         tst_dataset.extend(torch.load(path, weights_only=False))
 
     print("Data read in:")

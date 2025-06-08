@@ -91,7 +91,7 @@ def plot_loss(df, version):
     plt.close()
 
 
-def plot_LCA_acc(df, version):  # Need to modify it to the new LCA storage way
+def plot_LCA_acc(df, version):
     trn_LCA_acc0 = np.array(df["train/LCA_class0_pred_class0"])
     trn_LCA_acc1 = np.array(df["train/LCA_class1_pred_class1"])
     trn_LCA_acc2 = np.array(df["train/LCA_class2_pred_class2"])
@@ -130,7 +130,8 @@ def plot_LCA_acc(df, version):  # Need to modify it to the new LCA storage way
     plt.close()
 
 
-def plot_gn_block_dist(df, feature, nlayers, version):
+
+def plot_gn_block_dist(df, feature, nlayers, version, ref_signal):
     # Create a proper var dict for frag
     pos_key = {"frag": "frag_pos_part", "nodes": "sig_nodes", "edges": "sig_edges"}
     neg_key = {"frag": "frag_neg_part", "nodes": "bkg_nodes", "edges": "bkg_edges"}
@@ -142,7 +143,7 @@ def plot_gn_block_dist(df, feature, nlayers, version):
         exit()
 
     # Plot dir
-    outdir = f"lightning_logs/version_{version}/plots"
+    outdir = f"lightning_logs/version_{version}/plots_{ref_signal}"
     os.makedirs(outdir, exist_ok=True)
 
     for i in range(nlayers):  
@@ -165,9 +166,9 @@ def plot_gn_block_dist(df, feature, nlayers, version):
         plt.close()
 
 
-def plot_ft_nodes(df, nlayers, version):
+def plot_ft_nodes(df, nlayers, version, ref_signal):
     # Plot dir
-    outdir = f"lightning_logs/version_{version}/plots"
+    outdir = f"lightning_logs/version_{version}/plots_{ref_signal}"
     os.makedirs(outdir, exist_ok=True)
 
     labels = df["ft_y"]

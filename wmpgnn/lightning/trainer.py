@@ -66,6 +66,8 @@ if __name__ == "__main__":
     parser = OptionParser(usage)
     parser.add_option("", "--indir", type=str, default=None,
                       dest="INDIR", help="Input directory where files are gobbled from")
+    parser.add_option("", "--sample", type=str, default=None,
+                      dest="SAMPLE", help="Array like structure for samples, comma sepertaed")
     parser.add_option("", "--config", type=str, default=None,
                       dest="CONFIG", help="Config file path")
     parser.add_option("", "--ngpu", type=int, default=1,
@@ -95,19 +97,26 @@ if __name__ == "__main__":
     print("="*30)
 
     # Get the dataset glob it and load
+    samples = options.SAMPLE.split(",") if options.INDIR else exit()
     print("Start reading in the data")
+    print("Training:")
     start = time.time()
-    trn_paths = sorted(glob.glob(f'{option.INDIR}/training_data_*'))
     trn_dataset = []
-    for path in tqdm(trn_paths, desc="Training dataset"):
-        trn_dataset.extend(torch.load(path, weights_only=False))
+    for sample in samples:
+        print(f"Loading {sample}")
+        trn_paths = sorted(glob.glob(f'{option.INDIR}/{sample}/training_data_*'))
+        for path in tqdm(trn_paths, desc="Training dataset"):
+            trn_dataset.extend(torch.load(path, weights_only=False))
     # trn_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in trn_paths))
     # trn_dataset = LazyTorchDataset(f'{option.INDIR}/training_data_*')
 
-    val_paths = sorted(glob.glob(f'{option.INDIR}/validation_data_*'))
+    print("Validation:")
     val_dataset = []
-    for path in tqdm(val_paths, desc="Validation dataset"):
-        val_dataset.extend(torch.load(path, weights_only=False))
+    for sample in samples:
+        print(f"Loading {sample}")
+        val_paths = sorted(glob.glob(f'{option.INDIR}/{sample}/validation_data_*'))
+        for path in tqdm(val_paths, desc="Validation dataset"):
+            val_dataset.extend(torch.load(path, weights_only=False))
     # val_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in val_paths))
     # val_dataset = LazyTorchDataset(f'{option.INDIR}/validation_data_*')
     end = time.time()
