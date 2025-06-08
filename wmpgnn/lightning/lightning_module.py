@@ -15,7 +15,7 @@ torch.set_float32_matmul_precision("high")
 from torch import nn
 from torch_scatter import scatter_add
 
-from helper import make_loggable, eval_reco_performance, get_ref_signal
+from helper import make_loggable, eval_reco_performance, intialize_test_df
 from plot_helper import plot_gn_block_dist, plot_ft_nodes
 from wmpgnn.util.functions import acc_four_class
 
@@ -61,7 +61,7 @@ class HGNNLightningModule(L.LightningModule):
 
         # Eval flags on tst sample which can be turned on and off
         self.version = version
-        self.ref_signal = get_ref_signal(ref_signal)
+        self.ref_signal = ref_signal
         self.get_node_performance = True  # HOnestly this hsould be always true like everything but what ever...
         self.get_edge_performance = True
         self.get_PV_performance = True
@@ -88,28 +88,7 @@ class HGNNLightningModule(L.LightningModule):
                 self.tst_log[f"b_ft_score_{i}"] = torch.tensor([])
 
         # Initiate the dataframes for reco performance eval
-        self.signal_df = pd.DataFrame(
-        columns=['EventNumber', 'NumParticlesInEvent', 'NumSignalParticles', 'NumBkgParticles_noniso', 
-                'PerfectSignalReconstruction', 'AllParticles', 'PerfectReco', 'NoneIso', 'PartReco', 'NotFound', 'SigMatch', 
-                'B_id', 'Pred_FT'])
-        self.signal_df = self.signal_df.astype(
-            {'EventNumber': np.int32, 'NumParticlesInEvent': np.int32, 'NumSignalParticles': np.int32, 'NumBkgParticles_noniso': np.int32,
-                'PerfectSignalReconstruction': np.int32,
-                'AllParticles': np.int32, 'PerfectReco': np.int32,
-                'NoneIso': np.int32, 'PartReco': np.int32, 'NotFound': np.int32, 'SigMatch': np.int32, 'B_id': np.int32, 'Pred_FT': np.int32})
-
-        self.event_df = pd.DataFrame(
-            columns=['EventNumber', 'NumParticlesInEvent', 'NumParticlesFromHeavyHadronInEvent',
-                    'NumBackgroundParticlesInEvent', 'NumSelectedParticlesInEvent',
-                    'NumSelectedParticlesFromHeavyHadronInEvent',
-                    'NumSelectedBackgroundParticlesInEvent', 'NumTruthClustersGen1', 'NumTruthClustersGen2',
-                    'NumTruthClustersGen3', 'NumTruthClustersGen4', 'NumRecoClustersGen1', 'NumRecoClustersGen2',
-                    'NumRecoClustersGen3', 'NumRecoClustersGen4', 'MaxTruthFullChainDepthInEvent',
-                    'EfficiencyParticlesFromHeavyHadronInEvent', 'EfficiencyBackgroundParticlesInEvent',
-                    'BackgroundRejectionPowerInEvent', 'PerfectEventReconstruction', 'TimeNodeFiltering',
-                    'TimeEdgeFiltering',
-                    'TimeLCAReconstruction', 'TimeSequence', 'NumTrueSignalsInEvent', 'NumRecoSignalsInEvent',
-                    'TimeModel', 'TimeReco', 'TimeTruth'])
+        self.signal_df, self.event_df = intialize_test_df()
 
 
     def forward(self, batch):
@@ -203,7 +182,7 @@ class HGNNLightningModule(L.LightningModule):
 
     
     def validation_step(self, batch, batch_idx): 
-        loss = self.shared_step(batch, batch_idx,log_dict=self.val_log)
+        loss = self.shared_step(batch, batch_idx, log_dict=self.val_log)
         return loss
 
 
@@ -253,8 +232,8 @@ class HGNNLightningModule(L.LightningModule):
                 self.tst_log[f"bkg_edges_score_{i}"] = torch.cat([self.tst_log[f"bkg_edges_score_{i}"], bkg_edges_score.cpu()], dim=0)
             if self.get_frag_performance:
                 true_frag_selbool = y_frag == 1
-                frag_pos_part_score = torch.sigmoid(block.node_logits['frag'][true_frag_selbool]) # change to node weights
-                frag_neg_part_score = torch.sigmoid(block.node_logits['frag'][~true_frag_selbool])
+                frag_pos_part_score = block.node_weights['frag'][true_frag_selbool]
+                frag_neg_part_score = block.node_weights['frag'][~true_frag_selbool]
                 self.tst_log[f"frag_pos_part_score_{i}"] = torch.cat([self.tst_log[f"frag_pos_part_score_{i}"], frag_pos_part_score.cpu()], dim=0)
                 self.tst_log[f"frag_neg_part_score_{i}"] = torch.cat([self.tst_log[f"frag_neg_part_score_{i}"], frag_neg_part_score.cpu()], dim=0)
         
@@ -277,7 +256,8 @@ class HGNNLightningModule(L.LightningModule):
                 none_ft_selbool = y_ft == 1
                 b_ft_selbool = y_ft == 2
 
-                ft_score = torch.softmax(block.node_logits['ft'], dim=1)
+                # softmax is fine cause CE w/ 3 classes
+                ft_score = block.node_weights['ft']
                 bbar_ft_score =  torch.softmax(block.node_logits['ft'][bbar_ft_selbool], dim=1)
                 none_ft_score = torch.softmax(block.node_logits['ft'][none_ft_selbool], dim=1)
                 b_ft_score = torch.softmax(block.node_logits['ft'][b_ft_selbool], dim=1)
@@ -287,9 +267,12 @@ class HGNNLightningModule(L.LightningModule):
                 self.tst_log[f"none_ft_score_{i}"] = torch.cat([self.tst_log[f"none_ft_score_{i}"], none_ft_score.cpu()], dim=0)
                 self.tst_log[f"b_ft_score_{i}"] = torch.cat([self.tst_log[f"b_ft_score_{i}"], b_ft_score.cpu()], dim=0)
 
+                # get pv score
+                pv_score = block.edge_weights[('tracks', 'to', 'pvs')]
+
         """B reconstruction effiency"""
         if self.get_reco_performance:
-            self.signal_df, self.event_df = eval_reco_performance(outputs, batch, batch_idx, self.signal_df, self.event_df, ft_score, self.ref_signal)
+            self.signal_df, self.event_df = eval_reco_performance(outputs, batch, batch_idx, self.signal_df, self.event_df, ft_score, pv_score, self.ref_signal)
 
         """Logging"""
         for key, values in acc_LCA.items():
@@ -308,27 +291,37 @@ class HGNNLightningModule(L.LightningModule):
     def on_train_epoch_end(self):
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.trn_log.items()}
         for key, val in avg_losses.items():
-            self.log(f"train/{key}", val, prog_bar=True, on_epoch=True, on_step=False)
+            if key == "combined_loss":
+                self.log(f"val/{key}", val, prog_bar=True, on_epoch=True, on_step=False)
+            else:
+                self.log(f"val/{key}", val, on_epoch=True, on_step=False)
         self.trn_log = defaultdict(list)
 
     def on_validation_epoch_end(self):
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.val_log.items()}
         for key, val in avg_losses.items():
-            self.log(f"val/{key}", val, prog_bar=True, on_epoch=True, on_step=False)
+            if key == "combined_loss":
+                self.log(f"val/{key}", val, prog_bar=True, on_epoch=True, on_step=False)
+            else:
+                self.log(f"val/{key}", val, on_epoch=True, on_step=False)
         self.val_log = defaultdict(list)
     
     def on_test_epoch_end(self):
+        avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.tst_log.items()}
+        for key, val in avg_losses.items():
+            print(f"{key}: {val:.2f}")
+
         if self.get_reco_performance:
-            plot_ft_nodes(self.tst_log, len(self.model._blocks), self.version)
-            self.signal_df.to_csv(f'lightning_logs/version_{self.version}/signal_df.csv', index=False)
-            self.event_df.to_csv(f'lightning_logs/version_{self.version}/event_df.csv', index=False)
+            plot_ft_nodes(self.tst_log, len(self.model._blocks), self.version, self.ref_signal)
+            self.signal_df.to_csv(f'lightning_logs/version_{self.version}/signal_df_{self.ref_signal}.csv', index=False)
+            self.event_df.to_csv(f'lightning_logs/version_{self.version}/event_df_{self.ref_signal}.csv', index=False)
             del self.signal_df, self.event_df
         if self.get_node_performance:
-            plot_gn_block_dist(self.tst_log, "nodes", len(self.model._blocks), self.version)
+            plot_gn_block_dist(self.tst_log, "nodes", len(self.model._blocks), self.version, self.ref_signal)
         if self.get_edge_performance:
-            plot_gn_block_dist(self.tst_log, "edges", len(self.model._blocks), self.version)
+            plot_gn_block_dist(self.tst_log, "edges", len(self.model._blocks), self.version, self.ref_signal)
         if self.get_frag_performance:
-            plot_gn_block_dist(self.tst_log, "frag", len(self.model._blocks), self.version)
+            plot_gn_block_dist(self.tst_log, "frag", len(self.model._blocks), self.version, self.ref_signal)
 
 
 # Here is a trainer wrapper
@@ -341,12 +334,13 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulat
             optimizer_params={"lr": 1e-3}
         )
     else:
+        print("Loading from checkpoint")
         module = HGNNLightningModule.load_from_checkpoint(
-        checkpoint_path=checkpoint_path,
-        model=model,
-        pos_weights=pos_weight,
-        optimizer_class=torch.optim.Adam,
-        optimizer_params={"lr": 1e-3}
+            checkpoint_path=checkpoint_path,
+            model=model,
+            pos_weights=pos_weight,
+            optimizer_class=torch.optim.Adam,
+            optimizer_params={"lr": 1e-3}
         )
 
     early_stopping = EarlyStopping(

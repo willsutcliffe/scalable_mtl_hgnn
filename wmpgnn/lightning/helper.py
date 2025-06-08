@@ -84,6 +84,8 @@ def lca_truth_matrix(graph):
 
 
 def get_pred_ft(graph, cluster, ft_score):
+    ft_score = ft_score.cpu()
+
     cluster_keys = cluster['node_keys']
     keys = graph['final_keys']
 
@@ -92,10 +94,40 @@ def get_pred_ft(graph, cluster, ft_score):
     return ft_score
 
 
-def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, ref_signal):
+def get_b_cand_pv(graph, cluster, true_cluster, pv_score):
+    pv_score = pv_score.squeeze().cpu()
+
+    reco_cluster_keys = cluster['node_keys']
+    true_cluster_keys = true_cluster['node_keys']
+    keys = graph['final_keys']
+
+    # Get the b daugthers idx and number
+    b_daugthers_reco_idx = np.concatenate(np.argwhere(np.isin(keys, reco_cluster_keys) == True))
+    n_reco_daugthers = b_daugthers_reco_idx.size
+    b_daugthers_true_idx = np.concatenate(np.argwhere(np.isin(keys, true_cluster_keys) == True))
+    n_true_daugthers = b_daugthers_true_idx.size
+    
+    # obtain their pv score
+    edges = graph[("tracks", "to", "pvs")]["edge_index"][0].numpy()
+    n_pvs = np.unique(graph[("tracks", "to", "pvs")]["edge_index"][1].numpy()).size
+    reco_pv_edges = np.isin(edges, b_daugthers_reco_idx)
+    true_pv_edges = np.isin(edges, b_daugthers_true_idx)
+
+    reco_score = pv_score[reco_pv_edges].reshape(n_reco_daugthers, n_pvs)
+    true_score = pv_score[true_pv_edges].reshape(n_true_daugthers, n_pvs)
+
+    reco_pv_idx = torch.argmax(torch.sum(reco_score, dim=0)).item()
+    true_pv_idx = torch.argmax(torch.sum(true_score, dim=0)).item()
+
+    return reco_pv_idx, true_pv_idx
+
+
+def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, pv_score, ref_signal):
+    ref_signal = get_ref_signal(ref_signal)
+
     # do the eval on cpu
-    output = output.cpu()
-    graph = graph.cpu()
+    output = output.cpu()  # is the model output
+    graph = graph.cpu()  # is the inital graph, need to take the truth infromation
 
     # Check if B exists in the reco event
     Bparts = float(torch.sum(torch.argmax(graph['tracks', 'to', 'tracks'].y, -1) > 0))
@@ -134,7 +166,7 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
         perfect_event_reconstruction = 1  # Flag to track if the full event is perfectly reco. also takes into account correct LCA
         if number_of_selected_background_particles > 0:
             # More particle selected then background particle -> Background particle selected
-            perfect_event_reconstruction = 0 #
+            perfect_event_reconstruction = 0
 
         for tc_firstkey in truth_cluster_dict.keys():
             signal_match = 1
@@ -186,25 +218,38 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
             none_iso = 0
             part_reco = 0
             none_associated = 0
-            none_iso_n_bkg = -1
+            none_iso_n_bkg = -1000
+            reco_pv_idx = -1
+            true_pv_idx = -1
+
             for cluster in reco_cluster_dict.values():
                 true_in_reco = np.sum(np.isin(true_cluster['node_keys'], cluster['node_keys'])) / len(true_cluster['node_keys'])
                 if cluster['node_keys'] == true_cluster['node_keys']:
                     all_particles = 1
-                    # get the flavour
+                    # Check if the LCA is matching as well
                     if cluster['LCA_values'] == true_cluster['LCA_values']:
                         perfect_reco = 1
+
+                    # Get the flavour
                     FT = get_pred_ft(output, cluster, ft_score)
+                    # Add PV reco and true PV
+                    reco_pv_idx, true_pv_idx = get_b_cand_pv(output, cluster, true_cluster, pv_score)
                     break
                 elif true_in_reco == 1 and len(cluster['node_keys']) > len(true_cluster['node_keys']):
                     none_iso = 1  # background tracks in signal
+
                     FT = get_pred_ft(output, cluster, ft_score)
                     none_iso_n_bkg = len(cluster['node_keys']) - len(true_cluster['node_keys'])   # 'purity of bkg in non iso'
+                    # Add PV reco and true PV
+                    reco_pv_idx, true_pv_idx = get_b_cand_pv(output, cluster, true_cluster, pv_score)
                     break
                 elif true_in_reco >= 0.2 and true_in_reco < 1:
-                    # TODO: here we need to change some stuff include ft and none_iso_bkg
-                    FT = -10
                     part_reco = 1
+
+                    FT = get_pred_ft(output, cluster, ft_score)
+                    none_iso_n_bkg = len(cluster['node_keys']) - len(true_cluster['node_keys']) 
+                    # Add PV reco and true PV
+                    reco_pv_idx, true_pv_idx = get_b_cand_pv(output, cluster, true_cluster, pv_score)
             if all_particles == 1:
                 none_iso = 0
                 part_reco = 0
@@ -233,9 +278,11 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
                                             'NotFound': none_associated,
                                             'SigMatch': signal_match,
                                             'Pred_FT': FT,
-                                            'B_id': origin_B_id},
-                                            ignore_index=True)
-            import pdb; pdb.set_trace()
+                                            'B_id': origin_B_id,
+                                            'reco_pv_idx': reco_pv_idx,
+                                            'true_pv_idx': true_pv_idx
+                                            }, ignore_index=True)
+
         # Add same PV frag particle found, add same PV opposite side B reco type, add signal B reco type
         # Log for event df
         if number_of_background_particles <=0:
@@ -280,3 +327,34 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, r
 
 
     
+def intialize_test_df():
+    signal_df = pd.DataFrame(
+                columns=['EventNumber',
+                         'NumParticlesInEvent', 'NumSignalParticles', 'NumBkgParticles_noniso', 
+                        'PerfectSignalReconstruction', 'AllParticles', 'PerfectReco', 'NoneIso', 'PartReco', 'NotFound', 'SigMatch', 
+                        'B_id', 'Pred_FT',
+                        'reco_pv_idx', 'true_pv_idx'
+                        ])
+    """
+    signal_df = signal_df.astype(
+                {'EventNumber': np.int32, 'NumParticlesInEvent': np.int32, 'NumSignalParticles': np.int32, 'NumBkgParticles_noniso': np.int32,
+                'PerfectSignalReconstruction': np.int32,
+                'AllParticles': np.int32, 'PerfectReco': np.int32,
+                'NoneIso': np.int32, 'PartReco': np.int32, 'NotFound': np.int32, 'SigMatch': np.int32, 'B_id': np.int32, 'Pred_FT': np.int32})
+    """
+
+    event_df = pd.DataFrame(
+                columns=['EventNumber', 'NumParticlesInEvent', 'NumParticlesFromHeavyHadronInEvent',
+                        'NumBackgroundParticlesInEvent', 'NumSelectedParticlesInEvent',
+                        'NumSelectedParticlesFromHeavyHadronInEvent',
+                        'NumSelectedBackgroundParticlesInEvent', 'NumTruthClustersGen1', 'NumTruthClustersGen2',
+                        'NumTruthClustersGen3', 'NumTruthClustersGen4', 'NumRecoClustersGen1', 'NumRecoClustersGen2',
+                        'NumRecoClustersGen3', 'NumRecoClustersGen4', 'MaxTruthFullChainDepthInEvent',
+                        'EfficiencyParticlesFromHeavyHadronInEvent', 'EfficiencyBackgroundParticlesInEvent',
+                        'BackgroundRejectionPowerInEvent', 'PerfectEventReconstruction', 'TimeNodeFiltering',
+                        'TimeEdgeFiltering',
+                        'TimeLCAReconstruction', 'TimeSequence', 'NumTrueSignalsInEvent', 'NumRecoSignalsInEvent',
+                        'TimeModel', 'TimeReco', 'TimeTruth'
+                        ])
+
+    return signal_df, event_df
