@@ -1,3 +1,6 @@
+# Example config to train a 4 layer HGNN
+#  standard message passing
+#  with bce node and edge pruning constraints and track-PV edge constraints
 model:
   type: "heterognn"
   gnn_layers: 4

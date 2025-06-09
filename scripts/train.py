@@ -3,8 +3,6 @@ from wmpgnn.datasets.data_handler import DataHandler
 from wmpgnn.model.model_loader import ModelLoader
 from wmpgnn.trainers.gnn_trainer import GNNTrainer
 from wmpgnn.trainers.hetero_gnn_trainer import HeteroGNNTrainer
-import torch
-from torch import nn
 import argparse
 
 # load script arguments simply the config yaml

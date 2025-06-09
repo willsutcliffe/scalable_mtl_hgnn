@@ -53,14 +53,14 @@ perf.evaluate_reco_performance(event_max=200, pruning_cut=0.2, plot_perfect_deca
 # Note edge pruning takes a lot longer due to the large number of edges.
 print("Plotting Node pruning ROC curves with AUCs:")
 perf.unset_pruning(layer=7) # we first unset the pruning we applied with perf.evaluate_reco_performance
-true, pred = perf.evaluate_hetero_track_pruning_performance(layers=[0,1,2,7],plot_roc=True, edge_pruning=False, batch_size=4)
+true, pred = perf.evaluate_homog_track_pruning_performance(layers=[0,1,2,7],plot_roc=True, edge_pruning=False, batch_size=4)
 # here layers is a list of layers where you want to plot the ROC performance for
 # edge_pruning = True selects edge pruning where as False defaults to node pruning
 # note this returns the true edge / node labels
 
 # You can compute the LCA accuracy on the entire test sample with
 # not this will consider any pruning selection set
-acc = perf.evaluate_hetero_lca_accuracy(batch_size=4)
+acc = perf.evaluate_homog_lca_accuracy(batch_size=4)
 print("LCA test accuracy: \n", acc)
 
 # To set and unset pruning use the following:
@@ -69,12 +69,4 @@ perf.set_edge_pruning(layer=7,cut=0.2, device=device)
 perf.set_node_pruning(layer=7,cut=0.2, device=device)
 perf.unset_pruning(layer=7) # unset last layer of pruning of a 8 layer HGNN
 
-# track PV association with the HGNN is assessed with
-# note by default b_tracks = True
-acc, npvs, assoc = perf.evaluate_pv_association(batch_size=4, b_tracks=True)
-print("PV missassociation of B tracks: \n", acc)
 
-# Here acc is the an average accuracy over all tracks, assoc is a list of booleans
-# which denote if the PV was associated or not correctly.
-# Finally npvs is the multiplicity of the event for given PV.
-# One can also run the PV association for a custom use case by using the loop logic in the function.

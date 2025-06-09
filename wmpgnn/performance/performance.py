@@ -481,7 +481,8 @@ class Performance:
         return acc, npvs, associated
 
     def evaluate_homog_track_pruning_performance(self, layers=[0, 1, 2, 7], batch_size=8,
-                                                 edge_pruning=True, plot_roc=False):
+                                                 edge_pruning=True, plot_roc=False,
+                                                  show_plots = False):
         """
         Evaluates the track (edge or node) pruning performance for a homogeneous GNN model.
 
@@ -552,7 +553,8 @@ class Performance:
             plt.xlabel("Weights")
             plt.savefig(f"{self.results_dir}/{self.name}_{identifier}_{names[i]}_histogram.png", dpi=300)
             plt.savefig(f"{self.results_dir}/{self.name}_{identifier}_{names[i]}_histogram.pdf", dpi=300)
-            plt.show()
+            if show_plots:
+                plt.show()
         if plot_roc:
             if edge_pruning:
                 self.plot_roc_curve(true, pred, names, file_name="hetero_edge_pruning_roc", title="Edge")
