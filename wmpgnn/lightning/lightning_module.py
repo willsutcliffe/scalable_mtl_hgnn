@@ -21,10 +21,11 @@ from wmpgnn.util.functions import acc_four_class
 
 
 class HGNNLightningModule(L.LightningModule):
-    def __init__(self, model, optimizer_class, optimizer_params, pos_weights, version=0, ref_signal=''):
+    def __init__(self, model, optimizer_class, optimizer_params, pos_weights, config):
         super().__init__()
         self.save_hyperparameters({
             "pos_weights": make_loggable(pos_weights),
+            **config
         })
 
         self.model = model
@@ -60,13 +61,18 @@ class HGNNLightningModule(L.LightningModule):
             self.val_log[f"w_{i}"] = []
 
         # Eval flags on tst sample which can be turned on and off
-        self.version = version
-        self.ref_signal = ref_signal
-        self.get_node_performance = True  # HOnestly this hsould be always true like everything but what ever...
-        self.get_edge_performance = True
-        self.get_PV_performance = True
-        self.get_reco_performance = True
-        self.get_frag_performance = True
+        self.version = config["eval"]["version"]
+        self.ref_signal = config["eval"]["sample"]
+        self.get_node_performance = config["eval"]["performance"]["nodes"]  # HOnestly this hsould be always true like everything but what ever...
+        self.get_edge_performance = config["eval"]["performance"]["edges"] 
+        self.get_PV_performance = config["eval"]["performance"]["PV"] 
+        self.get_reco_performance = config["eval"]["performance"]["B_reco"] 
+        self.get_frag_performance = config["eval"]["performance"]["frag"] 
+        # set pruning for performance eval
+        layer = config["eval"]["pruning"]["layer"]
+        self.model._blocks[layer].node_weight_cut = config["eval"]["pruning"]["nodes"]
+        self.model._blocks[layer].prune_by_cut = True
+        self.model._blocks[layer].edge_weight_cut = config["eval"]["pruning"]["edges"]
 
     
     def init_tst_log(self):
@@ -283,9 +289,6 @@ class HGNNLightningModule(L.LightningModule):
 
     def on_test_epoch_start(self):
         self.init_tst_log()
-        self.model._blocks[3].node_weight_cut = 0.01
-        self.model._blocks[3].prune_by_cut = True
-        self.model._blocks[3].edge_weight_cut = 0.01
 
 
     def on_train_epoch_end(self):
@@ -325,13 +328,14 @@ class HGNNLightningModule(L.LightningModule):
 
 
 # Here is a trainer wrapper
-def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulate_grad_batches=2, checkpoint_path=None):
-    if checkpoint_path is None:
+def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, config, accumulate_grad_batches=1, checkpoint_path=None):
+    if checkpoint_path == "None":
         module = HGNNLightningModule(
             model=model,
             pos_weights=pos_weight,
             optimizer_class=torch.optim.Adam,
-            optimizer_params={"lr": 1e-3, "weight_decay": 1e-5}
+            optimizer_params={"lr": 1e-3, "weight_decay": 1e-5},
+            config=config
         )
     else:
         print("Loading from checkpoint")
@@ -340,7 +344,8 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulat
             model=model,
             pos_weights=pos_weight,
             optimizer_class=torch.optim.Adam,
-            optimizer_params={"lr": 1e-3, "weight_decay": 1e-5}
+            optimizer_params={"lr": 1e-3, "weight_decay": 1e-5},
+            config=config
         )
 
     early_stopping = EarlyStopping(
@@ -377,9 +382,10 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulat
         strategy="auto",  # ddp_notebook change it to normal ddp don't do ddp_notebook takes way to much memory
         callbacks=[early_stopping, best_model_callback, all_epochs_callback],
         precision="32",  # never do 16-mixed
-        gradient_clip_val=1.0,
         accumulate_grad_batches=accumulate_grad_batches,
-        num_sanity_val_steps=1
+        num_sanity_val_steps=1,
+        gradient_clip_val=0.5,
+        sync_batchnorm=True
     )
 
     """Start training"""

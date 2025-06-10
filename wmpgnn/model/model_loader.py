@@ -53,7 +53,7 @@ class ModelLoader:
                              use_edge_weights=config_loader.get("model.use_edge_weights"),
                              use_node_weights=config_loader.get("model.use_node_weights"),
                              weighted_mp=config_loader.get("model.weighted_mp"),
-                             norm=config_loader.get("model.norm")
+                             norm=config_loader.get("model.norm"),
                              )
         elif model_type == "heterognn":
             nodes = config_loader.get("model")['node_types']
@@ -69,7 +69,8 @@ class ModelLoader:
                                    use_edge_weights=config_loader.get("model.use_edge_weights"),
                                    use_node_weights=config_loader.get("model.use_node_weights"),
                                    weighted_mp=config_loader.get("model.weighted_mp"),
-                                   norm=config_loader.get("model.norm")
+                                   norm=config_loader.get("model.norm"),
+                                   drop_out=config_loader.get("model.dropout")
                                    )
 
 
