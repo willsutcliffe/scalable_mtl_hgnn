@@ -7,9 +7,9 @@ from wmpgnn.gnn.hetero_graph_network import HeteroGraphNetwork
 from wmpgnn.gnn.hetero_graphcoder import HeteroGraphCoder
 from wmpgnn.gnn.hetero_graph_network import edge_pruning, node_pruning
 
-def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm"):
+def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm", drop_out=0.):
     return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
-              out_channels=output_size, num_layers=num_layers, norm=norm)
+              out_channels=output_size, num_layers=num_layers, norm=norm, dropout=drop_out)
 
 def hetero_graph_concat(g1,g2):
     graph = g1.clone()
@@ -37,18 +37,19 @@ class HeteroGNN(nn.Module):
                  weight_mlp_channels=16,
                  weight_mlp_layers=4,
                  weighted_mp=False,
-                 norm="batch_norm"):
+                 norm="batch_norm",
+                 drop_out=0.):
         super(HeteroGNN, self).__init__()
 
         self.loss_weights = nn.Parameter(torch.zeros(6, dtype=torch.float32))  # Adding a trainable weight for loss combination arXiv:1705.07115 
 
         self.edge_types = edge_types
         self.node_types = node_types
-        mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm)
+        mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm, drop_out=drop_out)
         if norm == "graph_norm":
-            global_mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm="batch_norm")
+            global_mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm="batch_norm", drop_out=drop_out)
         else:
-            global_mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm)
+            global_mlp = make_mlp(mlp_output_size, hidden_channels=mlp_channels, num_layers=mlp_layers, norm=norm, drop_out=drop_out)
         self._encoder = HeteroGraphCoder(node_types, edge_types,
                                          edge_models={edge_type: mlp for edge_type in edge_types},
                                          node_models={node_type: mlp for node_type in node_types}, global_model=global_mlp)
@@ -59,7 +60,7 @@ class HeteroGNN(nn.Module):
                 HeteroGraphNetwork(node_types, edge_types, edge_model=mlp, node_model=mlp, global_model=mlp,
                                    use_node_weights=use_node_weights, use_edge_weights=use_edge_weights,
                                    weight_mlp_channels=weight_mlp_channels, weight_mlp_layers=weight_mlp_layers,
-                                   weighted_mp=weighted_mp, norm=norm))
+                                   weighted_mp=weighted_mp, norm=norm, drop_out=drop_out))
         self._blocks = nn.ModuleList(self._blocks)
 
         self._decoder = HeteroGraphCoder(node_types, edge_types,

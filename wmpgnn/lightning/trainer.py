@@ -58,52 +58,41 @@ def load_file(path):
     return files
 
 if __name__ == "__main__":
-    # python trainer.py --indir /eos/user/y/yukaiz/DFEI_data/ --sample inclusive,Bs_JpsiPhi --config  ../../config_files/simple.yaml --bs 12 --gacc 1 --ngpu 1 --ncpu 8 --cw
+    # python trainer.py  --config  ../../config_files/lightning.yaml
     usage = "usage: %prog [options]"
     parser = OptionParser(usage)
-    parser.add_option("", "--indir", type=str, default=None,
-                      dest="INDIR", help="Input directory where files are gobbled from")
-    parser.add_option("", "--sample", type=str, default=None,
-                      dest="SAMPLE", help="Array like structure for samples, comma sepertaed")
     parser.add_option("", "--config", type=str, default=None,
                       dest="CONFIG", help="Config file path")
-    parser.add_option("", "--ngpu", type=int, default=1,
-                      dest="NGPU", help="number of used gpu")
-    parser.add_option("", "--ncpu", type=int, default=1,
-                      dest="NCPU", help="number of cpu for multi processing")
-    parser.add_option("", "--bs", type=int, default=12,
-                      dest="BS", help="batch size")
-    parser.add_option("", "--gacc", type=int, default=1,
-                      dest="GACC", help="gradient accumulation")
-    parser.add_option("", "--cpt", type=str, default=None,
-                      dest="CHECKPOINT", help="pass a checkpoint to continue training")
-    parser.add_option('--cw', action='store_true', dest="CW", help='Calculate weights')
     (option, args) = parser.parse_args()
     if len(args) != 0:
         raise RuntimeError("Got undefined arguments", " ".join(args))
 
+    # pivoting from option parser to full config file
+
     # Load config file
     config_loader = ConfigLoader(option.CONFIG, environment_prefix="DL")
+    config = config_loader._load_config()
+    config["mode"] = "Training"
 
     # Load model
     model_loader = ModelLoader(config_loader)
     model = model_loader.get_model()
-    model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)  # changing from batchnorm to sync batchnorm
-    checkpoint_path = option.CHECKPOINT  # load the previous last model to retrain
+    checkpoint_path = config["training"]["cpt"]  # load the previous last model to retrain
     print(model)
     print("="*30)
 
     # Get the dataset glob it and load
-    samples = option.SAMPLE.split(",") if option.SAMPLE else exit()
+    samples = config["training"]["sample"]
     print("Start reading in the data")
     print("Training:")
     start = time.time()
     trn_dataset = []
     for sample in samples:
         print(f"Loading {sample}")
-        trn_paths = sorted(glob.glob(f'{option.INDIR}/{sample}/training_data_*'))
+        trn_paths = sorted(glob.glob(f'{config["data_dir"]}/{sample}/training_data_*'))
         for path in tqdm(trn_paths, desc="Training dataset"):
             trn_dataset.extend(torch.load(path, weights_only=False))
+            break
     # trn_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in trn_paths))
     # trn_dataset = LazyTorchDataset(f'{option.INDIR}/training_data_*')
 
@@ -111,9 +100,10 @@ if __name__ == "__main__":
     val_dataset = []
     for sample in samples:
         print(f"Loading {sample}")
-        val_paths = sorted(glob.glob(f'{option.INDIR}/{sample}/validation_data_*'))
+        val_paths = sorted(glob.glob(f'{config["data_dir"]}/{sample}/validation_data_*'))
         for path in tqdm(val_paths, desc="Validation dataset"):
             val_dataset.extend(torch.load(path, weights_only=False))
+            break
     # val_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in val_paths))
     # val_dataset = LazyTorchDataset(f'{option.INDIR}/validation_data_*')
     end = time.time()
@@ -124,21 +114,20 @@ if __name__ == "__main__":
     print("="*30)
 
     # here we can check what kind of gpu it is to specify bs, also num_workers = num_cpu * 2
-    trn_loader = DataLoader(trn_dataset, batch_size=option.BS, num_workers=option.NCPU*2, drop_last=True) 
-    val_loader = DataLoader(val_dataset, batch_size=option.BS, num_workers=option.NCPU*2, drop_last=True) 
+    trn_loader = DataLoader(trn_dataset, batch_size=config["training"]["batch_size"], num_workers=config["training"]["ncpu"]*2, drop_last=True) 
+    val_loader = DataLoader(val_dataset, batch_size=config["training"]["batch_size"], num_workers=config["training"]["ncpu"]*2, drop_last=True) 
 
     # Either recalculate the positive weight or take the old ones
     print("Getting pos weight:")
-    if option.CW:  # CW = calculate pos weights
+    if config["training"]["cw"]:  # CW = calculate pos weights
         pos_weight = get_hetero_weight(trn_loader)
     else:
         pos_weight = {'t_nodes': torch.tensor(23.54585), 'tt_edges': torch.tensor(944.7520),
                       'LCA': torch.tensor([2.5026e-01, 9.7058e+02, 3.3759e+02, 4.2255e+03]),
                       'frag': torch.tensor(593.7332), 'FT': torch.tensor([16.1860,  0.3476, 16.2423])}
-        # {'t_nodes': tensor(23.5458), 'tt_edges': tensor(944.7520), 'LCA': tensor([2.5026e-01, 9.7058e+02, 3.3759e+02, 4.2255e+03]), 'frag': tensor(593.7332), 'FT': tensor([16.1860,  0.3476, 16.2423])}
     print(pos_weight)
     print("="*30)
 
     # Start the training here
     epochs = 30
-    training(model, pos_weight, epochs, option.NGPU, trn_loader, val_loader, accumulate_grad_batches=option.GACC, checkpoint_path=checkpoint_path)
+    training(model, pos_weight, epochs, config["training"]["ngpu"], trn_loader, val_loader, config, accumulate_grad_batches=config["training"]["gacc"], checkpoint_path=checkpoint_path)

@@ -12,9 +12,9 @@ from torch_scatter.composite import scatter_softmax
 import contextlib
 
 
-def weight_mlp(output_size, hidden_channels=16, num_layers=4, norm="batch_norm"):
+def weight_mlp(output_size, hidden_channels=16, num_layers=4, norm="batch_norm", drop_out=0.):
     return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
-                       out_channels=output_size, num_layers=num_layers, norm=norm)
+                       out_channels=output_size, num_layers=num_layers, norm=norm, dropout=drop_out)
 
 
 def ones(device):
@@ -56,7 +56,7 @@ class HeteroGraphNetwork(AbstractModule):
                  node_types, edge_types, edge_model, node_model,
                  global_model=None, use_globals=True, hidden_size=8, device="cuda",
                  use_edge_weights=True, use_node_weights=True, weight_mlp_layers=4, weight_mlp_channels=128,
-                 weighted_mp = False, norm="batch_norm"):
+                 weighted_mp = False, norm="batch_norm", drop_out=0.):
         super(HeteroGraphNetwork, self).__init__()
 
         self._use_globals = use_globals
@@ -88,17 +88,17 @@ class HeteroGraphNetwork(AbstractModule):
         for edge_type in edge_types:
             self._edge_mlps[edge_type] = weight_mlp(1, hidden_channels=weight_mlp_channels,
                                                     num_layers=weight_mlp_layers,
-                                                    norm=norm)()  # MLPS for edge classification after each block
+                                                    norm=norm, drop_out=drop_out)()  # MLPS for edge classification after each block
         # self._node_mlp = weight_mlp(1)()
         self._node_mlps['tracks'] = weight_mlp(1, hidden_channels=weight_mlp_channels,
                                                num_layers=weight_mlp_layers,
-                                               norm=norm)()  # MLPs for node classification after each block
+                                               norm=norm, drop_out=drop_out)()  # MLPs for node classification after each block
         self._node_mlps['frag'] = weight_mlp(1, hidden_channels=weight_mlp_channels,
                                                num_layers=weight_mlp_layers,
-                                               norm=norm)()  # MLPs for fragmentation classification after each block
+                                               norm=norm, drop_out=drop_out)()  # MLPs for fragmentation classification after each block
         self._node_mlps['ft'] = weight_mlp(3, hidden_channels=weight_mlp_channels,
                                                num_layers=weight_mlp_layers,
-                                               norm=norm)()  # MLPs for FT after each block
+                                               norm=norm, drop_out=drop_out)()  # MLPs for FT after each block
         #self._node_mlps['pvs'] = ones(device)
         # self._edge_mlp = weight_mlp(1)()
         # self._edge_mlps[('tracks','to','tracks')] = self._edge_mlp

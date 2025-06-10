@@ -42,16 +42,18 @@ if __name__ == "__main__":
 
     """Load config file"""
     config_loader = ConfigLoader(option.CONFIG, environment_prefix="DL")  # One can include if it is included in the config loader and take that
-    config_file = config_loader._load_config()  # pass this to the lightning module
+    config = config_loader._load_config()
+    config["mode"] = "Testing"
 
     """Load model"""
     model_loader = ModelLoader(config_loader)
     model = model_loader.get_model()
     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)  # changing from batchnorm to sync batchnorm
-    if option.CHECKPOINT is None:
+    if config["eval"]["cpt"] == "None":
         print("Please specifiy checkpoint")
         exit()
-    checkpoint_path = F"lightning_logs/version_{option.VERSION}/checkpoints/{option.CHECKPOINT}"   # load the previous last model to retrain
+    version = config["eval"]["version"]
+    checkpoint_path = f"lightning_logs/version_{version}/checkpoints/{config["eval"]["cpt"]}"   # load the previous last model to retrain
     # the pos weight arent used but are requried to be passed on
     pos_weight = {'t_nodes': torch.tensor(0.), 'tt_edges': torch.tensor(0.), 'LCA': torch.tensor([0., 0., 0., 0.]), 'frag': torch.tensor(0.), 'FT': torch.tensor([0., 0., 0.])} # need to be load in from the hyperparams
     module = HGNNLightningModule.load_from_checkpoint(
@@ -60,13 +62,12 @@ if __name__ == "__main__":
             pos_weights=pos_weight,
             optimizer_class=torch.optim.Adam,
             optimizer_params={"lr": 1e-3},
-            version=option.VERSION,
-            ref_signal=option.INDIR.split('/')[-1]
+            config=config
         )
     print(model)
 
     """Load data"""
-    tst_paths = sorted(glob.glob(f'{option.INDIR}/testing_data_*'))[:1]
+    tst_paths = sorted(glob.glob(f'{config["data_dir"]}/{config["eval"]["sample"]}/testing_data_*'))[:1]
     tst_dataset = []
     for path in tqdm(tst_paths, desc="Test dataset"):
         tst_dataset.extend(torch.load(path, weights_only=False))
@@ -77,7 +78,6 @@ if __name__ == "__main__":
 
     """Start evaluation"""
     # Getting the data frame
-    version = option.VERSION
     file_path = f"lightning_logs/version_{version}"
     df = pd.read_csv(f"{file_path}/metrics.csv")
     df = df.groupby('epoch').agg(lambda x: x.dropna().iloc[0] if not x.dropna().empty else None).reset_index()
