@@ -4,6 +4,19 @@ import matplotlib.pyplot as plt
 import os
 from wmpgnn.util.functions import NOW
 
+
+# Set random seed for reproducibility
+import numpy as np
+import random
+seed = 42
+torch.manual_seed(seed)
+np.random.seed(seed)
+random.seed(seed)
+# Ensure deterministic behavior (optional, may slow down training)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+
 class Trainer(ABC):
     """
     Abstract base class for model training loops.

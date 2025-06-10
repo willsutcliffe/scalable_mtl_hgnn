@@ -247,16 +247,12 @@ def weight_n_class(dataset,hetero=False,n_class=5):
         num_sample += len(y)
         
     weight_class = {i: num_sample / (n_class * true_class[i]) for i in range(n_class)}
-    
-    #weight_class = {i: torch.tensor(1.0) for i in range(n_class)}
-    #weight_class = {i: torch.tensor(10.0**i) for i in range(n_class)}
-    #weight_class = {i: torch.tensor(1.0) for i in range(n_class)}
-    #weight_class[2] = torch.tensor(10000.0)
+    #weight_class[0] = weight_class[0] / 10.0 # uncomment to reduce weight of class 0
     weight = torch.stack(tuple(weight_class[i] for i in range(n_class)))
 
-    #print(weight_class)
-    #print(tuple(weight_class[i] for i in range(n_class)))
-    print(weight)
+    print("num_sample: ",num_sample)
+    print("num_sample: ",true_class)
+    print("weight: ",weight)
     return weight
 
 def weight_four_class(dataset,hetero=False):

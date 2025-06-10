@@ -136,8 +136,8 @@ os.makedirs(output_folder, exist_ok=True)
 print(f"Training finished. Saving model in {model_file}")
 trainer.save_model(output_folder+model_file, save_config=True)
 
+"""
 save_prediction = True
-
 if save_prediction:
     trainer.model.cuda()
     data_loader = val_loader
@@ -145,7 +145,7 @@ if save_prediction:
         data.to('cuda')
         outputs = trainer.model(data)
         import pdb; pdb.set_trace()
-
+"""
 csv_file = model_file.replace(".pt", ".csv")
 trainer.save_dataframe(output_folder+csv_file)
 
