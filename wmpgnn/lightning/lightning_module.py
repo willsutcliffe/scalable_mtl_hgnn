@@ -292,9 +292,9 @@ class HGNNLightningModule(L.LightningModule):
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.trn_log.items()}
         for key, val in avg_losses.items():
             if key == "combined_loss":
-                self.log(f"val/{key}", val, prog_bar=True, on_epoch=True, on_step=False)
+                self.log(f"train/{key}", val, prog_bar=True, on_epoch=True, on_step=False)
             else:
-                self.log(f"val/{key}", val, on_epoch=True, on_step=False)
+                self.log(f"train/{key}", val, on_epoch=True, on_step=False)
         self.trn_log = defaultdict(list)
 
     def on_validation_epoch_end(self):
@@ -331,7 +331,7 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulat
             model=model,
             pos_weights=pos_weight,
             optimizer_class=torch.optim.Adam,
-            optimizer_params={"lr": 1e-3}
+            optimizer_params={"lr": 1e-3, "weight_decay": 1e-5}
         )
     else:
         print("Loading from checkpoint")
@@ -340,7 +340,7 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, accumulat
             model=model,
             pos_weights=pos_weight,
             optimizer_class=torch.optim.Adam,
-            optimizer_params={"lr": 1e-3}
+            optimizer_params={"lr": 1e-3, "weight_decay": 1e-5}
         )
 
     early_stopping = EarlyStopping(

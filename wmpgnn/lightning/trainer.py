@@ -58,10 +58,7 @@ def load_file(path):
     return files
 
 if __name__ == "__main__":
-    # python trainer.py --indir /eos/user/y/yukaiz/DFEI_data/inclusive/ --config /afs/cern.ch/work/y/yukaiz/public/weighted_MP_gnn/config_files/simple.yaml --bs 3 --gacc 4 --ngpu 4
-    # python trainer.py --indir /eos/user/y/yukaiz/DFEI_data/inclusive/ --config  ../../config_files//simple.yaml --bs 12 --gacc 1 --ngpu 1 --cpt /eos/user/y/yukaiz/SWAN_projects/weighted_MP_gnn/wmpgnn/lightning/lightning_logs/version_2/checkpoints/epoch-epoch=07.ckpt
-    # bash /afs/cern.ch/work/y/yukaiz/public/jobs/train_hgnn.sh /eos/user/y/yukaiz/DFEI_data/inclusive/ /afs/cern.ch/work/y/yukaiz/public/weighted_MP_gnn/config_files/simple.yaml 6 2 1
-    #  python trainer.py --indir /eos/user/y/yukaiz/DFEI_data/inclusive --config  ../../config_files/simple.yaml --bs 12 --gacc 1 --ngpu 1 --ncpu 8 --cw
+    # python trainer.py --indir /eos/user/y/yukaiz/DFEI_data/ --sample inclusive,Bs_JpsiPhi --config  ../../config_files/simple.yaml --bs 12 --gacc 1 --ngpu 1 --ncpu 8 --cw
     usage = "usage: %prog [options]"
     parser = OptionParser(usage)
     parser.add_option("", "--indir", type=str, default=None,
@@ -97,7 +94,7 @@ if __name__ == "__main__":
     print("="*30)
 
     # Get the dataset glob it and load
-    samples = options.SAMPLE.split(",") if options.INDIR else exit()
+    samples = option.SAMPLE.split(",") if option.SAMPLE else exit()
     print("Start reading in the data")
     print("Training:")
     start = time.time()
