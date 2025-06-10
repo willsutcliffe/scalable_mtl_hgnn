@@ -70,12 +70,13 @@ def balance_edges(edge_index, edge_attr, edge_label, seed=42):
         return ei, ea, el
 
 class CustomNeutralsHeteroDataset(Dataset):
-    def __init__(self, filenames_input, filenames_target, performance_mode=False, config_loader=None, split="train"):
+    def __init__(self, filenames_input, filenames_target, performance_mode=False, config_loader=None, split="train", sizes=[0,0]):
         self.filenames_input = filenames_input
         self.filenames_target = filenames_target
         self.performance_mode = performance_mode
         self.config_loader = config_loader
         self.split = split
+        self.sizes = sizes
 
     # No. of graphs
     def __len__(self):
@@ -94,11 +95,9 @@ class CustomNeutralsHeteroDataset(Dataset):
 
         save_graph = self.config_loader.get("dataset.save_graph", False)
         load_graph = self.config_loader.get("dataset.load_graph", False)
-        dir = os.path.join(self.config_loader.get("dataset.data_dir"), self.config_loader.get("dataset.polarity"), self.config_loader.get("dataset.data_type"))
         balanced = self.config_loader.get("dataset.balanced_classes", False)
-        subdir = "graphs_balanced" if balanced else "graphs"
-        cache_dir = os.path.join(dir, subdir, f"{self.split}_graphs/")
-        os.makedirs(cache_dir, exist_ok=True)
+        polarity = self.config_loader.get("dataset.polarity", False)
+
         # cache_path = os.path.join(cache_dir, f"{self.split}_graphs.pt")
         evt_max = self.config_loader.get(f"dataset.evt_max_{self.split}", None)
         chunk_size = 100
@@ -106,20 +105,45 @@ class CustomNeutralsHeteroDataset(Dataset):
         if evt_max is not None:
             total_events = min(total_events, evt_max)
         num_chunks_needed = math.ceil(total_events / chunk_size)
-        def get_cache_file(start_idx, end_idx):
+
+        def get_cache_file(pol, start_idx, end_idx):
+            dir = os.path.join(self.config_loader.get("dataset.data_dir"), pol, self.config_loader.get("dataset.data_type"))
+            subdir = "graphs_balanced" if balanced else "graphs"
+            cache_dir = os.path.join(dir, subdir, f"{self.split}_graphs/")
+            os.makedirs(cache_dir, exist_ok=True)
             return os.path.join(cache_dir, f"events_{start_idx:05d}_to_{end_idx:05d}_{self.split}.pt")
 
 
         ### We can load the graphs if already generated
         if load_graph:
+            
             print(f"Loading preprocessed graphs for split {self.split}")
             if balanced :
                 print("Random background neutral particles have been discarded to have balanced class")
-            for i in range(num_chunks_needed):
-                cache_file = get_cache_file(i*chunk_size, min(((i + 1)*chunk_size), total_events) - 1)
-                if not os.path.exists(cache_file):
-                    raise RuntimeError(f"Missing cache chunk {cache_file}. Cannot load full dataset.")
-                dataset.extend(torch.load(cache_file, weights_only=False))
+            if polarity == 'magall':
+                total_events_up = self.sizes[0]
+                total_events_down = self.sizes[1]
+                num_chunks_needed_up = math.ceil(total_events_up / chunk_size)
+                num_chunks_needed_down = math.ceil(total_events_down / chunk_size)
+                
+                for i in range(num_chunks_needed_up):
+                    cache_file = get_cache_file('magup', i*chunk_size, min(((i + 1)*chunk_size), total_events_up) - 1)
+                    if not os.path.exists(cache_file):
+                        raise RuntimeError(f"Missing cache chunk {cache_file}. Cannot load full dataset.")
+                    dataset.extend(torch.load(cache_file, weights_only=False))
+                for i in range(num_chunks_needed_down):
+                    cache_file = get_cache_file('magdown', i*chunk_size, min(((i + 1)*chunk_size), total_events_down) - 1)
+                    if not os.path.exists(cache_file):
+                        raise RuntimeError(f"Missing cache chunk {cache_file}. Cannot load full dataset.")
+                    dataset.extend(torch.load(cache_file, weights_only=False))
+            elif (polarity=='magdown' or polarity=='magup'):
+                for i in range(num_chunks_needed):
+                    cache_file = get_cache_file(polarity, i*chunk_size, min(((i + 1)*chunk_size), total_events) - 1)
+                    if not os.path.exists(cache_file):
+                        raise RuntimeError(f"Missing cache chunk {cache_file}. Cannot load full dataset.")
+                    dataset.extend(torch.load(cache_file, weights_only=False))
+            else :
+                raise Exception(f"Unexpected magnet polarity {polarity}. Please use magdown, magup or magall.")
             dataset = dataset[:total_events]
             total = time.time() - start_time
             print(f"Loaded {len(dataset)} graphs from cache in {num_chunks_needed} files (in {total:.2f}s).")
@@ -264,7 +288,7 @@ class CustomNeutralsHeteroDataset(Dataset):
             dataset.extend(chunk_data)
                 # print(f"Processed Event {i} in {time.time() - event_start:.2f}s")
             if save_graph:
-                cache_file = get_cache_file(i, min((i + chunk_size), total_events) - 1)
+                cache_file = get_cache_file(polarity, i, min((i + chunk_size), total_events) - 1)
                 print(f"Saving chunk {i // chunk_size} to {cache_file} with {len(chunk_data)} events")
                 torch.save(chunk_data, cache_file)
 

@@ -52,7 +52,8 @@ class ModelLoader:
                                    use_edge_weights=config_loader.get("model.use_edge_weights"),
                                    use_node_weights=config_loader.get("model.use_node_weights"),
                                    weighted_mp=config_loader.get("model.weighted_mp"),
-                                   norm=config_loader.get("model.norm")
+                                   norm=config_loader.get("model.norm"),
+                                   dropout=config_loader.get("model.dropout")
                                    )                           
         elif model_type == "transformer":
             pass

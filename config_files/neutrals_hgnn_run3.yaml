@@ -1,0 +1,46 @@
+model:
+  type: "neutral_heterognn"
+  gnn_layers: 4 #8
+  mlp_output_size:  32 #16
+  mlp_layers: 4 #4
+  mlp_channels: 128 #128
+  weight_mlp_layers: 16 #8
+  weight_mlp_channels: 32 #16
+  weighted_mp: False
+  use_edge_weights: True
+  use_node_weights: True
+  node_types: ['chargedtree', 'neutrals']
+  edge_types: ["chargedtree_neutrals"]
+  norm: "batch_norm"
+  neutrals_classes: 2
+  threshold: 0.5
+  dropout: 0.6
+loss:
+  add_bce: False
+  beta_edge_bce : 0.2
+dataset:
+  data_type: "neutrals"
+  polarity: "magall"
+  data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array"
+  # data_dir: /panfs/ebornand/DFEI/FullMC/npy_array/magdown/neutrals_/
+  evt_max_train: 160000
+  evt_max_val: 21486 #10754 #10732 #
+  load_graph: True
+  save_graph: False
+  balanced_classes: False
+training:
+  train: True
+  starting_learning_rate: 0.0001
+  epochs: 100
+  dropped_lr_epochs: 0
+  batch_size: 256
+  load_checkpoint: False
+  save_checkpoint: True
+  k_subsetRandomSampler: 2
+  model_file: "Final_{dataset_data_type}_{dataset_polarity}_{model_gnn_layers}block_{training_epochs}_epochs_message_passing_BCE.pt"
+inference:
+  inference: True
+  learning_rate: 0.0001
+  batch_size: 16
+
+#mem-per-gpu

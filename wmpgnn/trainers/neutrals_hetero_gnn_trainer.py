@@ -3,6 +3,7 @@ from wmpgnn.util.functions import msg, neutrals_hetero_positive_edge_weight, neu
 import torch
 from torch import nn
 from torch_scatter import scatter_add
+from torch.utils.data import SubsetRandomSampler, DataLoader
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_curve, auc, confusion_matrix
@@ -15,7 +16,9 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                 use_bce_pos_weight=False, threshold=0.5):
         super().__init__(config, model, train_loader, val_loader)
         self.threshold=threshold
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001, weight_decay=5e-4)
+        self.k_subsetRandomSampler = config.get("training.k_subsetRandomSampler")
+        self._base_train_loader = self.train_loader
 
         # Class weighting for the classification task
         weights = weight_binary_class(self.train_loader, hetero=True)
@@ -284,12 +287,52 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
     def train(self, epochs=10, starting_epoch=0, learning_rate=0.001,
               save_checkpoint=False, checkpoint_path=None, checkpoint_freq=0.3):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        full_dataset = self.train_loader.dataset
+        batch_size = self.train_loader.batch_size
+        collate_fn = getattr(self.train_loader, "collate_fn", None)
+        num_workers = getattr(self.train_loader, "num_workers", 0)
         for epoch in range(starting_epoch, epochs):
             msg(f"At epoch {epoch}")
             self.epochs.append(epoch)
 
-            # Training epoch
-            train_metrics = self.eval_one_epoch(train=True)
+             # --- TRAINING PHASE ---
+            if self.k_subsetRandomSampler == 1:
+                # Standard: use the full train_loader
+                train_metrics = self.eval_one_epoch(train=True)
+
+            else:
+                # 1) Generate a random permutation of all sample indices
+                num_samples = len(full_dataset)
+                indices = np.arange(num_samples)
+                np.random.shuffle(indices)
+
+                # 2) Exclude roughly 1/k_folds of the indices
+                exclude_size = num_samples // self.k_subsetRandomSampler
+                included_indices = indices[exclude_size:]
+
+                # 3) Build a SubsetRandomSampler on the "included" indices
+                train_sampler = SubsetRandomSampler(included_indices)
+
+                # 4) Create a temporary DataLoader for this epoch’s subsample
+                train_loader_epoch = DataLoader(
+                    full_dataset,
+                    batch_size=batch_size,
+                    sampler=train_sampler,
+                    shuffle=False,       # sampler already shuffles
+                    num_workers=num_workers,
+                    collate_fn=collate_fn
+                )
+
+                # 5) Temporarily override self.train_loader so eval_one_epoch sees it
+                original_loader = self.train_loader
+                self.train_loader = train_loader_epoch
+
+                # 6) Call eval_one_epoch(train=True) which uses self.train_loader internally
+                train_metrics = self.eval_one_epoch(train=True)
+
+                # 7) Restore the original train_loader for future epochs/validation
+                self.train_loader = original_loader
+
             self.model.train(False)
             # Validation epoch
             val_metrics = self.eval_one_epoch(train=False)
