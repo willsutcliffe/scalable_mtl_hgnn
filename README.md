@@ -42,13 +42,25 @@ sudo brew install graphviz
 
 More information on the dataset is available in Dataset.md
 
-The dataset is available on Zenodo:
+The training, validation and test datasets are available on Zenodo:
+https://zenodo.org/records/15584745
 
+
+In particular for a default training of the model you should use the dataset
+inclusive_training_validation_dataset
+with ~40k training and ~10k validation events.
+
+The corresonding test dataset (~10k) is: 
+inclusive_test_dataset.tar.gz
+
+Meanwhile, for several exclusive decays we also provide test samples with more detail in Dataset.md
 ## Config files
 
 The training and inference of the HGNN and GNN models are controlled by yaml config files 
 located in config_files. These configure model and training hyperparameters and the model
 to load in the case of inference.
+
+For training set the relevant path to the datasets described above. 
 
 ## Training
 
