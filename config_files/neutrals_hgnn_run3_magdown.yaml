@@ -20,13 +20,13 @@ loss:
   beta_edge_bce : 0.2
 dataset:
   data_type: "neutrals"
-  polarity: "magall"
+  polarity: "magdown"
   data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array"
   # data_dir: /panfs/ebornand/DFEI/FullMC/npy_array/magdown/neutrals_/
-  evt_max_train: 160000
-  evt_max_val: 21486 #10754 #10732 #
-  load_graph: True
-  save_graph: False
+  evt_max_train: 80000
+  evt_max_val: 10754 #
+  load_graph: False
+  save_graph: True
   balanced_classes: False
 training:
   train: True

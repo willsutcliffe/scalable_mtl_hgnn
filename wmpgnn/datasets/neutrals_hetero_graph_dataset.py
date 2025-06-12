@@ -260,7 +260,8 @@ class CustomNeutralsHeteroDataset(Dataset):
 
                 # Global features
                 globals_ = torch.tensor([[neutral_feats.size(0), features.shape[0], charged_nodes.shape[0],
-                                        neutral_feats[:,0].sum(), neutral_feats[:,1].sum()]], dtype=torch.float)
+                                        neutral_feats[:,0].sum(), neutral_feats[:,1].sum(),
+                                        neutral_feats[:,2].sum(), neutral_feats[:,3].sum()]], dtype=torch.float)
 
                 if balanced:
                     result = balance_edges(edge_index, edge_attr, edge_labels.squeeze(-1))

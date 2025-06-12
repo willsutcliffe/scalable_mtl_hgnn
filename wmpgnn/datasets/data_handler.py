@@ -74,6 +74,8 @@ class DataHandler:
             files_target_vl = sorted(glob.glob(f'{data_path}/validation_dataset/target_*'), key=natural_sort_key)[:evt_max_val]
             files_input_tst = sorted(glob.glob(f'{data_path}/test_dataset/input_*'), key=natural_sort_key)
             files_target_tst = sorted(glob.glob(f'{data_path}/test_dataset/target_*'), key=natural_sort_key)
+
+            size_tr_up, size_tr_down, size_vl_up, size_vl_down = 0, 0, 0, 0
         else :
             raise Exception(f"Unexpected magnet polarity {polarity}. Please use magdown, magup or magall.")
 
