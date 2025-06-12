@@ -12,7 +12,7 @@ from torch_scatter.composite import scatter_softmax
 import contextlib
 
 
-def weight_mlp(output_size, hidden_channels=16, num_layers=4, norm="batch_norm", drop_out=0.):
+def weight_mlp(output_size, hidden_channels=16, num_layers=4, norm="batch_norm", drop_out=0.3):
     return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
                        out_channels=output_size, num_layers=num_layers, norm=norm, dropout=drop_out)
 

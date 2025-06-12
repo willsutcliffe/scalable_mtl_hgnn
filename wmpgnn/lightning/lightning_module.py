@@ -107,7 +107,7 @@ class HGNNLightningModule(L.LightningModule):
     # def on_train_epoch_start(self):
     #     self.trainer.train_dataloader.sampler.set_epoch(self.current_epoch)
 
-    def shared_step(self, batch, batch_idx, log_dict):  # Runs 1 batch
+    def shared_step(self, batch, batch_idx, log_dict, phase):  # Runs 1 batch
         loss_t_nodes = 0.
         loss_tt_edges = 0.
         loss_tPV_edges = 0.
@@ -139,7 +139,7 @@ class HGNNLightningModule(L.LightningModule):
         """Getting the loss"""
         loss_LCA = self.LCA_criterion(outputs[('tracks', 'to', 'tracks')].edges, y_tt_LCA)
         # Looping over all the GN blocks to grab the interference
-        for block in self.model._blocks:
+        for block in self.model._blocks: # does this cause issues because it is not reseted?
             loss_t_nodes += self.t_nodes_criterion(block.node_logits['tracks'], y_t_nodes)
             loss_frag_nodes += self.frag_nodes_criterion(block.node_logits['frag'], y_frag)
             loss_ft_nodes += self.ft_nodes_criterion(block.node_logits['ft'], y_ft)
@@ -176,19 +176,20 @@ class HGNNLightningModule(L.LightningModule):
             log_dict[key].append(values)
         log_dict["tPV_edge_acc"].append(acc_tPV_edge)
         log_dict["PV_has_B_acc"].append(acc_PV_has_B)
-        for i, weight in enumerate(self.model.loss_weights):
-            log_dict[f"w_{i}"].append(weight.item())
-
-        return loss
+        
+        if phase == "training":
+            return loss
+        elif phase == "validation":
+            return {}
         
 
     def training_step(self, batch, batch_idx): 
-        loss = self.shared_step(batch, batch_idx, log_dict=self.trn_log)
+        loss = self.shared_step(batch, batch_idx, log_dict=self.trn_log, phase="training")
         return loss
 
     
     def validation_step(self, batch, batch_idx): 
-        loss = self.shared_step(batch, batch_idx, log_dict=self.val_log)
+        loss = self.shared_step(batch, batch_idx, log_dict=self.val_log, phase="validation")
         return loss
 
 
@@ -292,6 +293,8 @@ class HGNNLightningModule(L.LightningModule):
 
 
     def on_train_epoch_end(self):
+        for i, weight in enumerate(self.model.loss_weights):
+            self.trn_log[f"w_{i}"].append(weight.item())
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.trn_log.items()}
         for key, val in avg_losses.items():
             if key == "combined_loss":
@@ -301,6 +304,8 @@ class HGNNLightningModule(L.LightningModule):
         self.trn_log = defaultdict(list)
 
     def on_validation_epoch_end(self):
+        for i, weight in enumerate(self.model.loss_weights):
+            self.val_log[f"w_{i}"].append(weight.item())
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.val_log.items()}
         for key, val in avg_losses.items():
             if key == "combined_loss":
@@ -385,7 +390,8 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, config, a
         accumulate_grad_batches=accumulate_grad_batches,
         num_sanity_val_steps=1,
         gradient_clip_val=0.5,
-        sync_batchnorm=True
+        sync_batchnorm=True,
+        reload_dataloaders_every_n_epochs=1
     )
 
     """Start training"""
