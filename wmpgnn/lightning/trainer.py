@@ -92,7 +92,6 @@ if __name__ == "__main__":
         trn_paths = sorted(glob.glob(f'{config["data_dir"]}/{sample}/training_data_*'))
         for path in tqdm(trn_paths, desc="Training dataset"):
             trn_dataset.extend(torch.load(path, weights_only=False))
-            break
     # trn_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in trn_paths))
     # trn_dataset = LazyTorchDataset(f'{option.INDIR}/training_data_*')
 
@@ -103,7 +102,6 @@ if __name__ == "__main__":
         val_paths = sorted(glob.glob(f'{config["data_dir"]}/{sample}/validation_data_*'))
         for path in tqdm(val_paths, desc="Validation dataset"):
             val_dataset.extend(torch.load(path, weights_only=False))
-            break
     # val_dataset = list(chain.from_iterable(torch.load(p, weights_only=False) for p in val_paths))
     # val_dataset = LazyTorchDataset(f'{option.INDIR}/validation_data_*')
     end = time.time()

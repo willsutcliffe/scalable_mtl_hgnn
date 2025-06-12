@@ -8,7 +8,7 @@ from torch_geometric.nn.models import MLP
 from torch.nn import Sigmoid
 
 
-def weight_mlp(output_size, hidden_channels=16, num_layers=4, norm="batch_norm", drop_out=0.):
+def weight_mlp(output_size, hidden_channels=16, num_layers=4, norm="batch_norm", drop_out=0.001):
     """
     Returns a function that creates a multilayer perceptron (MLP) for weight prediction.
 

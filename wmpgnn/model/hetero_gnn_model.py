@@ -6,7 +6,7 @@ from wmpgnn.gnn.hetero_graph_network import HeteroGraphNetwork
 from wmpgnn.gnn.hetero_graphcoder import HeteroGraphCoder
 from wmpgnn.gnn.hetero_graph_network import edge_pruning, node_pruning, faster_node_pruning
 
-def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm", drop_out=0.):
+def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm", drop_out=0.3):
     """
     Create a factory function for a Multi-Layer Perceptron (MLP) with specified architecture.
 
@@ -183,8 +183,9 @@ class HeteroGNN(nn.Module):
                 core_input = hetero_graph_concat(latent0, latent)
                 latent = core_input
 
-
+        # here we can just add two mlp for ft and frag on the final output on the latent after all the GN block, also append the original one
         decoded_op = self._decoder(latent)
+
 
         output = (self._output_transform(decoded_op))
 
