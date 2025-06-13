@@ -11,7 +11,6 @@ import pandas as pd
 import numpy as np
 
 import torch
-torch.set_float32_matmul_precision("high")
 from torch import nn
 from torch_scatter import scatter_add
 
@@ -107,7 +106,7 @@ class HGNNLightningModule(L.LightningModule):
     # def on_train_epoch_start(self):
     #     self.trainer.train_dataloader.sampler.set_epoch(self.current_epoch)
 
-    def shared_step(self, batch, batch_idx, log_dict, phase):  # Runs 1 batch
+    def shared_step(self, batch, batch_idx, log_dict):  # Runs 1 batch
         loss_t_nodes = 0.
         loss_tt_edges = 0.
         loss_tPV_edges = 0.
@@ -132,6 +131,7 @@ class HGNNLightningModule(L.LightningModule):
         pv_sum = scatter_add(yb, batch[('tracks', 'to', 'pvs')].edge_index[1], dim=0)
 
         """Passing to the model"""
+        import pdb; pdb.set_trace()
         outputs = self.model(batch)
         # print(torch.cuda.memory_allocated() / (1024 ** 2) )
         # print(torch.cuda.memory_summary())
@@ -177,19 +177,18 @@ class HGNNLightningModule(L.LightningModule):
         log_dict["tPV_edge_acc"].append(acc_tPV_edge)
         log_dict["PV_has_B_acc"].append(acc_PV_has_B)
         
-        if phase == "training":
-            return loss
-        elif phase == "validation":
-            return {}
+        return loss
+
         
 
     def training_step(self, batch, batch_idx): 
-        loss = self.shared_step(batch, batch_idx, log_dict=self.trn_log, phase="training")
+        loss = self.shared_step(batch, batch_idx, log_dict=self.trn_log)
         return loss
 
     
     def validation_step(self, batch, batch_idx): 
-        loss = self.shared_step(batch, batch_idx, log_dict=self.val_log, phase="validation")
+        assert not self.model.training, "Model is still in training mode during validation!"
+        loss = self.shared_step(batch, batch_idx, log_dict=self.val_log)
         return loss
 
 
@@ -393,6 +392,7 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, config, a
         sync_batchnorm=True,
         reload_dataloaders_every_n_epochs=1
     )
+    torch.set_float32_matmul_precision("highest")
 
     """Start training"""
     trainer.fit(module, trn_loader, val_loader)
