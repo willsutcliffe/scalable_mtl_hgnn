@@ -138,7 +138,7 @@ class NeutralsTrainer(ABC):
 
     def plot_predictions(self, path, file_name="pred.png", epoch=-1, show=True):
         """Plot la distribution des prédictions pour train et val, 
-        avec lignes verticales aux thresholds (manual, opt, tpr0.9, tpr0.99)."""
+        avec lignes verticales aux thresholds (default, opt, tpr0.9, tpr0.99)."""
 
         def to_numpy(tensor):
             if isinstance(tensor, torch.Tensor):
@@ -173,7 +173,7 @@ class NeutralsTrainer(ABC):
 
         # Création des subplots (hist + deux pulls)
         figure, (ax, pull1, pull2) = plt.subplots(
-            3, sharex=True, figsize=(12, 10),
+            3, sharex=True, figsize=(16, 10),
             gridspec_kw=dict(height_ratios=(4, 1, 1), hspace=0),
         )
 
@@ -230,11 +230,11 @@ class NeutralsTrainer(ABC):
 
         # 5) Récupérer les valeurs des thresholds au dernier epoch
         last_epoch = self.epoch_metrics_df.index.max()
-        thresholds = ['manual', 'opt', 'tpr0.9', 'tpr0.99']
+        thresholds = ['default', 'opt', 'tpr0.9', 'tpr0.99']
         colors = ['tab:cyan', 'tab:orange', 'tab:green', 'tab:purple']
 
         for idx, th in enumerate(thresholds):
-            if th == 'manual':
+            if th == 'default':
                 thr_val = self.threshold
             else:
                 thr_val = self.get_epoch_metric(f"val_{th}_threshold_value", epoch=last_epoch)
@@ -256,8 +256,9 @@ class NeutralsTrainer(ABC):
         plt.xlim(bins[0], bins[-1])
         plt.xlabel('Predictions', fontsize=fontsize)
         ax.set_title(f'Predictions Distribution at Epoch {epoch}', fontsize=fontsize + 2)
-        ax.legend(loc='best', fontsize=fontsize)
-
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=fontsize)
+        plt.tight_layout()
+        plt.subplots_adjust(right=0.75)
         if show:
             plt.show()
 
@@ -298,7 +299,7 @@ class NeutralsTrainer(ABC):
         roc_auc_val = auc(fpr_val, tpr_val)
 
         # 3) Tracer les courbes ROC
-        plt.figure(figsize=(8, 6))
+        plt.figure(figsize=(10, 6))
         plt.plot(fpr_train,
                 tpr_train,
                 linestyle="--",
@@ -312,12 +313,12 @@ class NeutralsTrainer(ABC):
 
         # 4) Récupérer les thresholds au epoch donné
         last_epoch = epoch
-        thresholds = ["manual", "opt", "tpr0.9", "tpr0.99"]
+        thresholds = ["default", "opt", "tpr0.9", "tpr0.99"]
         colors = ["tab:cyan", "tab:orange", "tab:green", "tab:purple"]
 
         for idx, th in enumerate(thresholds):
             # Nom de colonne dans epoch_metrics_df
-            if th == "manual":
+            if th == "default":
                 thr_val = self.threshold
             else:
                 thr_val = self.get_epoch_metric(f"val_{th}_threshold_value", epoch=last_epoch)
@@ -341,11 +342,12 @@ class NeutralsTrainer(ABC):
         plt.xlabel("False Positive Rate", fontsize=fontsize)
         plt.ylabel("True Positive Rate", fontsize=fontsize)
         plt.title(f"ROC Curves at Epoch {epoch}", fontsize=fontsize + 2)
-        plt.legend(loc="lower right", fontsize=fontsize - 1)
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=fontsize-1)
         plt.grid(True, linestyle="--", alpha=0.6)
         plt.xlim(0.0, 1.0)
         plt.ylim(0.0, 1.0)
         plt.tight_layout()
+        plt.subplots_adjust(right=0.65)
 
         # 6) Sauvegarder ou afficher
         output_path = os.path.join(path, "roc_auc", file_name)
@@ -362,14 +364,14 @@ class NeutralsTrainer(ABC):
         Plot train/val accuracy pour les quatre thresholds, avec la valeur du seuil dans le label.
         """
         epochs_list = self.epoch_metrics_df.index.values
-        thresholds = ['manual', 'opt', 'tpr0.9', 'tpr0.99']
+        thresholds = ['default', 'opt', 'tpr0.9', 'tpr0.99']
         colors = ['tab:cyan', 'tab:orange', 'tab:green', 'tab:purple']
         markers = {'train': 'o', 'val': 's'}
 
         # Récupérer le dernier epoch
         last_epoch = self.epoch_metrics_df.index.max()
 
-        fig, ax = plt.subplots(figsize=(6, 4))
+        fig, ax = plt.subplots(figsize=(8, 4))
         for idx, th in enumerate(thresholds):
             train_col = f"train_{th}_accuracy"
             val_col   = f"val_{th}_accuracy"
@@ -378,7 +380,7 @@ class NeutralsTrainer(ABC):
             val_vals   = self.get_epoch_metric(val_col,epoch= None)
 
             # Valeur du seuil
-            if th == 'manual':
+            if th == 'default':
                 th_value_train = th_value_val = self.threshold
             else:
                 th_value_train = self.get_epoch_metric(f"train_{th}_threshold_value", epoch=last_epoch)
@@ -402,8 +404,9 @@ class NeutralsTrainer(ABC):
         ax.set_ylabel("Accuracy")
         ax.set_title("Accuracy pour Train et Validation (4 thresholds)")
         ax.grid(True)
-        ax.legend()
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
         fig.tight_layout()
+        fig.subplots_adjust(right=0.7)
         if show:
             plt.show()
         fig.savefig(file_name)
@@ -413,13 +416,13 @@ class NeutralsTrainer(ABC):
         Plot train/val efficiency (TPR) pour les quatre thresholds, avec la valeur du seuil.
         """
         epochs_list = self.epoch_metrics_df.index.values
-        thresholds = ['manual', 'opt', 'tpr0.9', 'tpr0.99']
+        thresholds = ['default', 'opt', 'tpr0.9', 'tpr0.99']
         colors = ['tab:cyan', 'tab:orange', 'tab:green', 'tab:purple']
         markers = {'train': 'o', 'val': 's'}
 
         last_epoch = self.epoch_metrics_df.index.max()
 
-        fig, ax = plt.subplots(figsize=(6, 4))
+        fig, ax = plt.subplots(figsize=(8, 4))
         for idx, th in enumerate(thresholds):
             train_col = f"train_{th}_TPR"
             val_col   = f"val_{th}_TPR"
@@ -427,7 +430,7 @@ class NeutralsTrainer(ABC):
             train_vals = self.get_epoch_metric(train_col, epoch=None)
             val_vals   = self.get_epoch_metric(val_col, epoch=None)
 
-            if th == 'manual':
+            if th == 'default':
                 th_value_train = th_value_val = self.threshold
             else:
                 th_value_train = self.get_epoch_metric(f"train_{th}_threshold_value", epoch=last_epoch)
@@ -451,8 +454,9 @@ class NeutralsTrainer(ABC):
         ax.set_ylabel("Efficiency (TPR)")
         ax.set_title("Efficiency (TPR) pour Train et Validation (4 thresholds)")
         ax.grid(True)
-        ax.legend()
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
         fig.tight_layout()
+        fig.subplots_adjust(right=0.7)
         if show:
             plt.show()
         fig.savefig(file_name)
@@ -462,13 +466,13 @@ class NeutralsTrainer(ABC):
         Plot train/val rejection pour les quatre thresholds, avec la valeur du seuil.
         """
         epochs_list = self.epoch_metrics_df.index.values
-        thresholds = ['manual', 'opt', 'tpr0.9', 'tpr0.99']
+        thresholds = ['default', 'opt', 'tpr0.9', 'tpr0.99']
         colors = ['tab:cyan', 'tab:orange', 'tab:green', 'tab:purple']
         markers = {'train': 'o', 'val': 's'}
 
         last_epoch = self.epoch_metrics_df.index.max()
 
-        fig, ax = plt.subplots(figsize=(6, 4))
+        fig, ax = plt.subplots(figsize=(8, 4))
         for idx, th in enumerate(thresholds):
             train_col = f"train_{th}_rej"
             val_col   = f"val_{th}_rej"
@@ -476,7 +480,7 @@ class NeutralsTrainer(ABC):
             train_vals = self.get_epoch_metric(train_col, epoch=None)
             val_vals   = self.get_epoch_metric(val_col, epoch=None)
 
-            if th == 'manual':
+            if th == 'default':
                 th_value_train = th_value_val = self.threshold
             else:
                 th_value_train = self.get_epoch_metric(f"train_{th}_threshold_value", epoch=last_epoch)
@@ -500,8 +504,9 @@ class NeutralsTrainer(ABC):
         ax.set_ylabel("Rejection")
         ax.set_title("Rejection pour Train et Validation (4 thresholds)")
         ax.grid(True)
-        ax.legend()
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
         fig.tight_layout()
+        fig.subplots_adjust(right=0.7)
         if show:
             plt.show()
         fig.savefig(file_name)
@@ -511,13 +516,13 @@ class NeutralsTrainer(ABC):
         Plot train/val precision pour les quatre thresholds, avec la valeur du seuil.
         """
         epochs_list = self.epoch_metrics_df.index.values
-        thresholds = ['manual', 'opt', 'tpr0.9', 'tpr0.99']
+        thresholds = ['default', 'opt', 'tpr0.9', 'tpr0.99']
         colors = ['tab:cyan', 'tab:orange', 'tab:green', 'tab:purple']
         markers = {'train': 'o', 'val': 's'}
 
         last_epoch = self.epoch_metrics_df.index.max()
 
-        fig, ax = plt.subplots(figsize=(6, 4))
+        fig, ax = plt.subplots(figsize=(8, 4))
         for idx, th in enumerate(thresholds):
             train_col = f"train_{th}_precision"
             val_col   = f"val_{th}_precision"
@@ -525,7 +530,7 @@ class NeutralsTrainer(ABC):
             train_vals = self.get_epoch_metric(train_col, epoch=None)
             val_vals   = self.get_epoch_metric(val_col, epoch=None)
 
-            if th == 'manual':
+            if th == 'default':
                 th_value_train = th_value_val = self.threshold
             else:
                 th_value_train = self.get_epoch_metric(f"train_{th}_threshold_value", epoch=last_epoch)
@@ -549,8 +554,9 @@ class NeutralsTrainer(ABC):
         ax.set_ylabel("Precision")
         ax.set_title("Precision pour Train et Validation (4 thresholds)")
         ax.grid(True)
-        ax.legend()
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
         fig.tight_layout()
+        fig.subplots_adjust(right=0.7)
         if show:
             plt.show()
         fig.savefig(file_name)
@@ -560,13 +566,13 @@ class NeutralsTrainer(ABC):
         Plot train/val balanced accuracy pour les quatre thresholds, avec la valeur du seuil.
         """
         epochs_list = self.epoch_metrics_df.index.values
-        thresholds = ['manual', 'opt', 'tpr0.9', 'tpr0.99']
+        thresholds = ['default', 'opt', 'tpr0.9', 'tpr0.99']
         colors = ['tab:cyan', 'tab:orange', 'tab:green', 'tab:purple']
         markers = {'train': 'o', 'val': 's'}
 
         last_epoch = self.epoch_metrics_df.index.max()
 
-        fig, ax = plt.subplots(figsize=(6, 4))
+        fig, ax = plt.subplots(figsize=(8, 4))
         for idx, th in enumerate(thresholds):
             train_col = f"train_{th}_balanced_accuracy"
             val_col   = f"val_{th}_balanced_accuracy"
@@ -574,7 +580,7 @@ class NeutralsTrainer(ABC):
             train_vals = self.get_epoch_metric(train_col, epoch=None)
             val_vals   = self.get_epoch_metric(val_col, epoch=None)
 
-            if th == 'manual':
+            if th == 'default':
                 th_value_train = th_value_val = self.threshold
             else:
                 th_value_train = self.get_epoch_metric(f"train_{th}_threshold_value", epoch=last_epoch)
@@ -598,8 +604,9 @@ class NeutralsTrainer(ABC):
         ax.set_ylabel("Balanced Accuracy")
         ax.set_title("Balanced Accuracy pour Train et Validation (4 thresholds)")
         ax.grid(True)
-        ax.legend()
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
         fig.tight_layout()
+        fig.subplots_adjust(right=0.7)
         if show:
             plt.show()
         fig.savefig(file_name)
@@ -607,7 +614,7 @@ class NeutralsTrainer(ABC):
     def plot_tpr_thresholds(self, path, file_name, key_prefix: str = 'val', epoch: int =-1, show: bool = True):
         """
         Plot TPR vs. threshold for 'train' or 'val' (given key_prefix) 
-        and mark the four cutoffs (manual, opt, tpr=0.9, tpr=0.99) 
+        and mark the four cutoffs (default, opt, tpr=0.9, tpr=0.99) 
         with vertical lines and points. The style (colors, legend format) 
         matches that of plot_efficiency.
         """
@@ -621,15 +628,15 @@ class NeutralsTrainer(ABC):
         tpr_curve = data['tpr']
 
         # Retrieve all four thresholds
-        th_manual = data['threshold_manual']
+        th_default = data['threshold_default']
         th_opt = data['threshold_opt']
         th_tpr90 = data['threshold_tpr_90']
         th_tpr99 = data['threshold_tpr_99']
         tpr_at_opt = data['tpr_at_opt']
 
-        # Define a consistent color scheme (same order as plot_efficiency: manual, opt, tpr0.9, tpr0.99)
+        # Define a consistent color scheme (same order as plot_efficiency: default, opt, tpr0.9, tpr0.99)
         colors = {
-            'manual': 'tab:cyan',
+            'default': 'tab:cyan',
             'opt': 'tab:orange',
             'tpr0.9': 'tab:green',
             'tpr0.99': 'tab:purple'
@@ -642,13 +649,13 @@ class NeutralsTrainer(ABC):
                  color='red', label="TPR Curve")
 
         # For each of the four thresholds, draw a vertical line and a marker point:
-        # 1) Manual threshold
-        #    We draw a vertical line at th_manual. The point on the TPR curve at that threshold 
+        # 1) default threshold
+        #    We draw a vertical line at th_default. The point on the TPR curve at that threshold 
         #    might not correspond exactly to the curve arrays—so we can approximate by computing
-        #    the TPR at that cutoff manually if needed. But typically, we just draw the vertical line
-        #    at x = th_manual and let the legend note its value.
-        plt.axvline(th_manual, color=colors['manual'], linestyle="--",
-                    label=f"Manual (th={th_manual:.3f})")
+        #    the TPR at that cutoff defaultly if needed. But typically, we just draw the vertical line
+        #    at x = th_default and let the legend note its value.
+        plt.axvline(th_default, color=colors['default'], linestyle="--",
+                    label=f"default (th={th_default:.3f})")
 
         # 2) Optimal threshold
         plt.axvline(th_opt, color=colors['opt'], linestyle="--",

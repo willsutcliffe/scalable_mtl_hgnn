@@ -104,7 +104,6 @@ class CustomNeutralsHeteroDataset(Dataset):
         total_events = len(self.filenames_input)
         if evt_max is not None:
             total_events = min(total_events, evt_max)
-        num_chunks_needed = math.ceil(total_events / chunk_size)
 
         def get_cache_file(pol, start_idx, end_idx):
             dir = os.path.join(self.config_loader.get("dataset.data_dir"), pol, self.config_loader.get("dataset.data_type"))
@@ -116,7 +115,9 @@ class CustomNeutralsHeteroDataset(Dataset):
 
         ### We can load the graphs if already generated
         if load_graph:
-            
+            max_event_name = f"dataset.evt_max_{self.split}"
+            total_events = self.config_loader.get(max_event_name)
+            num_chunks_needed = math.ceil(total_events / chunk_size)
             print(f"Loading preprocessed graphs for split {self.split}")
             if balanced :
                 print("Random background neutral particles have been discarded to have balanced class")

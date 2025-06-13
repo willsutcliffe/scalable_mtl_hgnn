@@ -416,24 +416,41 @@ def ks_test(responses):
             f'{signal:.3f} ({bkg:.3f})')
 
 
-def select_epoch_indices(n_epochs, n_dropped_epochs, n_samples=5):
+def select_epoch_indices(n_epochs, n_dropped_epochs, n_samples=7):
     """
-    Return `n_samples` epoch indices (0-based, going up to n_epochs+1),
-    including the first (0) and last (n_epochs+1), and equally spaced values in between.
+    Return `n_samples` epoch indices (1-based, up to total_epochs),
+    including:
+    - The first epoch (1)
+    - The last `n_last` epochs
+    - Intermediate epochs spaced before the last ones
     """
-    # Include the first and last epochs
-    total_epochs = n_epochs + n_dropped_epochs -1 
+    total_epochs = n_epochs + n_dropped_epochs - 1  # 0-based indexing, but we use 1-based outputs
 
     if n_samples < 2:
-        raise ValueError("At least two samples are needed (first and last).")
+        raise ValueError("n_samples must be at least 2 (first and last).")
 
-    if n_samples >= total_epochs + 1:
-        # Return all indices from 0 to n_epochs + 1
-        return list(range(total_epochs + 1))
+    if total_epochs < n_samples:
+        # Not enough epochs — just return all from 1 to total_epochs
+        return list(range(1, total_epochs + 1))
 
-    # Create equally spaced indices
-    indices = torch.linspace(1, total_epochs, steps=n_samples).tolist()
+    # Number of last epochs to always include (at least 1)
+    n_last = min(5, n_samples - 2)  # Reserve 1 for first and 1 for intermediate
+    n_remaining = n_samples - n_last - 1  # How many to put between first and last
 
-    # Round and convert to a set of integers to avoid duplicates,
-    # then sort the result
-    return sorted(set(round(x) for x in indices))
+    indices = [1]  # Always include first (1-based)
+
+    # Intermediate epochs between 2 and total_epochs - n_last
+    if n_remaining > 0:
+        start = 2
+        end = total_epochs - n_last
+        if end >= start:
+            inter_indices = torch.linspace(start, end, steps=n_remaining + 1).tolist()
+            inter_indices = [round(x) for x in inter_indices]
+            indices += inter_indices
+
+    # Add the last n_last epochs
+    last_epochs = list(range(total_epochs - n_last + 1, total_epochs + 1))
+    indices.extend(last_epochs)
+
+    # Remove duplicates and sort
+    return sorted(set(indices))

@@ -87,16 +87,23 @@ if config_loader.get('training.load_checkpoint'):
 epochs = config_loader.get('training.epochs')
 learning_rate = config_loader.get('training.starting_learning_rate')
 dropped_lr_epochs = config_loader.get('training.dropped_lr_epochs')
-
+min_delta = config_loader.get('training.early_stopping_min_delta')
+patience=config_loader.get('training.early_stopping_patience')
 
 print(f"Running {epochs} epochs with learning rate {learning_rate}")
 save_checkpoint = config_loader.get('training.save_checkpoint')
-trainer.train(epochs = epochs, learning_rate = learning_rate,
-              starting_epoch=trainer.epoch_warmstart, save_checkpoint=save_checkpoint, checkpoint_path=checkpoint_path)
+trainer.train(epochs = epochs, learning_rate = learning_rate, early_stopping_patience=patience,
+              min_delta=min_delta,starting_epoch=trainer.epoch_warmstart, save_checkpoint=save_checkpoint, checkpoint_path=checkpoint_path)
+
+# In case of early stopping, we update the last epoch
+if trainer.last_epoch > 0:
+    last_epoch_early_stopping = trainer.last_epoch+1
+else :
+    last_epoch_early_stopping = epochs
 
 if dropped_lr_epochs > 0:
     print(f"Running {dropped_lr_epochs} epochs with learning rate {learning_rate/10}")
-    trainer.train(epochs=epochs+dropped_lr_epochs, starting_epoch=epochs, learning_rate=learning_rate/10)
+    trainer.train(epochs=last_epoch_early_stopping+dropped_lr_epochs, starting_epoch=last_epoch_early_stopping, learning_rate=learning_rate/10)
 
 print(f"Training finished. Saving model in {model_file}")
 trainer.save_model(output_folder+model_file, save_config=True)
@@ -123,7 +130,7 @@ trainer.plot_balanced_accuracy(output_folder+plot_name, show=False)
 plot_name = model_file.replace(".pt", "_pre.png")
 trainer.plot_precision(output_folder+plot_name, show=False)
 
-for i in select_epoch_indices(epochs,dropped_lr_epochs,5):
+for i in select_epoch_indices(last_epoch_early_stopping,dropped_lr_epochs,patience+2):
     plot_name = model_file.replace(".pt", f"_pred_epoch{i}.png")
     trainer.plot_predictions(output_folder, plot_name, epoch=i, show=False)
     plot_name = model_file.replace(".pt", f"_roc_auc_epoch{i}.png")

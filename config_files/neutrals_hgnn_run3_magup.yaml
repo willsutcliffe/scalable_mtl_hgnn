@@ -1,6 +1,6 @@
 model:
   type: "neutral_heterognn"
-  gnn_layers: 4 #8
+  gnn_layers: 6 #8
   mlp_output_size:  32 #16
   mlp_layers: 4 #4
   mlp_channels: 128 #128
@@ -21,23 +21,27 @@ loss:
 dataset:
   data_type: "neutrals"
   polarity: "magup"
-  data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array"
+  # data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array"
   # data_dir: /panfs/ebornand/DFEI/FullMC/npy_array/magdown/neutrals_/
+  data_dir: "/home/ebornand/Data/DFEI/FullMC/npy_array/"
   evt_max_train: 80000
   evt_max_val: 10732 #
-  load_graph: False
-  save_graph: True
+  evt_max_test: 0
+  load_graph: True
+  save_graph: False
   balanced_classes: False
 training:
   train: True
   starting_learning_rate: 0.001
-  epochs: 20
+  epochs: 100
   dropped_lr_epochs: 5
   batch_size: 256
+  early_stopping_patience: 6
+  early_stopping_min_delta: 0.001
   load_checkpoint: False
   save_checkpoint: True
   k_subsetRandomSampler: 4
-  model_file: "Final_{dataset_data_type}_{dataset_polarity}_{model_gnn_layers}block_{training_epochs}_epochs_message_passing_BCE.pt"
+  model_file: "Final_{dataset_data_type}_{dataset_polarity}_{model_gnn_layers}block_{training_epochs}+{training_dropped_lr_epochs}_epochs_message_passing_BCE.pt"
 inference:
   inference: True
   learning_rate: 0.0001

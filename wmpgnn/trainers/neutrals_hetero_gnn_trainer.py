@@ -6,6 +6,7 @@ from torch_scatter import scatter_add
 from torch.utils.data import SubsetRandomSampler, DataLoader
 import numpy as np
 import pandas as pd
+import copy
 from sklearn.metrics import roc_curve, auc, confusion_matrix
 
 
@@ -51,7 +52,8 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         self.bce_edges_train_loss = []
         self.bce_edges_val_loss = []
 
-        # Metrics tracking
+        # Mark the last epoch in case of early stopping
+        self.last_epoch=0
 
     
     def save_checkpoint(self,file_path:str):
@@ -284,13 +286,19 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
         return metrics
 
-    def train(self, epochs=10, starting_epoch=0, learning_rate=0.001,
+    def train(self, epochs=10, starting_epoch=0, learning_rate=0.001, early_stopping_patience=100, min_delta=0,
               save_checkpoint=False, checkpoint_path=None, checkpoint_freq=0.3):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         full_dataset = self.train_loader.dataset
         batch_size = self.train_loader.batch_size
         collate_fn = getattr(self.train_loader, "collate_fn", None)
         num_workers = getattr(self.train_loader, "num_workers", 0)
+
+        best_val_loss = float('inf')  # Best validation loss so far
+        best_model_state = None       # State dict of the best model
+        best_epoch = -1               # Epoch where best model occurred
+        patience_counter = 0          # Number of epochs without improvement
+
         for epoch in range(starting_epoch, epochs):
             msg(f"At epoch {epoch}")
             self.epochs.append(epoch)
@@ -337,6 +345,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             # Validation epoch
             val_metrics = self.eval_one_epoch(train=False)
 
+
             # Append metrics
             self.train_predictions.append(train_metrics['preds'])
             self.train_labels.append(train_metrics['labels'])
@@ -350,12 +359,35 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             train_labels_np = train_metrics['labels'].numpy()
             val_preds_np   = val_metrics['preds'].numpy()
             val_labels_np  = val_metrics['labels'].numpy()
+            train_loss=train_metrics['loss']
+            val_loss=val_metrics['loss']
+
+             # --- EARLY STOPPING LOGIC ---
+            if val_loss is None:
+                raise ValueError("Validation loss metric not found in val_metrics")
+
+            if (val_loss < best_val_loss - min_delta) :
+                best_val_loss = val_loss
+                best_epoch = epoch
+                best_model_state = copy.deepcopy(self.model.state_dict())
+                patience_counter = 0
+            else:
+                if val_loss < best_val_loss :
+                    best_val_loss = val_loss
+                    best_epoch = epoch
+                    best_model_state = copy.deepcopy(self.model.state_dict())
+                    patience_counter += 0.5
+                    print(f"Not enough improvement in validation loss (less than {min_delta}). Patience: {patience_counter}/{early_stopping_patience}")
+                else :
+                    patience_counter += 1
+                    print(f"No improvement in validation loss. Patience: {patience_counter}/{early_stopping_patience}")
+
 
             train_dict = self.compute_thresholds_and_metrics(
-                train_labels_np, train_preds_np, key_prefix='train', epoch=epoch
+                train_labels_np, train_preds_np, train_loss, key_prefix='train', epoch=epoch
             )
             val_dict   = self.compute_thresholds_and_metrics(
-                val_labels_np,   val_preds_np,   key_prefix='val', epoch=epoch
+                val_labels_np,   val_preds_np, val_loss,  key_prefix='val', epoch=epoch
             )
 
             # Merge the two dicts to form this epoch's row
@@ -366,18 +398,20 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                 axis=0
             )
 
-            # --- Print metrics (manual threshold) via get_epoch_metric ---
-            tm_acc  = self.get_epoch_metric('train_manual_accuracy', epoch=epoch)
-            vm_acc  = self.get_epoch_metric('val_manual_accuracy', epoch=epoch)
-            tm_tpr  = self.get_epoch_metric('train_manual_TPR', epoch=epoch)
-            vm_tpr  = self.get_epoch_metric('val_manual_TPR', epoch=epoch)
-            tm_rej  = self.get_epoch_metric('train_manual_rej', epoch=epoch)
-            vm_rej  = self.get_epoch_metric('val_manual_rej', epoch=epoch)
+            # --- Print metrics (default threshold) via get_epoch_metric ---
+            tm_acc  = self.get_epoch_metric('train_default_accuracy', epoch=epoch)
+            vm_acc  = self.get_epoch_metric('val_default_accuracy', epoch=epoch)
+            tm_tpr  = self.get_epoch_metric('train_default_TPR', epoch=epoch)
+            vm_tpr  = self.get_epoch_metric('val_default_TPR', epoch=epoch)
+            tm_rej  = self.get_epoch_metric('train_default_rej', epoch=epoch)
+            vm_rej  = self.get_epoch_metric('val_default_rej', epoch=epoch)
+            tm_roc_auc = self.get_epoch_metric('train_roc_auc', epoch=epoch)
+            vm_roc_auc  = self.get_epoch_metric('val_roc_auc', epoch=epoch)
 
-            print(f"Epoch {epoch} | Manual threshold:")
-            print(f"  Train - Acc: {tm_acc:.4f}, Eff: {tm_tpr:.4f}, Rej: {tm_rej:.4f}")
-            print(f"  Val   - Acc: {vm_acc:.4f}, Eff: {vm_tpr:.4f}, Rej: {vm_rej:.4f}")
-
+            print(f"Epoch {epoch} | default threshold:")
+            print(f"  Train - Acc: {tm_acc:.4f}, Eff: {tm_tpr:.4f}, Rej: {tm_rej:.4f}, ROC AUC: {tm_roc_auc:.4f}")
+            print(f"  Val   - Acc: {vm_acc:.4f}, Eff: {vm_tpr:.4f}, Rej: {vm_rej:.4f}, ROC AUC: {vm_roc_auc:.4f}")
+            
            
             # Checkpoint saving
             if save_checkpoint:
@@ -389,7 +423,17 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                     self.epoch_warmstart = epoch
                     file_path = f'{checkpoint_path}checkpoint_{epoch}.pt'
                     self.save_checkpoint(file_path)
-
+            
+            # Stop training if patience exceeded
+            if patience_counter >= early_stopping_patience:
+                self.last_epoch=epoch
+                print(f"Early stopping at epoch {epoch}. Best epoch was {best_epoch} with val_loss={best_val_loss:.4f}")
+                break
+        
+        # Restore best model weights
+        if best_model_state is not None:
+            self.model.load_state_dict(best_model_state)
+            print(f"Model weights restored to best epoch {best_epoch}")
 
     def save_dataframe(self, file_name):
         data = {
@@ -418,7 +462,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         return df
 
 
-    def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, key_prefix: str, epoch=-1):
+    def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, loss, key_prefix: str, epoch=-1):
         """
         Given true labels (0/1) and scores (float) for the entire epoch,
         compute for 4 thresholds (manuel, opt, TPR=0.9, TPR=0.99) :
@@ -426,10 +470,10 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
           - TPR (efficiency), Rejection (1 - FPR), Precision, Accuracy, Balanced accuracy
         key_prefix = 'train' or 'val' to differentiate keys in the final DataFrame.
         Returns a dict whose keys are, for example:
-          "train_manual_TP", "train_manual_FP", "train_manual_TN", "train_manual_FN",
-          "train_manual_TPR", "train_manual_rej", "train_manual_precision",
-          "train_manual_accuracy", "train_manual_balanced_accuracy",
-          "train_manual_threshold_value", and similarly for 'opt', 'tpr0.9', 'tpr0.99'.
+          "train_default_TP", "train_default_FP", "train_default_TN", "train_default_FN",
+          "train_default_TPR", "train_default_rej", "train_default_precision",
+          "train_default_accuracy", "train_default_balanced_accuracy",
+          "train_default_threshold_value", and similarly for 'opt', 'tpr0.9', 'tpr0.99'.
         """
         metrics_dict = {}
 
@@ -438,6 +482,8 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
         # Compute ROC curve (fpr, tpr, thresholds)
         fpr, tpr, thresholds = roc_curve(y_true, y_score)
+        roc_auc = auc(fpr, tpr)
+
         thresholds = thresholds[1:]
         fpr = fpr[1:]
         tpr = tpr[1:]
@@ -469,7 +515,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         tpr099_threshold = find_threshold_for_tpr(0.99)
 
         threshold_info = [
-            ('manual', self.threshold),
+            ('default', self.threshold),
             ('opt',    opt_threshold),
             ('tpr0.9', tpr09_threshold),
             ('tpr0.99',tpr099_threshold),
@@ -505,16 +551,19 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             metrics_dict[f"{prefix}_balanced_accuracy"] = float(bal_acc_val)
 
         # Also store the numeric threshold values themselves
-        metrics_dict[f"{key_prefix}_manual_threshold_value"]   = float(self.threshold)
+        metrics_dict[f"{key_prefix}_default_threshold_value"]   = float(self.threshold)
         metrics_dict[f"{key_prefix}_opt_threshold_value"]      = float(opt_threshold)
         metrics_dict[f"{key_prefix}_tpr0.9_threshold_value"]  = float(tpr09_threshold)
         metrics_dict[f"{key_prefix}_tpr0.99_threshold_value"] = float(tpr099_threshold)
-        
+        metrics_dict[f"{key_prefix}_loss"] = float(loss)
+        metrics_dict[f"{key_prefix}_roc_auc"] = float(roc_auc)
+
+
         self.tpr_and_threshold[key_prefix][epoch] = {
             'fpr': fpr,
             'tpr': tpr,
             'thresholds': thresholds,
-            'threshold_manual': self.threshold,
+            'threshold_default': self.threshold,
             'threshold_opt': opt_threshold,
             'tpr_at_opt': tpr_at_opt,
             'threshold_tpr_90': tpr09_threshold,

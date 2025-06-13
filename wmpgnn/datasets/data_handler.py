@@ -27,59 +27,72 @@ class DataHandler:
         polarity = self.config_loader.get("dataset.polarity")
         data_type = self.config_loader.get("dataset.data_type")
         if polarity == 'magall' :
-            data_path_up = os.path.join(data_path, 'magup', data_type)
-            data_path_down = os.path.join(data_path, 'magdown', data_type)
+            if not self.config_loader.get("dataset.load_graph"):
+                data_path_up = os.path.join(data_path, 'magup', data_type)
+                data_path_down = os.path.join(data_path, 'magdown', data_type)
 
-            # Training set: split across two folders
-            files_input_tr_up_1 = sorted(glob.glob(f'{data_path_up}/training_dataset/input_*'), key=natural_sort_key)
-            files_target_tr_up_1 = sorted(glob.glob(f'{data_path_up}/training_dataset/target_*'), key=natural_sort_key)
-            files_input_tr_up_2 = sorted(glob.glob(f'{data_path_up}/training_dataset_2/input_*'), key=natural_sort_key)
-            files_target_tr_up_2 = sorted(glob.glob(f'{data_path_up}/training_dataset_2/target_*'), key=natural_sort_key)
-            size_tr_up =len(files_target_tr_up_1)+len(files_target_tr_up_2)
+                # Training set: split across two folders
+                files_input_tr_up_1 = sorted(glob.glob(f'{data_path_up}/training_dataset/input_*'), key=natural_sort_key)
+                files_target_tr_up_1 = sorted(glob.glob(f'{data_path_up}/training_dataset/target_*'), key=natural_sort_key)
+                files_input_tr_up_2 = sorted(glob.glob(f'{data_path_up}/training_dataset_2/input_*'), key=natural_sort_key)
+                files_target_tr_up_2 = sorted(glob.glob(f'{data_path_up}/training_dataset_2/target_*'), key=natural_sort_key)
+                size_tr_up =len(files_target_tr_up_1)+len(files_target_tr_up_2)
 
-            files_input_tr_down_1 = sorted(glob.glob(f'{data_path_down}/training_dataset/input_*'), key=natural_sort_key)
-            files_target_tr_down_1 = sorted(glob.glob(f'{data_path_down}/training_dataset/target_*'), key=natural_sort_key)
-            files_input_tr_down_2 = sorted(glob.glob(f'{data_path_down}/training_dataset_2/input_*'), key=natural_sort_key)
-            files_target_tr_down_2 = sorted(glob.glob(f'{data_path_down}/training_dataset_2/target_*'), key=natural_sort_key)
-            size_tr_down =len(files_target_tr_down_1)+len(files_target_tr_down_2)
-            
-            # Combine the two lists and limit to evt_max_train
-            files_input_tr = (files_input_tr_down_1 + files_input_tr_down_2+files_input_tr_up_1 + files_input_tr_up_2)[:evt_max_train]
-            files_target_tr = (files_target_tr_down_1 + files_target_tr_down_2+files_target_tr_up_1 + files_target_tr_up_2)[:evt_max_train]
-            
-            files_input_up_vl = sorted(glob.glob(f'{data_path_up}/validation_dataset/input_*'), key=natural_sort_key)
-            files_target_up_vl = sorted(glob.glob(f'{data_path_up}/validation_dataset/target_*'), key=natural_sort_key)
-            size_vl_up =len(files_input_up_vl)
-            files_input_down_vl = sorted(glob.glob(f'{data_path_down}/validation_dataset/input_*'), key=natural_sort_key)
-            files_target_down_vl = sorted(glob.glob(f'{data_path_down}/validation_dataset/target_*'), key=natural_sort_key)
-            size_vl_down =len(files_input_down_vl)
+                files_input_tr_down_1 = sorted(glob.glob(f'{data_path_down}/training_dataset/input_*'), key=natural_sort_key)
+                files_target_tr_down_1 = sorted(glob.glob(f'{data_path_down}/training_dataset/target_*'), key=natural_sort_key)
+                files_input_tr_down_2 = sorted(glob.glob(f'{data_path_down}/training_dataset_2/input_*'), key=natural_sort_key)
+                files_target_tr_down_2 = sorted(glob.glob(f'{data_path_down}/training_dataset_2/target_*'), key=natural_sort_key)
+                size_tr_down =len(files_target_tr_down_1)+len(files_target_tr_down_2)
+                
+                # Combine the two lists and limit to evt_max_train
+                files_input_tr = (files_input_tr_down_1 + files_input_tr_down_2+files_input_tr_up_1 + files_input_tr_up_2)[:evt_max_train]
+                files_target_tr = (files_target_tr_down_1 + files_target_tr_down_2+files_target_tr_up_1 + files_target_tr_up_2)[:evt_max_train]
+                
+                files_input_up_vl = sorted(glob.glob(f'{data_path_up}/validation_dataset/input_*'), key=natural_sort_key)
+                files_target_up_vl = sorted(glob.glob(f'{data_path_up}/validation_dataset/target_*'), key=natural_sort_key)
+                size_vl_up =len(files_input_up_vl)
+                files_input_down_vl = sorted(glob.glob(f'{data_path_down}/validation_dataset/input_*'), key=natural_sort_key)
+                files_target_down_vl = sorted(glob.glob(f'{data_path_down}/validation_dataset/target_*'), key=natural_sort_key)
+                size_vl_down =len(files_input_down_vl)
 
-            files_input_vl = (files_input_up_vl + files_input_down_vl)[:evt_max_val]
-            files_target_vl = (files_target_up_vl + files_target_down_vl)[:evt_max_val]
+                files_input_vl = (files_input_up_vl + files_input_down_vl)[:evt_max_val]
+                files_target_vl = (files_target_up_vl + files_target_down_vl)[:evt_max_val]
 
-            files_input_tst = sorted(glob.glob(f'{data_path_up}/test_dataset/input_*'), key=natural_sort_key)
-            files_target_tst = sorted(glob.glob(f'{data_path_up}/test_dataset/target_*'), key=natural_sort_key)
+                files_input_tst = sorted(glob.glob(f'{data_path_up}/test_dataset/input_*'), key=natural_sort_key)
+                files_target_tst = sorted(glob.glob(f'{data_path_up}/test_dataset/target_*'), key=natural_sort_key)
+            else :    
+                size_vl_down = 10754
+                size_tr_down = 79500
+                size_vl_up = 10732
+                size_tr_up = 80000
+                files_input_tr, files_target_tr = [], []
+                files_input_vl, files_target_vl = [], []
+                files_input_tst, files_target_tst = [], []
+
 
         elif (polarity=='magup' or polarity=='magdown' ):
-            data_path = os.path.join(data_path, polarity, data_type)
-            # Training set: split across two folders
-            files_input_tr_1 = sorted(glob.glob(f'{data_path}/training_dataset/input_*'), key=natural_sort_key)
-            files_target_tr_1 = sorted(glob.glob(f'{data_path}/training_dataset/target_*'), key=natural_sort_key)
-            files_input_tr_2 = sorted(glob.glob(f'{data_path}/training_dataset_2/input_*'), key=natural_sort_key)
-            files_target_tr_2 = sorted(glob.glob(f'{data_path}/training_dataset_2/target_*'), key=natural_sort_key)
-            # Combine the two lists and limit to evt_max_train
-            files_input_tr = (files_input_tr_1 + files_input_tr_2)[:evt_max_train]
-            files_target_tr = (files_target_tr_1 + files_target_tr_2)[:evt_max_train]
-            files_input_vl = sorted(glob.glob(f'{data_path}/validation_dataset/input_*'), key=natural_sort_key)[:evt_max_val]
-            files_target_vl = sorted(glob.glob(f'{data_path}/validation_dataset/target_*'), key=natural_sort_key)[:evt_max_val]
-            files_input_tst = sorted(glob.glob(f'{data_path}/test_dataset/input_*'), key=natural_sort_key)
-            files_target_tst = sorted(glob.glob(f'{data_path}/test_dataset/target_*'), key=natural_sort_key)
-
-            size_tr_up, size_tr_down, size_vl_up, size_vl_down = 0, 0, 0, 0
+            if not self.config_loader.get("dataset.load_graph") :
+                data_path = os.path.join(data_path, polarity, data_type)
+                # Training set: split across two folders
+                files_input_tr_1 = sorted(glob.glob(f'{data_path}/training_dataset/input_*'), key=natural_sort_key)
+                files_target_tr_1 = sorted(glob.glob(f'{data_path}/training_dataset/target_*'), key=natural_sort_key)
+                files_input_tr_2 = sorted(glob.glob(f'{data_path}/training_dataset_2/input_*'), key=natural_sort_key)
+                files_target_tr_2 = sorted(glob.glob(f'{data_path}/training_dataset_2/target_*'), key=natural_sort_key)
+                # Combine the two lists and limit to evt_max_train
+                files_input_tr = (files_input_tr_1 + files_input_tr_2)[:evt_max_train]
+                files_target_tr = (files_target_tr_1 + files_target_tr_2)[:evt_max_train]
+                files_input_vl = sorted(glob.glob(f'{data_path}/validation_dataset/input_*'), key=natural_sort_key)[:evt_max_val]
+                files_target_vl = sorted(glob.glob(f'{data_path}/validation_dataset/target_*'), key=natural_sort_key)[:evt_max_val]
+                # files_input_tst = sorted(glob.glob(f'{data_path}/test_dataset/input_*'), key=natural_sort_key)
+                # files_target_tst = sorted(glob.glob(f'{data_path}/test_dataset/target_*'), key=natural_sort_key)
+            else :
+                files_input_tr, files_target_tr = [], []
+                files_input_vl, files_target_vl = [], []
+                # files_input_tst, files_target_tst = [], []    
+                size_tr_up, size_tr_down, size_vl_up, size_vl_down = 0, 0, 0, 0
         else :
             raise Exception(f"Unexpected magnet polarity {polarity}. Please use magdown, magup or magall.")
 
-        
         if data_type == "homogeneous":
             LCA_classes = self.config_loader.get('model.LCA_classes')
             self.train_dataset = CustomDataset(files_input_tr, files_target_tr, performance_mode=performance_mode, n_classes=LCA_classes)
@@ -95,7 +108,7 @@ class DataHandler:
             print('creating custom datasets...')
             self.train_dataset = CustomNeutralsHeteroDataset(files_input_tr, files_target_tr, performance_mode=performance_mode, config_loader=self.config_loader, split="train", sizes=[size_tr_up, size_tr_down])
             self.val_dataset = CustomNeutralsHeteroDataset(files_input_vl, files_target_vl, performance_mode=performance_mode, config_loader=self.config_loader, split="val", sizes=[size_vl_up, size_vl_down])
-            self.test_dataset = CustomNeutralsHeteroDataset(files_input_tst, files_target_tst, performance_mode=performance_mode, config_loader=self.config_loader, split="test")         
+            # self.test_dataset = CustomNeutralsHeteroDataset(files_input_tst, files_target_tst, performance_mode=performance_mode, config_loader=self.config_loader, split="test")         
         else:
             LCA_classes = self.config_loader.get('model.LCA_classes')
             raise Exception(f"Unexpected data type {data_type}. Please use neutrals, homogeneous or heterogeneous.")
@@ -103,7 +116,7 @@ class DataHandler:
     def load_data(self):
         self.dataset_tr = self.train_dataset.get()
         self.dataset_vl = self.val_dataset.get()
-        self.dataset_tst = self.test_dataset.get()
+        # self.dataset_tst = self.test_dataset.get()
 
     def get_train_dataloader(self, batch_size=None):
         if batch_size is None:
