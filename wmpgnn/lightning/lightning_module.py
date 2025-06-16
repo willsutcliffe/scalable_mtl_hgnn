@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 
 import torch
+torch.set_float32_matmul_precision("high")
 from torch import nn
 from torch_scatter import scatter_add
 
@@ -20,7 +21,7 @@ from wmpgnn.util.functions import acc_four_class
 
 
 class HGNNLightningModule(L.LightningModule):
-    def __init__(self, model, optimizer_class, optimizer_params, pos_weights, config):
+    def __init__(self, model, optimizer_class, optimizer_params, scheduler_params, pos_weights, config):
         super().__init__()
         self.save_hyperparameters({
             "pos_weights": make_loggable(pos_weights),
@@ -31,6 +32,7 @@ class HGNNLightningModule(L.LightningModule):
 
         self.optimizer_class = optimizer_class
         self.optimizer_params = optimizer_params
+        self.scheduler_params = scheduler_params
 
         # Loss functions
         self.LCA_criterion = nn.CrossEntropyLoss(weight=pos_weights["LCA"])
@@ -101,10 +103,24 @@ class HGNNLightningModule(L.LightningModule):
     
 
     def configure_optimizers(self):
-        return self.optimizer_class(self.model.parameters(), **self.optimizer_params)
-    
-    # def on_train_epoch_start(self):
-    #     self.trainer.train_dataloader.sampler.set_epoch(self.current_epoch)
+        weight_param_names = ["loss_weights"]
+        weight_params = [p for name, p in self.model.named_parameters() if name in weight_param_names]
+        other_params  = [p for name, p in self.model.named_parameters() if name not in weight_param_names]
+        
+        # Seperate the weights from model params, as they should not be affected by the lr schedular
+        optimizer = self.optimizer_class([
+            { "params": weight_params, "lr": 0.01 },
+            { "params": other_params },
+            ], **self.optimizer_params)
+
+        return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', **self.scheduler_params),
+                    "monitor": "val_combined_loss",
+                    }
+                }
+
 
     def shared_step(self, batch, batch_idx, log_dict):  # Runs 1 batch
         loss_t_nodes = 0.
@@ -118,7 +134,7 @@ class HGNNLightningModule(L.LightningModule):
         y_tPV_edges = batch[('tracks', 'to', 'pvs')].y.to(dtype=torch.float32)  # PV to track edge classification
         y_tt_edges = (batch[('tracks', 'to', 'tracks')].y[:, 0] == 0).unsqueeze(1).float()  # for edge pruning, wether edge exists or not
         y_frag = (batch['tracks'].frag !=0).float().unsqueeze(1)
-        y_ft = batch['tracks'].ft + 1  # shifted by one 0 = bbar, 1 = none, 2 = b
+        y_ft = batch['tracks'].ft + 1  # shifted by one: 0 = bbar, 1 = none, 2 = b
 
         # Getting the truth for node pruning
         num_nodes = batch['tracks'].x.shape[0]
@@ -131,7 +147,6 @@ class HGNNLightningModule(L.LightningModule):
         pv_sum = scatter_add(yb, batch[('tracks', 'to', 'pvs')].edge_index[1], dim=0)
 
         """Passing to the model"""
-        import pdb; pdb.set_trace()
         outputs = self.model(batch)
         # print(torch.cuda.memory_allocated() / (1024 ** 2) )
         # print(torch.cuda.memory_summary())
@@ -188,6 +203,9 @@ class HGNNLightningModule(L.LightningModule):
     
     def validation_step(self, batch, batch_idx): 
         assert not self.model.training, "Model is still in training mode during validation!"
+        self.model.apply(
+            lambda m: m.train() if isinstance(m, torch.nn.modules.batchnorm._BatchNorm) else None
+        )  # Here we set the batchnorm to train mode, this in principal introduces a bias but redundant
         loss = self.shared_step(batch, batch_idx, log_dict=self.val_log)
         return loss
 
@@ -296,10 +314,8 @@ class HGNNLightningModule(L.LightningModule):
             self.trn_log[f"w_{i}"].append(weight.item())
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.trn_log.items()}
         for key, val in avg_losses.items():
-            if key == "combined_loss":
-                self.log(f"train/{key}", val, prog_bar=True, on_epoch=True, on_step=False)
-            else:
-                self.log(f"train/{key}", val, on_epoch=True, on_step=False)
+            self.log(f"train_{key}", val, prog_bar=(key == "combined_loss"), on_epoch=True, on_step=False)
+
         self.trn_log = defaultdict(list)
 
     def on_validation_epoch_end(self):
@@ -307,10 +323,7 @@ class HGNNLightningModule(L.LightningModule):
             self.val_log[f"w_{i}"].append(weight.item())
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.val_log.items()}
         for key, val in avg_losses.items():
-            if key == "combined_loss":
-                self.log(f"val/{key}", val, prog_bar=True, on_epoch=True, on_step=False)
-            else:
-                self.log(f"val/{key}", val, on_epoch=True, on_step=False)
+            self.log(f"val_{key}", val, prog_bar=(key == "combined_loss"), on_epoch=True, on_step=False)
         self.val_log = defaultdict(list)
     
     def on_test_epoch_end(self):
@@ -339,6 +352,7 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, config, a
             pos_weights=pos_weight,
             optimizer_class=torch.optim.Adam,
             optimizer_params={"lr": 1e-3, "weight_decay": 1e-5},
+            scheduler_params={"min_lr": 1e-4, "patience": 5},
             config=config
         )
     else:
@@ -349,11 +363,12 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, config, a
             pos_weights=pos_weight,
             optimizer_class=torch.optim.Adam,
             optimizer_params={"lr": 1e-3, "weight_decay": 1e-5},
+            scheduler_params={"min_lr": 1e-4, "patience": 5},
             config=config
         )
 
     early_stopping = EarlyStopping(
-        monitor="val/combined_loss",
+        monitor="val_combined_loss",
         verbose=True,
         mode="min",
         patience=5,
@@ -361,7 +376,7 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, config, a
 
     best_model_callback = ModelCheckpoint(
         filename="best-{epoch:02d}-{val_combined_loss:.2f}",
-        monitor="val/combined_loss",
+        monitor="val_combined_loss",
         mode="min",
         save_top_k=1
     )
@@ -392,7 +407,6 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, config, a
         sync_batchnorm=True,
         reload_dataloaders_every_n_epochs=1
     )
-    torch.set_float32_matmul_precision("highest")
 
     """Start training"""
     trainer.fit(module, trn_loader, val_loader)
