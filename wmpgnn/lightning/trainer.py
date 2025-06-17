@@ -112,7 +112,7 @@ if __name__ == "__main__":
     print("="*30)
 
     # here we can check what kind of gpu it is to specify bs, also num_workers = num_cpu * 2
-    trn_loader = DataLoader(trn_dataset, batch_size=config["training"]["batch_size"], num_workers=config["training"]["ncpu"]*2, drop_last=True) 
+    trn_loader = DataLoader(trn_dataset, batch_size=config["training"]["batch_size"], num_workers=config["training"]["ncpu"]*2, drop_last=True, shuffle=True) 
     val_loader = DataLoader(val_dataset, batch_size=config["training"]["batch_size"], num_workers=config["training"]["ncpu"]*2, drop_last=True) 
 
     # Either recalculate the positive weight or take the old ones

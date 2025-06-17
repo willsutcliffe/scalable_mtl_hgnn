@@ -36,11 +36,18 @@ class HGNNLightningModule(L.LightningModule):
 
         # Loss functions
         self.LCA_criterion = nn.CrossEntropyLoss(weight=pos_weights["LCA"])
-        self.t_nodes_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights["t_nodes"])
+
+        # Using the unweighted slowly debug if weighted cause huge difference or not
+        self.t_nodes_criterion = nn.BCEWithLogitsLoss()
+        self.tt_edges_criterion = nn.BCEWithLogitsLoss()
+        self.tPV_edges_criterion = nn.BCEWithLogitsLoss() 
+        # self.t_nodes_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights["t_nodes"])
+        # self.tt_edges_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights["tt_edges"])
+        # self.tPV_edges_criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([6.1118]))  # Average no. of PVs for each track one PV is correct
+
         self.frag_nodes_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights["frag"])
-        self.ft_nodes_criterion = nn.CrossEntropyLoss(weight=pos_weights["FT"])
-        self.tt_edges_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights["tt_edges"])
-        self.tPV_edges_criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([6.1118]))  # Average no. of PVs for each track one PV is correct
+        # self.ft_nodes_criterion = nn.CrossEntropyLoss(weight=pos_weights["FT"])
+        self.ft_nodes_criterion = nn.CrossEntropyLoss()  # new way of ft calculation doesn't need weights 
 
         # trn, val, tst logging
         self.trn_log = {"LCA_loss": [], "t_nodes_loss": [], "frag_loss": [], "ft_loss": [], "tt_edges_loss": [], "tPV_edges_loss": [], "combined_loss": [],
@@ -148,29 +155,44 @@ class HGNNLightningModule(L.LightningModule):
 
         """Passing to the model"""
         outputs = self.model(batch)
-        # print(torch.cuda.memory_allocated() / (1024 ** 2) )
-        # print(torch.cuda.memory_summary())
 
         """Getting the loss"""
         loss_LCA = self.LCA_criterion(outputs[('tracks', 'to', 'tracks')].edges, y_tt_LCA)
         # Looping over all the GN blocks to grab the interference
         for block in self.model._blocks: # does this cause issues because it is not reseted?
             loss_t_nodes += self.t_nodes_criterion(block.node_logits['tracks'], y_t_nodes)
-            loss_frag_nodes += self.frag_nodes_criterion(block.node_logits['frag'], y_frag)
-            loss_ft_nodes += self.ft_nodes_criterion(block.node_logits['ft'], y_ft)
             loss_tt_edges += self.tt_edges_criterion(block.edge_logits[('tracks', 'to', 'tracks')], y_tt_edges)
             loss_tPV_edges += self.tPV_edges_criterion(block.edge_logits[('tracks', 'to', 'pvs')], y_tPV_edges)
+
+            # The idea is to only interfere on the signal (b) nodes the flavour, if the b node is missing apply max penalty
+            nodes_selbool = y_t_nodes.long() == 1
+            sig_nodes = block.node_weights['tracks'][nodes_selbool]
+            bkg_nodes = block.node_weights['tracks'][~nodes_selbool]
+            sig_nodes_selbool = sig_nodes >= 0.01
+            bkg_nodes_selbool = bkg_nodes >= 0.01
+
+            n_missing_sig_nodes = sig_nodes.shape[0] - torch.sum(sig_nodes_selbool)
+            n_mistag_bkg_nodes = torch.sum(bkg_nodes_selbool)
+            n_penalty = n_missing_sig_nodes + n_mistag_bkg_nodes
+
+            sig_ft_loss = self.ft_nodes_criterion(block.node_logits['ft'][nodes_selbool.squeeze()][sig_nodes_selbool], y_ft[nodes_selbool.squeeze()][sig_nodes_selbool])
+            bkg_ft_loss = self.ft_nodes_criterion(block.node_logits['ft'][~nodes_selbool.squeeze()][bkg_nodes_selbool], y_ft[~nodes_selbool.squeeze()][bkg_nodes_selbool])
+            loss_ft_nodes += sig_ft_loss + bkg_ft_loss + torch.tensor([n_penalty], device=self.device)  # might need some beta value here for better scaling
+            
+            # fragmentaion loss
+            loss_frag_nodes += self.frag_nodes_criterion(block.node_logits['frag'], y_frag)
+            
         
         """Combing the loss"""
         w = torch.exp(-self.model.loss_weights)
-        loss = 1/2 * (
-                w[0] * loss_LCA +
-                w[1] * loss_t_nodes +
-                w[2] * loss_tt_edges +
-                w[3] * loss_tPV_edges + 
-                w[4] * loss_frag_nodes +
-                w[5] * loss_ft_nodes +
-                torch.sum(self.model.loss_weights)
+        loss = 1 * (
+                1 * loss_LCA +
+                3 * loss_t_nodes +
+                33 * loss_tt_edges +
+                1 * loss_tPV_edges + 
+                1 * loss_frag_nodes +
+                1 * loss_ft_nodes  # +
+                # torch.sum(self.model.loss_weights)
         )
 
         """Getting the accuracy"""
@@ -205,7 +227,7 @@ class HGNNLightningModule(L.LightningModule):
         assert not self.model.training, "Model is still in training mode during validation!"
         self.model.apply(
             lambda m: m.train() if isinstance(m, torch.nn.modules.batchnorm._BatchNorm) else None
-        )  # Here we set the batchnorm to train mode, this in principal introduces a bias but redundant
+        )  # Setting the batchnorm to train mode during val step, this introduces a bias but shouldn't matter once converged TODO study it
         loss = self.shared_step(batch, batch_idx, log_dict=self.val_log)
         return loss
 
@@ -272,7 +294,7 @@ class HGNNLightningModule(L.LightningModule):
         self.model._blocks[3].node_prune = False
         self.model._blocks[3].edge_prune = False
 
-        """Edge node prediciont plots output"""
+        """Edge node prediciont plots output""" # TODO include here again the different FT calculation
         for i, block in enumerate(self.model._blocks):  # check if .item() is necessary
             # Obtain FT accuracy/block ouput
             if self.get_reco_performance:  # for confusion matrix
@@ -329,7 +351,7 @@ class HGNNLightningModule(L.LightningModule):
     def on_test_epoch_end(self):
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.tst_log.items()}
         for key, val in avg_losses.items():
-            print(f"{key}: {val:.2f}")
+            print(f"{key}: {val}")
 
         if self.get_reco_performance:
             plot_ft_nodes(self.tst_log, len(self.model._blocks), self.version, self.ref_signal)
