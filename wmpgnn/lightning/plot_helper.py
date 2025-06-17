@@ -18,22 +18,22 @@ hep.style.use(hep.style.LHCb2)
 
 def plot_loss(df, version):
     # Combined output loss w/ the scaling beta
-    trn_loss = np.array(df["train/combined_loss"])
-    val_loss = np.array(df["val/combined_loss"])
+    trn_loss = np.array(df["train_combined_loss"])
+    val_loss = np.array(df["val_combined_loss"])
     # Output loss of each criterion
-    trn_LCA_loss = np.array(df["train/LCA_loss"])
-    val_LCA_loss = np.array(df["val/LCA_loss"])
-    trn_PV_loss = np.array(df["train/tPV_edges_loss"])
-    val_PV_loss = np.array(df["val/tPV_edges_loss"])
-    trn_edge_loss = np.array(df["train/tt_edges_loss"])
-    val_edge_loss = np.array(df["val/tt_edges_loss"])
-    trn_track_loss = np.array(df["train/t_nodes_loss"])
-    val_track_loss = np.array(df["val/t_nodes_loss"])
+    trn_LCA_loss = np.array(df["train_LCA_loss"])
+    val_LCA_loss = np.array(df["val_LCA_loss"])
+    trn_PV_loss = np.array(df["train_tPV_edges_loss"])
+    val_PV_loss = np.array(df["val_tPV_edges_loss"])
+    trn_edge_loss = np.array(df["train_tt_edges_loss"])
+    val_edge_loss = np.array(df["val_tt_edges_loss"])
+    trn_track_loss = np.array(df["train_t_nodes_loss"])
+    val_track_loss = np.array(df["val_t_nodes_loss"])
     # New ones for ft
-    trn_frag_loss = np.array(df["train/frag_loss"])
-    val_frag_loss = np.array(df["val/frag_loss"])
-    trn_ft_loss = np.array(df["train/ft_loss"])
-    val_ft_loss = np.array(df["val/ft_loss"])
+    trn_frag_loss = np.array(df["train_frag_loss"])
+    val_frag_loss = np.array(df["val_frag_loss"])
+    trn_ft_loss = np.array(df["train_ft_loss"])
+    val_ft_loss = np.array(df["val_ft_loss"])
     #
     epochs = np.arange(len(trn_loss))
 
@@ -92,15 +92,15 @@ def plot_loss(df, version):
 
 
 def plot_LCA_acc(df, version):
-    trn_LCA_acc0 = np.array(df["train/LCA_class0_pred_class0"])
-    trn_LCA_acc1 = np.array(df["train/LCA_class1_pred_class1"])
-    trn_LCA_acc2 = np.array(df["train/LCA_class2_pred_class2"])
-    trn_LCA_acc3 = np.array(df["train/LCA_class3_pred_class3"])
+    trn_LCA_acc0 = np.array(df["train_LCA_class0_pred_class0"])
+    trn_LCA_acc1 = np.array(df["train_LCA_class1_pred_class1"])
+    trn_LCA_acc2 = np.array(df["train_LCA_class2_pred_class2"])
+    trn_LCA_acc3 = np.array(df["train_LCA_class3_pred_class3"])
 
-    val_LCA_acc0 = np.array(df["val/LCA_class0_pred_class0"])
-    val_LCA_acc1 = np.array(df["val/LCA_class1_pred_class1"])
-    val_LCA_acc2 = np.array(df["val/LCA_class2_pred_class2"])
-    val_LCA_acc3 = np.array(df["val/LCA_class3_pred_class3"])
+    val_LCA_acc0 = np.array(df["val_LCA_class0_pred_class0"])
+    val_LCA_acc1 = np.array(df["val_LCA_class1_pred_class1"])
+    val_LCA_acc2 = np.array(df["val_LCA_class2_pred_class2"])
+    val_LCA_acc3 = np.array(df["val_LCA_class3_pred_class3"])
 
     epochs = np.arange(len(trn_LCA_acc0))
 

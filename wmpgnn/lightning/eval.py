@@ -94,11 +94,11 @@ if __name__ == "__main__":
     trainer.test(module, dataloaders=tst_loader)
 
     # Load in signal df to calculate reco effiency and opposite side B finding
-    signal_df = pd.read_csv(f"lightning_logs/version_{version}/signal_df_{option.INDIR.split('/')[-1]}") 
-    sig_selbool = df["SigMatch"] == 1
+    signal_df = pd.read_csv(f"lightning_logs/version_{version}/signal_df_{config['eval']['sample']}.csv") 
+    sig_selbool = signal_df["SigMatch"] == 1
     signal_df = signal_df[sig_selbool]
     print(f"Number of signal B: {signal_df.shape[0]}")
-    print(f"Number of perfect B: {np.sum(signal_df["PerfectReco"])}")
-    print(f"Number of all particles B: {np.sum(signal_df["AllParticles"])}")
-    print(f"Number of part reco B: {np.sum(signal_df["PartReco"])}")
-    print(f"Number of none iso B: {np.sum(signal_df["NoneIso"])}")
+    print(f"Number of perfect B: {np.sum(signal_df['PerfectReco'])}")
+    print(f"Number of all particles B: {np.sum(signal_df['AllParticles'])}")
+    print(f"Number of part reco B: {np.sum(signal_df['PartReco'])}")
+    print(f"Number of none iso B: {np.sum(signal_df['NoneIso'])}")
