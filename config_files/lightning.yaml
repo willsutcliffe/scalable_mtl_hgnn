@@ -19,12 +19,12 @@ model:
 
 # Now additional information for training++
 data_dir: "/eos/user/y/yukaiz/DFEI_data"
-mode: ""  # will be set to either eval or training
+mode: ""  # will be set to either eval or training TODO
 
 
 training:
   sample: ["inclusive"]
-  batch_size: 2
+  batch_size: 12
   gacc: 1  # gradient accumulation if using smaller batch size
   ngpu: 1  # need roughly 40 Gb for bs of 12 
   ncpu: 8  # need roughly 128Gb cpu memory
