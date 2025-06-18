@@ -13,6 +13,9 @@ model:
   edge_types: ["tracks_tracks","tracks_pvs"]
   norm: "batch_norm"
   dropout: 0.3
+  # Some FT flags
+  nFT_layers: 3
+  no_FT_epochs: 5
 
 # Now additional information for training++
 data_dir: "/eos/user/y/yukaiz/DFEI_data"
@@ -21,7 +24,7 @@ mode: ""  # will be set to either eval or training
 
 training:
   sample: ["inclusive"]
-  batch_size: 12
+  batch_size: 2
   gacc: 1  # gradient accumulation if using smaller batch size
   ngpu: 1  # need roughly 40 Gb for bs of 12 
   ncpu: 8  # need roughly 128Gb cpu memory
@@ -41,8 +44,8 @@ eval:
     frag: True
   pruning:
     layer: 3  # Layer where the pruning is applied to
-    nodes: 0.2
-    edges: 0.2
+    nodes: 0.01
+    edges: 0.01
   
 
 

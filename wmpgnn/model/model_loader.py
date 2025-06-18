@@ -35,7 +35,8 @@ class ModelLoader:
                                    use_node_weights=config_loader.get("model.use_node_weights"),
                                    weighted_mp=config_loader.get("model.weighted_mp"),
                                    norm=config_loader.get("model.norm"),
-                                   drop_out=config_loader.get("model.dropout")
+                                   drop_out=config_loader.get("model.dropout"),
+                                   nFT_layers=config_loader.get("model.nFT_layers")
                                    )
         elif model_type == "transformer":
             pass
