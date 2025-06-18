@@ -62,6 +62,7 @@ if __name__ == "__main__":
             pos_weights=pos_weight,
             optimizer_class=torch.optim.Adam,
             optimizer_params={"lr": 1e-3},
+            scheduler_params={},
             config=config
         )
     print(model)
