@@ -45,6 +45,9 @@ class HGNNLightningModule(L.LightningModule):
         # self.tt_edges_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights["tt_edges"])
         # self.tPV_edges_criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([6.1118]))  # Average no. of PVs for each track one PV is correct
 
+        # FT parts
+        self.nFT_layers = config["model"]["nFT_layers"]
+        self.no_FT_epochs = config["model"]["no_FT_epochs"]  # Number of epochs before FT gets turned on
         self.frag_nodes_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights["frag"])
         # self.ft_nodes_criterion = nn.CrossEntropyLoss(weight=pos_weights["FT"])
         self.ft_nodes_criterion = nn.CrossEntropyLoss()  # new way of ft calculation doesn't need weights 
@@ -78,7 +81,8 @@ class HGNNLightningModule(L.LightningModule):
         self.get_frag_performance = config["eval"]["performance"]["frag"] 
         # set pruning for performance eval
         layer = config["eval"]["pruning"]["layer"]
-        self.model._blocks[layer].node_weight_cut = config["eval"]["pruning"]["nodes"]
+        self.node_pruning_val = config["eval"]["pruning"]["nodes"]
+        self.model._blocks[layer].node_weight_cut = self.node_pruning_val
         self.model._blocks[layer].prune_by_cut = True
         self.model._blocks[layer].edge_weight_cut = config["eval"]["pruning"]["edges"]
 
@@ -159,41 +163,50 @@ class HGNNLightningModule(L.LightningModule):
         """Getting the loss"""
         loss_LCA = self.LCA_criterion(outputs[('tracks', 'to', 'tracks')].edges, y_tt_LCA)
         # Looping over all the GN blocks to grab the interference
-        for block in self.model._blocks: # does this cause issues because it is not reseted?
+        for i, block in enumerate(self.model._blocks):
             loss_t_nodes += self.t_nodes_criterion(block.node_logits['tracks'], y_t_nodes)
             loss_tt_edges += self.tt_edges_criterion(block.edge_logits[('tracks', 'to', 'tracks')], y_tt_edges)
             loss_tPV_edges += self.tPV_edges_criterion(block.edge_logits[('tracks', 'to', 'pvs')], y_tPV_edges)
 
             # The idea is to only interfere on the signal (b) nodes the flavour, if the b node is missing apply max penalty
-            nodes_selbool = y_t_nodes.long() == 1
-            sig_nodes = block.node_weights['tracks'][nodes_selbool]
-            bkg_nodes = block.node_weights['tracks'][~nodes_selbool]
-            sig_nodes_selbool = sig_nodes >= 0.01
-            bkg_nodes_selbool = bkg_nodes >= 0.01
+            if i >= len(self.model._blocks) - self.nFT_layers and self.current_epoch > self.no_FT_epochs:  # We want to add flavour tagging and fragmentation on the later blocks
+                nodes_selbool = y_t_nodes.long() == 1
+                sig_nodes = block.node_weights['tracks'][nodes_selbool]
+                bkg_nodes = block.node_weights['tracks'][~nodes_selbool]
+                sig_nodes_selbool = sig_nodes >= self.node_pruning_val
+                bkg_nodes_selbool = bkg_nodes >= self.node_pruning_val
 
-            n_missing_sig_nodes = sig_nodes.shape[0] - torch.sum(sig_nodes_selbool)
-            n_mistag_bkg_nodes = torch.sum(bkg_nodes_selbool)
-            n_penalty = n_missing_sig_nodes + n_mistag_bkg_nodes
+                n_missing_sig_nodes = sig_nodes.shape[0] - torch.sum(sig_nodes_selbool)
+                n_mistag_bkg_nodes = torch.sum(bkg_nodes_selbool)
+                n_penalty = n_missing_sig_nodes + n_mistag_bkg_nodes
 
-            sig_ft_loss = self.ft_nodes_criterion(block.node_logits['ft'][nodes_selbool.squeeze()][sig_nodes_selbool], y_ft[nodes_selbool.squeeze()][sig_nodes_selbool])
-            bkg_ft_loss = self.ft_nodes_criterion(block.node_logits['ft'][~nodes_selbool.squeeze()][bkg_nodes_selbool], y_ft[~nodes_selbool.squeeze()][bkg_nodes_selbool])
-            loss_ft_nodes += sig_ft_loss + bkg_ft_loss + torch.tensor([n_penalty], device=self.device)  # might need some beta value here for better scaling
-            
-            # fragmentaion loss
-            loss_frag_nodes += self.frag_nodes_criterion(block.node_logits['frag'], y_frag)
+                sig_ft_loss = self.ft_nodes_criterion(block.node_logits['ft'][nodes_selbool.squeeze()][sig_nodes_selbool], y_ft[nodes_selbool.squeeze()][sig_nodes_selbool])
+                bkg_ft_loss = self.ft_nodes_criterion(block.node_logits['ft'][~nodes_selbool.squeeze()][bkg_nodes_selbool], y_ft[~nodes_selbool.squeeze()][bkg_nodes_selbool])
+                loss_ft_nodes += sig_ft_loss + bkg_ft_loss + 1e-3 * torch.tensor([n_penalty], device=self.device)  # scale it to at most O(1)
+                
+                # fragmentaion loss
+                loss_frag_nodes += self.frag_nodes_criterion(block.node_logits['frag'], y_frag)
             
         
         """Combing the loss"""
-        w = torch.exp(-self.model.loss_weights)
-        loss = 1 * (
-                1 * loss_LCA +
-                3 * loss_t_nodes +
-                33 * loss_tt_edges +
-                1 * loss_tPV_edges + 
-                1 * loss_frag_nodes +
-                1 * loss_ft_nodes  # +
-                # torch.sum(self.model.loss_weights)
-        )
+        # Initial couple epochs on raw performance than add FT component and "balance" out the loss through trainable weights
+        if self.current_epoch <= self.no_FT_epochs:
+            loss = (1 * loss_LCA +
+                    3 * loss_t_nodes +
+                    33 * loss_tt_edges +
+                    1 * loss_tPV_edges
+                    )
+        else:
+            w = torch.exp(-self.model.loss_weights)
+            loss = 1/2 * (
+                    w[0] * loss_LCA +
+                    w[1] * 3 * loss_t_nodes +
+                    w[2] * 33 * loss_tt_edges +
+                    w[3] * loss_tPV_edges + 
+                    w[4] * loss_frag_nodes +
+                    w[5] * loss_ft_nodes +
+                    torch.sum(self.model.loss_weights)
+                    )
 
         """Getting the accuracy"""
         acc_LCA = acc_four_class(outputs[('tracks', 'to', 'tracks')].edges, y_tt_LCA)
@@ -204,8 +217,6 @@ class HGNNLightningModule(L.LightningModule):
         """Logging"""
         log_dict["LCA_loss"].append(loss_LCA.item())
         log_dict["t_nodes_loss"].append(loss_t_nodes.item())
-        log_dict["frag_loss"].append(loss_frag_nodes.item())
-        log_dict["ft_loss"].append(loss_ft_nodes.item())
         log_dict["tt_edges_loss"].append(loss_tt_edges.item()) 
         log_dict["tPV_edges_loss"].append(loss_tPV_edges.item())
         log_dict["combined_loss"].append(loss.item())
@@ -214,9 +225,14 @@ class HGNNLightningModule(L.LightningModule):
         log_dict["tPV_edge_acc"].append(acc_tPV_edge)
         log_dict["PV_has_B_acc"].append(acc_PV_has_B)
         
+        if self.current_epoch > self.no_FT_epochs:
+            log_dict["frag_loss"].append(loss_frag_nodes.item())
+            log_dict["ft_loss"].append(loss_ft_nodes.item())  # TODO make it logable as 0
+        else:
+            log_dict["frag_loss"].append(loss_frag_nodes)
+            log_dict["ft_loss"].append(loss_ft_nodes)
         return loss
 
-        
 
     def training_step(self, batch, batch_idx): 
         loss = self.shared_step(batch, batch_idx, log_dict=self.trn_log)

@@ -69,7 +69,8 @@ class HeteroGNN(nn.Module):
                  weight_mlp_layers=4,
                  weighted_mp=False,
                  norm="batch_norm",
-                 drop_out=0.):
+                 drop_out=0.,
+                 nFT_layers=2):  # nFT_layers gives the last n GN blocks which includes MLP for FT and fragementation determination
         """
         Initializes the HeteroGNN model with encoders, message-passing blocks, and decoders.
 
@@ -107,11 +108,15 @@ class HeteroGNN(nn.Module):
 
         self._blocks = []
         for i in range(num_blocks):
+            if i >= num_blocks - nFT_layers:
+                add_FT_layer = True
+            else:
+                add_FT_layer = False
             self._blocks.append(
                 HeteroGraphNetwork(node_types, edge_types, edge_model=mlp, node_model=mlp, global_model=mlp,
                                    use_node_weights=use_node_weights, use_edge_weights=use_edge_weights,
                                    weight_mlp_channels=weight_mlp_channels, weight_mlp_layers=weight_mlp_layers,
-                                   weighted_mp=weighted_mp, norm=norm, drop_out=drop_out))
+                                   weighted_mp=weighted_mp, norm=norm, drop_out=drop_out, nFT_layers=add_FT_layer))
         self._blocks = nn.ModuleList(self._blocks)
 
         self._decoder = HeteroGraphCoder(node_types, edge_types,

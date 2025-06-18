@@ -162,7 +162,7 @@ class HeteroGraphNetwork(AbstractModule):
                  node_types, edge_types, edge_model, node_model,
                  global_model=None, use_globals=True, hidden_size=8, device="cuda",
                  use_edge_weights=True, use_node_weights=True, weight_mlp_layers=4, weight_mlp_channels=128,
-                 weighted_mp = False, norm="batch_norm", drop_out=0.):
+                 weighted_mp = False, norm="batch_norm", drop_out=0., nFT_layers=False):
         """
         Initialize the HeteroGraphNetwork.
 
@@ -187,6 +187,7 @@ class HeteroGraphNetwork(AbstractModule):
         self._use_globals = use_globals
         self.edge_types = edge_types
         self.node_types = node_types
+        self.FT = nFT_layers
         self.edge_prune = False
         self.node_prune = False
         self.prune_by_cut = False
@@ -196,6 +197,7 @@ class HeteroGraphNetwork(AbstractModule):
         self.k_nodes = 70
         self.edge_weight_cut = 0.001
         self.node_weight_cut = 0.001
+
 
         with self._enter_variable_scope():
             self._edge_block = HeteroEdgeBlock(edge_types, edge_model_fn=edge_model)
@@ -210,16 +212,17 @@ class HeteroGraphNetwork(AbstractModule):
             self._edge_mlps[edge_type] = weight_mlp(1, hidden_channels=weight_mlp_channels,
                                                     num_layers=weight_mlp_layers,
                                                     norm=norm, drop_out=drop_out)()  # MLPS for edge classification after each block
-        # self._node_mlp = weight_mlp(1)()
+
         self._node_mlps['tracks'] = weight_mlp(1, hidden_channels=weight_mlp_channels,
                                                num_layers=weight_mlp_layers,
                                                norm=norm, drop_out=drop_out)()  # MLPs for node classification after each block
-        self._node_mlps['frag'] = weight_mlp(1, hidden_channels=weight_mlp_channels,
-                                               num_layers=weight_mlp_layers,
-                                               norm=norm, drop_out=drop_out)()  # MLPs for fragmentation classification after each block
-        self._node_mlps['ft'] = weight_mlp(3, hidden_channels=weight_mlp_channels,
-                                               num_layers=weight_mlp_layers,
-                                               norm=norm, drop_out=drop_out)()  # MLPs for FT after each block
+        if self.FT:
+            self._node_mlps['frag'] = weight_mlp(1, hidden_channels=weight_mlp_channels,
+                                                num_layers=weight_mlp_layers,
+                                                norm=norm, drop_out=drop_out)()  # MLPs for fragmentation classification after each block
+            self._node_mlps['ft'] = weight_mlp(3, hidden_channels=weight_mlp_channels,
+                                                num_layers=weight_mlp_layers,
+                                                norm=norm, drop_out=drop_out)()  # MLPs for FT after each block
 
         self._edge_models_model_dict = torch.nn.ModuleDict({str(i): j for i, j in self._edge_mlps.items()})
         self._node_models_model_dict = torch.nn.ModuleDict({str(i): j for i, j in self._node_mlps.items()})
@@ -279,7 +282,7 @@ class HeteroGraphNetwork(AbstractModule):
             else:
                 self.node_weights[node_type] = torch.ones((graph[node_type].x.shape[0], 1)).to(self.device)
         
-        if True:  # Additional Layers for fragmentation particle identification and FT
+        if self.FT:  # Additional Layers for fragmentation particle identification and FT
             # Fragmentation
             self.node_logits["frag"] = self._node_mlps["frag"](global_input["tracks"].x, global_input["tracks"].batch)
             self.node_weights["frag"] = self._sigmoid(self.node_logits["frag"])
