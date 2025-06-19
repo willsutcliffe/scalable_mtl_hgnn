@@ -105,12 +105,15 @@ class HeteroGNN(nn.Module):
 
 
     def forward(self, input_op):
+        # Input graph
+        initial_graph_pid = input_op['tracks'].x[:,-6:]  # charge + 5 pid, hard coded be careful
 
+        # Latent graph
         latent = self._encoder(input_op)
         latent0 = latent.clone()
 
         for b, core in enumerate(self._blocks):
-            latent = core(latent)
+            latent = core(latent, initial_graph_pid)
             if core.edge_prune == True:
                 for edge_type in self.edge_types:
                     if edge_type == ('tracks', 'to', 'tracks'):
