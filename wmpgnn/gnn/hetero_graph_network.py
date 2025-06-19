@@ -238,7 +238,7 @@ class HeteroGraphNetwork(AbstractModule):
         self.node_indices = {}
         self.edge_node_pruning_indices = {}
 
-    def forward(self, graph):
+    def forward(self, graph, pid_nodes):
         """
         Execute one GNN pass over a heterogeneous graph.
 
@@ -287,7 +287,8 @@ class HeteroGraphNetwork(AbstractModule):
             self.node_logits["frag"] = self._node_mlps["frag"](global_input["tracks"].x, global_input["tracks"].batch)
             self.node_weights["frag"] = self._sigmoid(self.node_logits["frag"])
             # FT
-            self.node_logits["ft"] = self._node_mlps["ft"](global_input["tracks"].x, global_input["tracks"].batch)
+            combined_graph = torch.cat([global_input["tracks"].x, pid_nodes], dim=1)  # catting the pid values before FT inference
+            self.node_logits["ft"] = self._node_mlps["ft"](combined_graph, global_input["tracks"].batch)
             self.node_weights["ft"] = self._sigmoid(self.node_logits["ft"])
 
 
