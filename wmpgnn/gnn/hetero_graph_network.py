@@ -220,7 +220,7 @@ class HeteroGraphNetwork(AbstractModule):
             self._node_mlps['frag'] = weight_mlp(1, hidden_channels=weight_mlp_channels,
                                                 num_layers=weight_mlp_layers,
                                                 norm=norm, drop_out=drop_out)()  # MLPs for fragmentation classification after each block
-            self._node_mlps['ft'] = weight_mlp(3, hidden_channels=weight_mlp_channels,
+            self._node_mlps['ft'] = weight_mlp(3, hidden_channels=weight_mlp_channels,  # Maybe take a smaller one?
                                                 num_layers=weight_mlp_layers,
                                                 norm=norm, drop_out=drop_out)()  # MLPs for FT after each block
 
@@ -288,6 +288,9 @@ class HeteroGraphNetwork(AbstractModule):
             self.node_weights["frag"] = self._sigmoid(self.node_logits["frag"])
             # FT
             combined_graph = torch.cat([global_input["tracks"].x, pid_nodes], dim=1)  # catting the pid values before FT inference
+            combined_graph = torch.cat([combined_graph, self.node_weights['tracks']], dim=1)  # catting the node weights
+            # I think its good to add here the node weights as well
+            import pdb; pdb.set_trace()
             self.node_logits["ft"] = self._node_mlps["ft"](combined_graph, global_input["tracks"].batch)
             self.node_weights["ft"] = self._sigmoid(self.node_logits["ft"])
 
