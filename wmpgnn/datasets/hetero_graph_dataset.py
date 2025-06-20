@@ -197,7 +197,20 @@ class CustomHeteroDataset(Dataset):
 
             permutations = torch.cartesian_prod(torch.arange(true_nodes_PVs.shape[0]), torch.arange(recoPVs.shape[0]))
             data = HeteroData()
-            new_nodes = new_nodes[:, :-6]
+            
+            skip_features = -3
+            if i == 0:
+                nodes_features = graph.get("nodes_features", None)
+                if nodes_features is not None:
+                    print(f"Using the following nodes features: {nodes_features[:skip_features]}")
+                edges_features = graph.get("edges_features", None)
+                if edges_features is not None:
+                    print(f"Using the following edges features: {edges_features}")
+            
+            truth_reco_pv = new_nodes[:, skip_features:]
+            new_nodes = new_nodes[:, :skip_features]
+            
+            
             data['tracks'].x = new_nodes
 
             data['pvs'].x = recoPVs
@@ -214,18 +227,21 @@ class CustomHeteroDataset(Dataset):
             data['tracks', 'tracks'].edges = new_edges
 
             if self.performance_mode:
-                data['final_keys'] = torch.from_numpy(graph["keys"])
-                data['moth_ids'] = torch.from_numpy(graph["ids"])
-                data['part_ids'] = torch.from_numpy(graph["part_ids"])
-                data['lca_chain'] = torch.from_numpy(graph["lca_chain"])
-                data['truth_senders'] = torch.from_numpy(graph["truth_senders"]).long()
-                data['truth_receivers'] = torch.from_numpy(graph["truth_receivers"]).long()
-                data['truth_y'] = torch.from_numpy(graph["truth_y"])
-                data['truth_moth_ids'] = torch.from_numpy(graph["truth_ids"])
-                data['truth_part_ids'] = torch.from_numpy(graph["truth_part_ids"])
-                data['truth_part_keys'] = torch.from_numpy(graph["truth_part_keys"])
-                data['true_origin'] = torch.from_numpy(graph["nodes"][indices][:, 13:])
-                data['truth_reco_pv'] = truth_reco_pv
+                try:
+                    data['final_keys'] = torch.from_numpy(graph["keys"])
+                    data['moth_ids'] = torch.from_numpy(graph["ids"])
+                    data['part_ids'] = torch.from_numpy(graph["part_ids"])
+                    data['lca_chain'] = torch.from_numpy(graph["lca_chain"])
+                    data['truth_senders'] = torch.from_numpy(graph["truth_senders"]).long()
+                    data['truth_receivers'] = torch.from_numpy(graph["truth_receivers"]).long()
+                    data['truth_y'] = torch.from_numpy(graph["truth_y"])
+                    data['truth_moth_ids'] = torch.from_numpy(graph["truth_ids"])
+                    data['truth_part_ids'] = torch.from_numpy(graph["truth_part_ids"])
+                    data['truth_part_keys'] = torch.from_numpy(graph["truth_part_keys"])
+                    data['true_origin'] = torch.from_numpy(graph["nodes"][indices][:, -1:])
+                    data['truth_reco_pv'] = truth_reco_pv
+                except KeyError:
+                    continue
 
 
             data_set.append(data)

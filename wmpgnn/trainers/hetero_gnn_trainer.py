@@ -158,7 +158,7 @@ class HeteroGNNTrainer(Trainer):
         self.val_node_pv_acc        = history['val_node_pv_acc']
         self.val_node_pv_acc_err    = history['val_node_pv_acc_err']
         
-    def set_beta_BCE_nodes(self, beta):
+    def set_beta_bce_nodes(self, beta):
         self.beta_BCE_nodes = beta
 
     def set_beta_bce_edges(self, beta):
@@ -204,7 +204,6 @@ class HeteroGNNTrainer(Trainer):
         last_batch = len(data_loader)
         # print(last_batch)
         for i, data in enumerate(data_loader):
-            # print(i, train)
             if train:
                 self.optimizer.zero_grad()
             data.to('cuda')
@@ -216,11 +215,16 @@ class HeteroGNNTrainer(Trainer):
             label = data[('tracks', 'to', 'tracks')].y.argmax(dim=1)
             #pv_label = torch.tensor(data[('tracks', 'to', 'pvs')].y, dtype=torch.float32)
             pv_label = data[('tracks', 'to', 'pvs')].y.to(dtype=torch.float32)
+            
             if not self.no_lca_task:
                 loss = self.criterion(outputs[('tracks', 'to', 'tracks')].edges, label)
                 running_ce_loss += loss.item()
             else:
                 loss = torch.tensor(0.).cuda()
+            
+            print(f"Batch {i+1}/{last_batch} - Loss: {loss.item():.4f}, CE Loss: {running_ce_loss:.4f}, BCE Edge Loss: {running_bce_edge_loss:.4f}, BCE Node Loss: {running_bce_node_loss:.4f}, BCE PV Loss: {running_bce_pv_loss:.4f}")
+            
+                
             num_nodes = data['tracks'].x.shape[0]
             out = data[('tracks', 'to', 'tracks')].edges.new_zeros(num_nodes,
                                                                    data[('tracks', 'to', 'tracks')].y.shape[1])
@@ -380,6 +384,13 @@ class HeteroGNNTrainer(Trainer):
                     file_path=f'{checkpoint_path}checkpoint_{epoch}.pt'
                     self.epoch_warmstart = epoch
                     self.save_checkpoint(file_path=f'{checkpoint_path}checkpoint_{epoch}.pt')
+            # early_stopping
+            if self.early_stopping > 0 and self.early_stopping < 1:
+                epsilon = (self.early_stopping/100)
+                max_rel_diff = np.max([(val_metrics['loss']-l)/l for l in self.val_loss[-5:]]) # max loss difference in last 5 epoch
+                if max_rel_diff < self.early_stopping: # relative loss difference is too small
+                    print(f"Early stopping at epoch {epoch} with max relative loss difference {max_rel_diff}")
+                    break
 
     def save_dataframe(self, file_name):
         """

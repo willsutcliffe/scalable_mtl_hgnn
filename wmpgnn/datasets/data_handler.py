@@ -2,7 +2,26 @@ from wmpgnn.datasets.graph_dataset import CustomDataset
 from wmpgnn.datasets.hetero_graph_dataset import CustomHeteroDataset
 from torch_geometric.loader import DataLoader
 import glob
+import random
 
+
+def random_shuffle(inputs, targets, seed):
+    """
+    Randomly shuffle lists of files preserving the correspondence
+    
+    Args:
+        inputs (list): List of input file paths.
+        targets (list): List of target file paths.
+        seed (int): Random seed for reproducibility.
+    """
+    Nfiles = len(inputs)
+    if Nfiles != len(targets):
+        raise ValueError(f"Inputs and targets must have the same length, got {Nfiles} and {len(targets)}.")
+    elif Nfiles != 0:
+        files = list(zip(inputs, targets))
+        random.shuffle(files)
+        inputs, targets = zip(*files)
+    return inputs, targets
 
 class DataHandler:
     """
@@ -26,7 +45,7 @@ class DataHandler:
 
         Args:
             config (Config): Configuration provider with keys:
-                - "dataset.data_dir": Base directory containing dataset subfolders.
+                - "dataset.data_dir": Base directory containing dataset subfolders, or list of base direcories.
                 - "dataset.data_type": "homogeneous" or "heterogeneous".
                 - "training.batch_size": Default batch size.
             performance_mode (bool): If True, may enable accelerated data loading or
@@ -56,28 +75,41 @@ class DataHandler:
         files_input_tst, files_target_tst = [], []
         # get all files in the data paths
         for data_path in data_paths:
-            files_input_tr   += glob.glob(f'{data_path}/training_dataset/input_*')
-            files_target_tr  += glob.glob(f'{data_path}/training_dataset/target_*')
-            files_input_vl   += glob.glob(f'{data_path}/validation_dataset/input_*')
-            files_target_vl  += glob.glob(f'{data_path}/validation_dataset/target_*')
-            files_input_tst  += glob.glob(f'{data_path}/test_dataset/input_*')
-            files_target_tst += glob.glob(f'{data_path}/test_dataset/target_*')
+            files_input_tr   += sorted(glob.glob(f'{data_path}/training_dataset/input_*'))
+            files_target_tr  += sorted(glob.glob(f'{data_path}/training_dataset/target_*'))
+            files_input_vl   += sorted(glob.glob(f'{data_path}/validation_dataset/input_*'))
+            files_target_vl  += sorted(glob.glob(f'{data_path}/validation_dataset/target_*'))
+            files_input_tst  += sorted(glob.glob(f'{data_path}/test_dataset/input_*'))
+            files_target_tst += sorted(glob.glob(f'{data_path}/test_dataset/target_*'))
         
+        # random shuffle with a fixed seed
+        random_seed = self.config_loader.get("training.random_seed",default=None)
+        if random_seed is not None:
+            print(f"Shuffling files with random seed {random_seed}")
+            files_input_tr, files_target_tr = random_shuffle(files_input_tr, files_target_tr, random_seed)
+            files_input_vl, files_target_vl = random_shuffle(files_input_vl, files_target_vl, random_seed)
+            files_input_tst, files_target_tst = random_shuffle(files_input_tst, files_target_tst, random_seed)
+        
+        #for i in range(5):
+        #    print(f"Input {i}: {files_input_tr[i].split('/')[-1]}\t{files_target_tr[i].split('/')[-1]}")
+        #for i in range(5):
+        #    print(f"input {i}: {files_input_vl[i].split('/')[-1]}\t{files_target_vl[i].split('/')[-1]}")
         
         # reduce the number of events if needed
-        if isinstance(evt_max_train, int) and evt_max_train > 0:
+        if isinstance(evt_max_train, int) and evt_max_train >= 0:
             files_input_tr = files_input_tr[:evt_max_train]
             files_target_tr = files_target_tr[:evt_max_train]
-        if isinstance(evt_max_val, int) and evt_max_val > 0:
+        if isinstance(evt_max_val, int) and evt_max_val >= 0:
             files_input_vl = files_input_vl[:evt_max_val]
             files_target_vl = files_target_vl[:evt_max_val]
-        if isinstance(evt_max_test, int) and evt_max_test > 0:
+        if isinstance(evt_max_test, int) and evt_max_test >= 0:
             files_input_tst = files_input_tst[:evt_max_test]
             files_target_tst = files_target_tst[:evt_max_test]
         
         print(f"Using {len(files_input_tr)} events for training")
         print(f"Using {len(files_input_vl)} events for validation")
         print(f"Using {len(files_input_tst)} events for testing")
+        
             
         self.batch_size =  self.config_loader.get("training.batch_size")
         LCA_classes = self.config_loader.get('model.LCA_classes')

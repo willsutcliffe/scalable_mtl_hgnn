@@ -389,12 +389,15 @@ def reconstruct_decay(triang_LCA_matrix, particle_keys, ax=0, particle_ids=[], t
             edge = adj_links.iloc[ie]
             G.add_edge(labels[edge['receivers']], labels[edge['senders']])
 
-        pos = graphviz_layout(G, prog='dot')
-        nx.draw(G, pos, with_labels=False,
-                node_color=filtered_node_colors, node_size=1300, ax=ax)
-        label_options = {"ec": "k", "fc": "white", "alpha": 0.7}
-        nx.draw_networkx_labels(G, pos, font_size=14,
-                                bbox=label_options, ax=ax)
+        try:
+            pos = graphviz_layout(G, prog='dot')
+            nx.draw(G, pos, with_labels=False,
+                    node_color=filtered_node_colors, node_size=1300, ax=ax)
+            label_options = {"ec": "k", "fc": "white", "alpha": 0.7}
+            nx.draw_networkx_labels(G, pos, font_size=14,
+                                    bbox=label_options, ax=ax)
+        except ImportError:
+            print("graphviz not installed, cannot plot decay tree. Please install graphviz to visualize the decay tree.")
 
     # Compute information per separated decay chain
 

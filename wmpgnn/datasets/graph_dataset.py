@@ -115,6 +115,7 @@ class CustomDataset(Dataset):
             # new_edges = np.take(graph["edges"], [1, 2, 3], axis=1)
             #new_nodes = graph["nodes"][indices][:, : -3] 
             new_nodes = graph["nodes"][indices]
+            true_reco_pv = new_nodes[:, -3:] # true reco PVs coordinates
             new_nodes = new_nodes[:, :-3] # skip the reco PVs coordinates
             new_edges = graph['edges']
             data = Data(nodes=torch.from_numpy(new_nodes),

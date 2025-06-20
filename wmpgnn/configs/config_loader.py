@@ -1,6 +1,8 @@
 
 import yaml
 import os
+from wmpgnn.util.functions import flatten_dict
+
 
 class ConfigLoader:
     """
@@ -30,6 +32,13 @@ class ConfigLoader:
 
         if self.environment_prefix:
             config = self._apply_env_overrides(config)
+            
+        # formate model name if it contains placeholders
+        model_file = config.get("training", {}).get("model_file", None)
+        if model_file is not None:
+            # format the name with info from the config file
+            flatten_config = flatten_dict(config)
+            config['training']['model_file'] = model_file.format(**flatten_config)
 
         return config
 
@@ -92,6 +101,22 @@ class ConfigLoader:
             else:
                 return default
         return value
+
+    def sett(self, key: str, value):
+        """
+        Set a value in the configuration.
+
+        Args:
+            key (str): The key to set.
+            value: The value to set for the key.
+        """
+        keys = key.split(".")
+        d = self.config
+        for k in keys[:-1]:
+            if k not in d:
+                d[k] = {}
+            d = d[k]
+        d[keys[-1]] = value
 
     def reload(self):
         """Reload the configuration from the YAML file."""

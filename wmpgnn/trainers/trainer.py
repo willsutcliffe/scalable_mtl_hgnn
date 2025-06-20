@@ -5,16 +5,6 @@ import os
 from wmpgnn.util.functions import NOW
 
 
-# Set random seed for reproducibility
-import numpy as np
-import random
-seed = 42
-torch.manual_seed(seed)
-np.random.seed(seed)
-random.seed(seed)
-# Ensure deterministic behavior (optional, may slow down training)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
 
 
 class Trainer(ABC):
@@ -72,8 +62,9 @@ class Trainer(ABC):
         self.train_loss = []
         self.val_loss = []
         self.epochs = []
-        self.LCA_classes = config.get('model.LCA_classes')
+        self.LCA_classes = config.get('model.LCA_classes',4)
         self.epoch_warmstart = 0
+        self.early_stopping = config.get('training.early_stopping', 0)
         
 
     @abstractmethod
@@ -262,15 +253,15 @@ class Trainer(ABC):
             axarr[0].errorbar(x, class_acc_tr[f"class{i}_acc_tr"], yerr=class_acc_tr_err[f"class{i}_acc_tr_err"], label=f"LCA={i}")
             axarr[1].errorbar(x, class_acc_vl[f"class{i}_acc_vl"], yerr=class_acc_vl_err[f"class{i}_acc_vl_err"], label=f"LCA={i}")
 
-        axarr[0].set_xlabel('epoch')
         axarr[0].set_ylabel('training accuracy')
-        axarr[0].grid()
-        axarr[0].legend()
-
-        axarr[1].set_xlabel('epoch')
         axarr[1].set_ylabel('validation accuracy')
-        axarr[1].grid()
-        axarr[1].legend()
+
+        for ax in axarr:
+            #ax.set_yticks([i/10 for i in range(11)])
+            #ax.set_ylim(0, 1.0)
+            ax.set_xlabel('epoch')
+            ax.grid()
+            ax.legend()
 
         fig.tight_layout()
         if show:

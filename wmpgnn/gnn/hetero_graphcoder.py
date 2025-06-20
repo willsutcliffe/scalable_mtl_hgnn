@@ -1,6 +1,8 @@
 from wmpgnn.blocks.abstract_module import AbstractModule
 import torch
 
+
+
 def no_transform():
     """
     Identity transform factory.
@@ -30,7 +32,9 @@ class WrappedModelFnModule(AbstractModule):
         Args:
             model_fn (callable): Zero-argument function that returns an `nn.Module`.
         """
+        
         super(WrappedModelFnModule, self).__init__()
+        
         with self._enter_variable_scope():
             self._model = model_fn()
 
@@ -109,6 +113,7 @@ class HeteroGraphCoder(AbstractModule):
             self._edge_models_model_dict = torch.nn.ModuleDict({str(i): j for i, j in self._edge_models.items()})
             self._node_models_model_dict = torch.nn.ModuleDict({str(i): j for i, j in self._node_models.items()})
 
+            
     def forward(self, graph):
         """
         Apply per-type transformations to nodes, edges, and globals.
@@ -134,7 +139,7 @@ class HeteroGraphCoder(AbstractModule):
             for node_type in self._node_types:
                 graph[node_type].x = self._node_models[node_type](graph[node_type].x, graph[node_type].batch)
             for edge_type in self._edge_types:
-                graph[edge_type].edges = self._edge_models[edge_type](graph[edge_type].edges, graph[edge_type[0]].batch[ graph[edge_type].edge_index[0]])
+                graph[edge_type].edges = self._edge_models[edge_type](graph[edge_type].edges, graph[edge_type[0]].batch[ graph[edge_type].edge_index[0]]) # non-deterministic behaviour: see https://docs.nvidia.com/cuda/cublas/index.html#results-reproducibility
         else:
             for node_type in self._node_types:
                 graph[node_type].x = self._node_models[node_type](graph[node_type].x)

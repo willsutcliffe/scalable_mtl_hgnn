@@ -2,6 +2,16 @@ import torch
 from torch_scatter import scatter_add
 from datetime import datetime
 
+def flatten_dict(d, parent_key='', sep='_'):
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
 def hetero_positive_edge_weight(loader):
     """
     Computes the positive class weighting factor for edges in a heterogeneous graph
@@ -247,7 +257,7 @@ def weight_n_class(dataset,hetero=False,n_class=5):
         num_sample += len(y)
         
     weight_class = {i: num_sample / (n_class * true_class[i]) for i in range(n_class)}
-    #weight_class[0] = weight_class[0] / 10.0 # uncomment to reduce weight of class 0
+    #weight_class[0] = weight_class[0] / 100.0 # uncomment to reduce weight of class 0
     weight = torch.stack(tuple(weight_class[i] for i in range(n_class)))
 
     print("num_sample: ",num_sample)

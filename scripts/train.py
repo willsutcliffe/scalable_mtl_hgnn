@@ -1,6 +1,9 @@
 import sys,os
 sys.path.append(os.getcwd())
 
+
+
+
 from wmpgnn.configs.config_loader import ConfigLoader
 from wmpgnn.datasets.data_handler import DataHandler
 from wmpgnn.model.model_loader import ModelLoader
@@ -8,6 +11,8 @@ from wmpgnn.trainers.gnn_trainer import GNNTrainer
 from wmpgnn.trainers.hetero_gnn_trainer import HeteroGNNTrainer
 import argparse
 import glob
+
+
 
 def flatten_dict(d, parent_key='', sep='_'):
     items = []
@@ -37,6 +42,23 @@ args = parser.parse_args()
 print("Loading Config")
 config_loader = ConfigLoader(f"config_files/{args.config}", environment_prefix="DL")
 
+# Set random seed for reproducibility
+seed = config_loader.get("training.random_seed", None)  # Default to None if not specified
+if seed is not None:
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+    import numpy as np
+    import random
+    np.random.seed(seed)
+    random.seed(seed)
+    import torch
+    torch.manual_seed(seed)
+    torch.use_deterministic_algorithms(True)
+    # Ensure deterministic behavior (optional, may slow down training)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+else:
+    os.environ.pop("CUBLAS_WORKSPACE_CONFIG", None)
+
 # load dataset with DataHandler
 print(f"Loading Dataset {config_loader.get('dataset.data_type')}")
 data_loader = DataHandler(config_loader)
@@ -48,6 +70,7 @@ val_loader = data_loader.get_val_dataloader()
 print(f"Initializing model {config_loader.get('model.type')}")
 model_loader = ModelLoader(config_loader)
 model = model_loader.get_model()
+
 
 model_file = config_loader.get("training.model_file")
 # format the name with info from the config file
@@ -88,23 +111,9 @@ if config_loader.get('training.load_checkpoint'):
     else:
         print("No checkpoint file found. Starting training from scratch.")
 
-
-checkpoint_path = f"{output_folder}"
-print(f"Checkpoint path: {checkpoint_path}")
-if config_loader.get('training.load_checkpoint'):
-    checkpoint_file = GetWarmstartFile(checkpoint_path, name_query="checkpoint*")
-    if checkpoint_file is not None:
-        trainer.load_checkpoint(checkpoint_file)
-        print(f"Checkpoint loaded from {checkpoint_file}")
-    else:
-        print("No checkpoint file found. Starting training from scratch.")
-
-
 epochs = config_loader.get('training.epochs')
 learning_rate = config_loader.get('training.starting_learning_rate')
 dropped_lr_epochs = config_loader.get('training.dropped_lr_epochs')
-
-
 
 # Run training loop with nominal learning rate
 print(f"Running {epochs} epochs with learning rate {learning_rate}")
@@ -136,16 +145,6 @@ os.makedirs(output_folder, exist_ok=True)
 print(f"Training finished. Saving model in {model_file}")
 trainer.save_model(output_folder+model_file, save_config=True)
 
-"""
-save_prediction = True
-if save_prediction:
-    trainer.model.cuda()
-    data_loader = val_loader
-    for i, data in enumerate(data_loader):
-        data.to('cuda')
-        outputs = trainer.model(data)
-        import pdb; pdb.set_trace()
-"""
 csv_file = model_file.replace(".pt", ".csv")
 trainer.save_dataframe(output_folder+csv_file)
 

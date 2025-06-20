@@ -132,13 +132,13 @@ class HeteroGNN(nn.Module):
             global_fn = None
         else:
             global_fn = lambda: nn.Linear(mlp_output_size, global_op)
-
+        
         edge_models = {('tracks',
                         'to',
-                        'pvs'): lambda: nn.Linear(mlp_output_size, 1), ('tracks',
-                                                                        'to',
-                                                                        'tracks'): lambda: nn.Linear(mlp_output_size,
-                                                                                                     edge_op)}
+                        'pvs'): lambda: nn.Linear(mlp_output_size, 1),
+                       ('tracks',
+                        'to',
+                        'tracks'): lambda: nn.Linear(mlp_output_size,edge_op)}
         # edge_models ={('tracks',
         #                 'to',
         #                 'tracks') : lambda: nn.Linear(mlp_output_size, 4).cuda()}

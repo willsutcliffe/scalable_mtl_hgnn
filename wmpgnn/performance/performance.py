@@ -13,7 +13,7 @@ import time
 from torch_scatter import scatter_add
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
-
+from os import makedirs
 
 
 
@@ -83,16 +83,18 @@ class Performance:
         self.model = model_loader.get_model()
         self.full_graphs = full_graphs
         model_weights = config.get("inference.model_file")
-        self.model.load_state_dict(torch.load(model_weights))
+        try:
+            self.model.load_state_dict(torch.load(model_weights, weights_only=True)['model_state_dict'])
+        except KeyError: 
+            self.model.load_state_dict(torch.load(model_weights, weights_only=True))
         self.model.eval()
         self.name = config.get("inference.name")
         self.results_dir = config.get("inference.results_dir")
+        makedirs(self.results_dir, exist_ok=True)
         self.cuda = cuda
         if cuda:
             self.model.cuda()
         plt.rcParams.update(init_plot_style())
-
-
 
 
     def evaluate_hetero_lca_accuracy(self, prune_layer=3, bdt_pruned_data=False, batch_size=8):
@@ -384,10 +386,16 @@ class Performance:
             receivers = graph.truth_receivers
             init_y = graph["truth_y"]
         truth_lca = pd.DataFrame(np.column_stack((senders, receivers)), columns=['senders', 'receivers'])
-        truth_lca['LCA_dec'] = np.reshape(
-            np.argmax(
-                np.reshape(init_y, (init_y.shape[0], 4)), axis=-1),
-            (-1,))
+        try:
+            truth_lca['LCA_dec'] = np.reshape(
+                np.argmax(
+                    np.reshape(init_y, (init_y.shape[0], 4)), axis=-1), # pythia simulation
+                (-1,))
+        except ValueError:
+            truth_lca['LCA_dec'] = np.reshape(
+                np.argmax(
+                    np.reshape(init_y, (init_y.shape[0], 10)), axis=-1), # full run3 simulation
+                (-1,))
         truth_lca = truth_lca[truth_lca['senders'] < truth_lca['receivers']]
         truth_lca['LCA_id_label'] = list(map(particle_name, graph['truth_moth_ids'].numpy()))
         truth_lca['TrueFullChainLCA'] = graph['lca_chain']
@@ -454,6 +462,7 @@ class Performance:
         running_acc = 0
         npvs = []
         associated = []
+        empty_tracks_counter = 0
         for i, data in enumerate(self.dataset):
             data.to('cuda')
 
@@ -468,16 +477,21 @@ class Performance:
             unique_tracks = torch.unique(tracks)
             correctly_associated = 0
 
-            for i in unique_tracks:
-                index = (data[('tracks', 'to', 'pvs')].edge_index[0] == i)
+            for j in unique_tracks:
+                index = (data[('tracks', 'to', 'pvs')].edge_index[0] == j)
                 pv_associated = (torch.argmax(
                     self.model._blocks[-1].edge_weights[('tracks', 'to', 'pvs')][index]) == torch.argmax(
                     data[('tracks', 'to', 'pvs')].y[index]))
                 correctly_associated += int(pv_associated.item())
                 npvs.append(data['pvs'].x.shape[0])
                 associated.append( int(pv_associated.item()))
-            running_acc += correctly_associated / unique_tracks.shape[0]
-        acc = running_acc / len(self.dataset)
+            
+            if unique_tracks.shape[0] == 0:
+                print(f"Empty tracks in data {i} (is b_tracks? {b_tracks}), not update running accuracy...")
+                empty_tracks_counter += 1
+            else:
+                running_acc += correctly_associated / unique_tracks.shape[0]
+        acc = running_acc / ( len(self.dataset) - empty_tracks_counter)
         return acc, npvs, associated
 
     def evaluate_homog_track_pruning_performance(self, layers=[0, 1, 2, 7], batch_size=8,
@@ -608,7 +622,7 @@ class Performance:
             outputs = self.model(data)
             data = outputs
             label = data[('tracks', 'to', 'tracks')].y.argmax(dim=1)
-            PVlabel = torch.tensor(data[('tracks', 'to', 'pvs')].y, dtype=torch.float32)
+            PVlabel = torch.tensor(data[('tracks', 'to', 'pvs')].y.clone().detach(), dtype=torch.float32)
             num_nodes = data['tracks'].x.shape[0]
             out = data[('tracks', 'to', 'tracks')].edges.new_zeros(num_nodes,
                                                                    data[('tracks', 'to', 'tracks')].y.shape[1])
@@ -1038,22 +1052,35 @@ class Performance:
             signal_df = self.signal_df.query("SigMatch == 1")
         else:
             signal_df = self.signal_df
-        sig_perfect_reco = 100 * len(signal_df.query('PerfectSignalReconstruction == 1')) / len(signal_df)
-        sig_wrong_hierarchy = 100 * len(signal_df.query('AllParticles == 1')) / len(signal_df) - sig_perfect_reco
-        sig_none_isolated = 100 * len(signal_df.query('NoneIso == 1')) / len(signal_df)
-        sig_part_reco = 100 * (len(signal_df.query('PartReco == 1')) / len(signal_df) + len(
-            signal_df.query('NotFound == 1')) / len(signal_df))
+        
+        if len(signal_df) == 0:
+            sig_perfect_reco = 0
+            sig_wrong_hierarchy = 0
+            sig_none_isolated = 0
+            sig_part_reco = 0
+            
+            event_perfect_reco = 0
+            event_wrong_hierarchy = 0
+            event_none_isolated = 0
+            event_part_reco = 0
+        else:
+            sig_perfect_reco = 100 * len(signal_df.query('PerfectSignalReconstruction == 1')) / len(signal_df)
+            sig_wrong_hierarchy = 100 * len(signal_df.query('AllParticles == 1')) / len(signal_df) - sig_perfect_reco
+            sig_none_isolated = 100 * len(signal_df.query('NoneIso == 1')) / len(signal_df)
+            sig_part_reco = 100 * (len(signal_df.query('PartReco == 1')) / len(signal_df) + len(
+                signal_df.query('NotFound == 1')) / len(signal_df))
 
-        event_perfect_reco = 100 * len(self.event_df.query('PerfectEventReconstruction == 1')) / len(self.event_df)
-        event_wrong_hierarchy = 100 * len(self.event_df.query(
-            'NumSelectedBackgroundParticlesInEvent == 0 and NumSelectedParticlesFromHeavyHadronInEvent 	==  NumParticlesFromHeavyHadronInEvent')) / len(
-            self.event_df) - event_perfect_reco
-        event_none_isolated = 100 * len(self.event_df.query(
-            'NumSelectedParticlesFromHeavyHadronInEvent ==  NumParticlesFromHeavyHadronInEvent and NumSelectedBackgroundParticlesInEvent > 0')) / len(
-            self.event_df)
-        event_part_reco = 100 * len(
-            self.event_df.query('NumSelectedParticlesFromHeavyHadronInEvent <  NumParticlesFromHeavyHadronInEvent')) / len(
-            self.event_df)
+            event_perfect_reco = 100 * len(self.event_df.query('PerfectEventReconstruction == 1')) / len(self.event_df)
+            event_wrong_hierarchy = 100 * len(self.event_df.query(
+                'NumSelectedBackgroundParticlesInEvent == 0 and NumSelectedParticlesFromHeavyHadronInEvent 	==  NumParticlesFromHeavyHadronInEvent')) / len(
+                self.event_df) - event_perfect_reco
+            event_none_isolated = 100 * len(self.event_df.query(
+                'NumSelectedParticlesFromHeavyHadronInEvent ==  NumParticlesFromHeavyHadronInEvent and NumSelectedBackgroundParticlesInEvent > 0')) / len(
+                self.event_df)
+            event_part_reco = 100 * len(
+                self.event_df.query('NumSelectedParticlesFromHeavyHadronInEvent <  NumParticlesFromHeavyHadronInEvent')) / len(
+                self.event_df)
+                
         perf_numbers = perf_numbers._append({"Scope": "True b", "Perfect hierarchy": sig_perfect_reco,
                                              "Wrong hierarchy": sig_wrong_hierarchy, "None isolated": sig_none_isolated,
                                              "Part reco": sig_part_reco}, ignore_index=True)
