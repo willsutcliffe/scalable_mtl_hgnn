@@ -290,7 +290,6 @@ class HeteroGraphNetwork(AbstractModule):
             combined_graph = torch.cat([global_input["tracks"].x, pid_nodes], dim=1)  # catting the pid values before FT inference
             combined_graph = torch.cat([combined_graph, self.node_weights['tracks']], dim=1)  # catting the node weights
             # I think its good to add here the node weights as well
-            import pdb; pdb.set_trace()
             self.node_logits["ft"] = self._node_mlps["ft"](combined_graph, global_input["tracks"].batch)
             self.node_weights["ft"] = self._sigmoid(self.node_logits["ft"])
 
