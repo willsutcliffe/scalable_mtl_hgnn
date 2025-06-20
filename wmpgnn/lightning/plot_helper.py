@@ -173,8 +173,11 @@ def plot_ft_nodes(df, nlayers, version, ref_signal):
 
     labels = df["ft_y"]
     for i in range(nlayers):  
-        ft_score = df[f"ft_score_{i}"]
-        pred = torch.argmax(ft_score, dim=1)
+        try:  # TODO implement w/o try
+            ft_score = df[f"ft_score_{i}"]
+            pred = torch.argmax(ft_score, dim=1)
+        except: 
+            continue
 
         cm = confusion_matrix(labels.numpy(), pred.numpy())
 

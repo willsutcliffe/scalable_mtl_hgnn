@@ -96,10 +96,10 @@ class HGNNLightningModule(L.LightningModule):
             if self.get_edge_performance:
                 self.tst_log[f"sig_edges_score_{i}"] = torch.tensor([])
                 self.tst_log[f"bkg_edges_score_{i}"] = torch.tensor([])
-            if self.get_frag_performance:
+            if self.get_frag_performance and i >= len(self.model._blocks) - self.nFT_layers:
                 self.tst_log[f"frag_pos_part_score_{i}"] = torch.tensor([])
                 self.tst_log[f"frag_neg_part_score_{i}"] = torch.tensor([])
-            if self.get_reco_performance:
+            if self.get_reco_performance and i >= len(self.model._blocks) - self.nFT_layers:
                 self.tst_log[f"ft_score_{i}"] = torch.tensor([])
                 self.tst_log[f"bbar_ft_score_{i}"] = torch.tensor([])
                 self.tst_log[f"none_ft_score_{i}"] = torch.tensor([])
@@ -227,7 +227,7 @@ class HGNNLightningModule(L.LightningModule):
         
         if self.current_epoch > self.no_FT_epochs:
             log_dict["frag_loss"].append(loss_frag_nodes.item())
-            log_dict["ft_loss"].append(loss_ft_nodes.item())  # TODO make it logable as 0
+            log_dict["ft_loss"].append(loss_ft_nodes.item())
         else:
             log_dict["frag_loss"].append(loss_frag_nodes)
             log_dict["ft_loss"].append(loss_ft_nodes)
@@ -292,7 +292,7 @@ class HGNNLightningModule(L.LightningModule):
                 bkg_edges_score = block.edge_weights[('tracks', 'to', 'tracks')].squeeze()[~sig_edges_selbool]
                 self.tst_log[f"sig_edges_score_{i}"] = torch.cat([self.tst_log[f"sig_edges_score_{i}"], sig_edges_score.cpu()], dim=0)
                 self.tst_log[f"bkg_edges_score_{i}"] = torch.cat([self.tst_log[f"bkg_edges_score_{i}"], bkg_edges_score.cpu()], dim=0)
-            if self.get_frag_performance:
+            if self.get_frag_performance and i >= len(self.model._blocks) - self.nFT_layers :
                 true_frag_selbool = y_frag == 1
                 frag_pos_part_score = block.node_weights['frag'][true_frag_selbool]
                 frag_neg_part_score = block.node_weights['frag'][~true_frag_selbool]
@@ -313,7 +313,7 @@ class HGNNLightningModule(L.LightningModule):
         """Edge node prediciont plots output""" # TODO include here again the different FT calculation
         for i, block in enumerate(self.model._blocks):  # check if .item() is necessary
             # Obtain FT accuracy/block ouput
-            if self.get_reco_performance:  # for confusion matrix
+            if self.get_reco_performance and i >= len(self.model._blocks) - self.nFT_layers :  # for confusion matrix
                 bbar_ft_selbool = y_ft == 0
                 none_ft_selbool = y_ft == 1
                 b_ft_selbool = y_ft == 2
