@@ -20,7 +20,7 @@ def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm", 
         Callable[[], MLP]: A function that constructs an MLP when called.
     """
     return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
-              out_channels=output_size, num_layers=num_layers, norm=norm, dropout=drop_out)
+              out_channels=output_size, num_layers=num_layers, norm=norm)
 
 def hetero_graph_concat(g1,g2):
     """

@@ -90,8 +90,8 @@ def get_pred_ft(graph, cluster, ft_score):
     keys = graph['final_keys']
 
     b_daugthers_mask = np.isin(keys, cluster_keys)
-    ft_score = torch.argmax(ft_score[b_daugthers_mask].mean(dim=0)).item() - 1
-    return ft_score
+    ft_bbar_score, ft_no_score, ft_b_score = ft_score[b_daugthers_mask].mean(dim=0)
+    return ft_bbar_score, ft_no_score, ft_b_score
 
 
 def get_b_cand_pv(graph, cluster, true_cluster, pv_score):
@@ -231,14 +231,14 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
                         perfect_reco = 1
 
                     # Get the flavour
-                    FT = get_pred_ft(output, cluster, ft_score)
+                    ft_bbar_score, ft_no_score, ft_b_score = get_pred_ft(output, cluster, ft_score)
                     # Add PV reco and true PV
                     reco_pv_idx, true_pv_idx = get_b_cand_pv(output, cluster, true_cluster, pv_score)
                     break
                 elif true_in_reco == 1 and len(cluster['node_keys']) > len(true_cluster['node_keys']):
                     none_iso = 1  # background tracks in signal
 
-                    FT = get_pred_ft(output, cluster, ft_score)
+                    ft_bbar_score, ft_no_score, ft_b_score = get_pred_ft(output, cluster, ft_score)
                     none_iso_n_bkg = len(cluster['node_keys']) - len(true_cluster['node_keys'])   # 'purity of bkg in non iso'
                     # Add PV reco and true PV
                     reco_pv_idx, true_pv_idx = get_b_cand_pv(output, cluster, true_cluster, pv_score)
@@ -246,7 +246,7 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
                 elif true_in_reco >= 0.2 and true_in_reco < 1:
                     part_reco = 1
 
-                    FT = get_pred_ft(output, cluster, ft_score)
+                    ft_bbar_score, ft_no_score, ft_b_score = get_pred_ft(output, cluster, ft_score)
                     none_iso_n_bkg = len(cluster['node_keys']) - len(true_cluster['node_keys']) 
                     # Add PV reco and true PV
                     reco_pv_idx, true_pv_idx = get_b_cand_pv(output, cluster, true_cluster, pv_score)
@@ -277,7 +277,9 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
                                             'PartReco': part_reco,
                                             'NotFound': none_associated,
                                             'SigMatch': signal_match,
-                                            'Pred_FT': FT,
+                                            'Pred_FT_bbar_score': ft_bbar_score.item(), 
+                                            'Pred_FT_no_scrore': ft_no_score.item(),
+                                            'Pred_FT_b_score' ft_b_score.item(),
                                             'B_id': origin_B_id,
                                             'reco_pv_idx': reco_pv_idx,
                                             'true_pv_idx': true_pv_idx

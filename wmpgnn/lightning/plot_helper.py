@@ -45,7 +45,6 @@ def plot_loss(df, version):
     f, ax = plt.subplots(figsize=(9, 6))
     ax.plot(epochs, trn_loss, color="#4169E1", label="trn loss")
     ax.plot(epochs, val_loss, color="#B22222", label="val loss")
-    ax.set_yscale("log")
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Loss")
     ax.legend()
@@ -146,9 +145,12 @@ def plot_gn_block_dist(df, feature, nlayers, version, ref_signal):
     outdir = f"lightning_logs/version_{version}/plots_{ref_signal}"
     os.makedirs(outdir, exist_ok=True)
 
-    for i in range(nlayers):  
-        true_val = df[f"{pos_key[feature]}_score_{i}"]
-        false_val = df[f"{neg_key[feature]}_score_{i}"]
+    for i in range(nlayers): 
+        try:
+            true_val = df[f"{pos_key[feature]}_score_{i}"]
+            false_val = df[f"{neg_key[feature]}_score_{i}"]
+        except:
+            continue
 
         true_weights = np.ones_like(true_val) / len(true_val)
         fake_weights = np.ones_like(false_val) / len(false_val)
