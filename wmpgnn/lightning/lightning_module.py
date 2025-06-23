@@ -182,8 +182,7 @@ class HGNNLightningModule(L.LightningModule):
 
                 sig_ft_loss = self.ft_nodes_criterion(block.node_logits['ft'][nodes_selbool.squeeze()][sig_nodes_selbool], y_ft[nodes_selbool.squeeze()][sig_nodes_selbool])
                 bkg_ft_loss = self.ft_nodes_criterion(block.node_logits['ft'][~nodes_selbool.squeeze()][bkg_nodes_selbool], y_ft[~nodes_selbool.squeeze()][bkg_nodes_selbool])
-                loss_ft_nodes += sig_ft_loss + bkg_ft_loss + 1e-3 * torch.tensor([n_penalty], device=self.device)  # scale it to at most O(1)
-                
+                loss_ft_nodes += torch.nan_to_num(sig_ft_loss, nan=0.0) + torch.nan_to_num(bkg_ft_loss, nan=0.0) + 1e-3 * torch.tensor([n_penalty], device=self.device) 
                 # fragmentaion loss
                 loss_frag_nodes += self.frag_nodes_criterion(block.node_logits['frag'], y_frag)
             
@@ -241,9 +240,10 @@ class HGNNLightningModule(L.LightningModule):
     
     def validation_step(self, batch, batch_idx): 
         assert not self.model.training, "Model is still in training mode during validation!"
-        self.model.apply(
-            lambda m: m.train() if isinstance(m, torch.nn.modules.batchnorm._BatchNorm) else None
-        )  # Setting the batchnorm to train mode during val step, this introduces a bias but shouldn't matter once converged TODO study it
+        # If this is set to train: good loss during eval but then issues in testing -> Layernorm
+        # self.model.apply(
+        #     lambda m: m.train() if isinstance(m, torch.nn.modules.batchnorm._BatchNorm) else None
+        # )  # Setting the batchnorm to train mode during val step, this introduces a bias but shouldn't matter once converged TODO study it
         loss = self.shared_step(batch, batch_idx, log_dict=self.val_log)
         return loss
 
@@ -353,7 +353,6 @@ class HGNNLightningModule(L.LightningModule):
         avg_losses = {key: torch.tensor(vals).nanmean(dim=0) for key, vals in self.trn_log.items()}
         for key, val in avg_losses.items():
             self.log(f"train_{key}", val, prog_bar=(key == "combined_loss"), on_epoch=True, on_step=False)
-
         self.trn_log = defaultdict(list)
 
     def on_validation_epoch_end(self):

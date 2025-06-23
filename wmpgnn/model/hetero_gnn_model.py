@@ -9,7 +9,7 @@ from wmpgnn.gnn.hetero_graph_network import edge_pruning, node_pruning
 
 def make_mlp(output_size, hidden_channels=128, num_layers=4, norm="batch_norm", drop_out=0.3):
     return lambda: MLP(in_channels=-1, hidden_channels=hidden_channels,
-              out_channels=output_size, num_layers=num_layers, norm=norm, dropout=drop_out)
+              out_channels=output_size, num_layers=num_layers, norm=norm)
 
 def hetero_graph_concat(g1,g2):
     graph = g1.clone()
