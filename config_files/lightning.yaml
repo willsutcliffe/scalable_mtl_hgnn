@@ -1,21 +1,21 @@
 model:
   type: "heterognn"
   gnn_layers: 4
-  mlp_output_size: 16
+  mlp_output_size: 16  # -> this to 32? This one is the output of the global, edge and node blocks
   mlp_layers: 4
-  mlp_channels: 128
+  mlp_channels: 128  # hidden dimension for the same as above
   weight_mlp_layers: 4
-  weight_mlp_channels: 16
+  weight_mlp_channels: 16  # Hidden dimension for the MLP in the inference part -> change to 32
   weighted_mp: False
   use_edge_weights: True
   use_node_weights: True
   node_types: ['tracks', 'pvs']
   edge_types: ["tracks_tracks","tracks_pvs"]
   norm: "batch_norm"
-  dropout: 0.3
+  dropout: 0.01
   # Some FT flags
-  nFT_layers: 3
-  no_FT_epochs: 5
+  nFT_layers: 1  # starting from the end
+  no_FT_epochs: 2 # counting start at 0 -> 3 epochs w/ FT disabled
 
 # Now additional information for training++
 data_dir: "/eos/user/y/yukaiz/DFEI_data"
