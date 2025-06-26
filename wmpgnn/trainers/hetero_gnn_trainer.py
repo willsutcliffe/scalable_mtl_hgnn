@@ -74,7 +74,7 @@ class HeteroGNNTrainer(Trainer):
         print("Use logits ", self.use_logits)
         self.criterion.to('cuda')
         self.criterion_bce_edges.cuda()
-        self.criterion_bce_edges.cuda()
+        self.criterion_bce_nodes.cuda()
         self.criterion_bce_pvs.cuda()
         self.model.cuda()
 
@@ -133,12 +133,15 @@ class HeteroGNNTrainer(Trainer):
         pv_node_acc_one_epoch = []
         if train == True:
             data_loader = self.train_loader
+            self.model.train(True)
         else:
             data_loader = self.val_loader
+            self.model.train(False)
+            self.model.eval()
         last_batch = len(data_loader)
-        # print(last_batch)
+
         for i, data in enumerate(data_loader):
-            # print(i, train)
+
             if train:
                 self.optimizer.zero_grad()
             data.to('cuda')
@@ -170,24 +173,24 @@ class HeteroGNNTrainer(Trainer):
             for block in self.model._blocks:
                 if self.use_logits:
                     if self.add_pv:
-                        bce_pvs_loss = (self.beta_bce_nodes  * self.criterion_bce_pvs(block.edge_logits[('tracks', 'to', 'pvs')], pv_label))
+                        bce_pvs_loss = (self.beta_bce_pvs  * self.criterion_bce_pvs(block.edge_logits[('tracks', 'to', 'pvs')], pv_label))
                         running_bce_pv_loss += bce_pvs_loss.item()
                         loss +=  bce_pvs_loss
                     if self.add_bce:
                         bce_edges_loss = (self.beta_bce_edges * self.criterion_bce_edges(block.edge_logits[('tracks', 'to', 'tracks')], y_bce))
-                        bce_nodes_loss = (self.beta_bce_pvs  * self.criterion_bce_nodes(block.node_logits['tracks'], ynodes))
+                        bce_nodes_loss = (self.beta_bce_nodes  * self.criterion_bce_nodes(block.node_logits['tracks'], ynodes))
                         running_bce_edge_loss += bce_edges_loss.item()
                         running_bce_node_loss += bce_nodes_loss.item()
                         loss += bce_edges_loss
                         loss += bce_nodes_loss
                 else:
                     if self.add_pv:
-                        bce_pvs_loss = (self.beta_bce_nodes  * self.criterion_bce_pvs(block.edge_weights[('tracks', 'to', 'pvs')], pv_label))
+                        bce_pvs_loss = (self.beta_bce_pvs * self.criterion_bce_pvs(block.edge_weights[('tracks', 'to', 'pvs')], pv_label))
                         running_bce_pv_loss += bce_pvs_loss.item()
                         loss +=  bce_pvs_loss
                     if self.add_bce:
                         bce_edges_loss = (self.beta_bce_edges * self.criterion_bce_edges(block.edge_weights[('tracks', 'to', 'tracks')], y_bce))
-                        bce_nodes_loss = (self.beta_bce_pvs  * self.criterion_bce_nodes(block.node_weights['tracks'], ynodes))
+                        bce_nodes_loss = (self.beta_bce_nodes  * self.criterion_bce_nodes(block.node_weights['tracks'], ynodes))
                         running_bce_edge_loss += bce_edges_loss.item()
                         running_bce_node_loss += bce_nodes_loss.item()
                         loss += bce_edges_loss
