@@ -32,7 +32,7 @@ dataset:
 training:
   train: True
   starting_learning_rate: 0.001
-  epochs: 100
+  epochs: 50
   dropped_lr_epochs: 5
   batch_size: 256
   early_stopping_patience: 6

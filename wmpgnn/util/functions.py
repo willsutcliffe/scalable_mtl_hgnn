@@ -252,6 +252,10 @@ def weight_binary_class(dataset,hetero=True):
         true_class[1] += (y == 1).sum().item()
         num_sample += len(y)
     
+    print(f"Amount signal: {true_class[1]}, {true_class[1]/num_sample}")
+    print(f"Amount bkg: {true_class[0]}, {true_class[0]/num_sample}")
+    print(f"Amount total: {num_sample}")
+
     # Calcul des poids pour chaque classe
     weight_class = {
         0: num_sample / (2 * true_class[0]) if true_class[0] > 0 else 0,

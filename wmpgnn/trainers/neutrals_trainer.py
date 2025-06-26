@@ -9,7 +9,7 @@ from sklearn.metrics import roc_curve, auc
 from uncertainties.unumpy import (uarray, nominal_values as unp_n,
                                   std_devs as unp_s)
 from wmpgnn.util.functions import NOW, plt_pull, ks_test, centers, hist, plt_smooth, batched_predict_proba
-# plt.style.use(mplhep.style.LHCb2)
+plt.style.use(mplhep.style.LHCb2)
 
 class NeutralsTrainer(ABC):
 
@@ -128,7 +128,7 @@ class NeutralsTrainer(ABC):
         plt.plot(self.val_loss, label="Validation Loss")
 
         plt.xlabel('epoch')
-        plt.ylabel('Cross Entropy Loss')
+        plt.ylabel('Binary Cross Entropy Loss')
         plt.grid()
 
         plt.legend()
@@ -166,7 +166,6 @@ class NeutralsTrainer(ABC):
         }
         responses = data
 
-        fontsize = 20
         bins = np.linspace(0, 1, 30)
         # centers + xerr pour les barres d'erreur
         x, xerr = centers(bins, xerr=True)
@@ -221,15 +220,15 @@ class NeutralsTrainer(ABC):
         plt_pull(pull2, bins, unp_n(bkg),    0, err=unp_s(bkg))
         pull1.set_ylabel(
             'signal\n' r'$\frac{\mathrm{val} - \mathrm{train}}{\sigma}$',
-            loc='center', fontsize=fontsize
+            loc='center'
         )
         pull2.set_ylabel(
             'bkg\n' r'$\frac{\mathrm{val} - \mathrm{train}}{\sigma}$',
-            loc='center', fontsize=fontsize
+            loc='center'
         )
 
         # 5) Récupérer les valeurs des thresholds au dernier epoch
-        last_epoch = self.epoch_metrics_df.index.max()
+        last_epoch = epoch
         thresholds = ['default', 'opt', 'tpr0.9', 'tpr0.99']
         colors = ['tab:cyan', 'tab:orange', 'tab:green', 'tab:purple']
 
@@ -248,15 +247,24 @@ class NeutralsTrainer(ABC):
                 label=f"{th.title()} (th={thr_val:.2f})"
             )
 
-        # 6) Style final et légende
-        ax.tick_params(axis='both', labelsize=fontsize)
-        pull1.tick_params(axis='both', labelsize=fontsize)
-        pull2.tick_params(axis='both', labelsize=fontsize)
+        # # 6) Style final et légende
+        # ax.tick_params(axis='both')
+        # pull1.tick_params(axis='both')
+        # pull2.tick_params(axis='both')
+
+        for label in pull1.get_yticklabels():
+            label.set_y(label.get_position()[1] + 1)  # décale vers le haut
+
+        for label in pull2.get_yticklabels():
+            label.set_y(label.get_position()[1] - 1)  # décale vers le bas
+        
+        for label in ax.get_xticklabels():
+            label.set_x(label.get_position()[0] + 1)  # décale vers la droite
 
         plt.xlim(bins[0], bins[-1])
-        plt.xlabel('Predictions', fontsize=fontsize)
-        ax.set_title(f'Predictions Distribution at Epoch {epoch}', fontsize=fontsize + 2)
-        ax.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=fontsize)
+        plt.xlabel('Predictions')
+        ax.set_title(f'Predictions Distribution at Epoch {epoch}')
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         plt.tight_layout()
         plt.subplots_adjust(right=0.75)
         if show:
@@ -299,15 +307,17 @@ class NeutralsTrainer(ABC):
         roc_auc_val = auc(fpr_val, tpr_val)
 
         # 3) Tracer les courbes ROC
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(14, 8))
         plt.plot(fpr_train,
                 tpr_train,
                 linestyle="--",
+                linewidth=2,
                 color="blue",
                 label=f"Train ROC (AUC = {roc_auc_train:.3f})")
         plt.plot(fpr_val,
                 tpr_val,
                 linestyle="-",
+                linewidth=3,
                 color="red",
                 label=f"Val ROC   (AUC = {roc_auc_val:.3f})")
 
@@ -330,24 +340,26 @@ class NeutralsTrainer(ABC):
 
             color = colors[idx]
             # Tracer verticale/horizontale (sans label)
-            plt.axvline(fpr_pt, linestyle="dotted", color=color, alpha=0.7)
-            plt.axhline(tpr_pt, linestyle="dotted", color=color, alpha=0.7)
+            plt.axvline(fpr_pt, linestyle='--', color=color)
+            plt.axhline(tpr_pt, linestyle='--', color=color)
 
             # Scatter + légende (threshold et valeur arrondie à 2 décimales)
             label = f"{th.title()} (th={thr_val:.2f})"
             plt.scatter(fpr_pt, tpr_pt, color=color, s=50, zorder=5, label=label)
 
         # 5) Style général
-        fontsize = 14
-        plt.xlabel("False Positive Rate", fontsize=fontsize)
-        plt.ylabel("True Positive Rate", fontsize=fontsize)
-        plt.title(f"ROC Curves at Epoch {epoch}", fontsize=fontsize + 2)
-        plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=fontsize-1)
+        fontsze = 20
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title(f"ROC Curves at Epoch {epoch}")
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1),  frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         plt.grid(True, linestyle="--", alpha=0.6)
+        # plt.xticks(fontsize)
+        # plt.yticks(fontsize)
         plt.xlim(0.0, 1.0)
         plt.ylim(0.0, 1.0)
         plt.tight_layout()
-        plt.subplots_adjust(right=0.65)
+        plt.subplots_adjust(right=0.7)
 
         # 6) Sauvegarder ou afficher
         output_path = os.path.join(path, "roc_auc", file_name)
@@ -371,7 +383,8 @@ class NeutralsTrainer(ABC):
         # Récupérer le dernier epoch
         last_epoch = self.epoch_metrics_df.index.max()
 
-        fig, ax = plt.subplots(figsize=(8, 4))
+        fig, ax = plt.subplots(figsize=(14, 8))
+
         for idx, th in enumerate(thresholds):
             train_col = f"train_{th}_accuracy"
             val_col   = f"val_{th}_accuracy"
@@ -402,9 +415,9 @@ class NeutralsTrainer(ABC):
 
         ax.set_xlabel("Epoch")
         ax.set_ylabel("Accuracy")
-        ax.set_title("Accuracy pour Train et Validation (4 thresholds)")
+        ax.set_title("Train and Validation (4 thresholds)")
         ax.grid(True)
-        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         fig.tight_layout()
         fig.subplots_adjust(right=0.7)
         if show:
@@ -422,7 +435,8 @@ class NeutralsTrainer(ABC):
 
         last_epoch = self.epoch_metrics_df.index.max()
 
-        fig, ax = plt.subplots(figsize=(8, 4))
+        fig, ax = plt.subplots(figsize=(14, 8))
+
         for idx, th in enumerate(thresholds):
             train_col = f"train_{th}_TPR"
             val_col   = f"val_{th}_TPR"
@@ -452,9 +466,9 @@ class NeutralsTrainer(ABC):
 
         ax.set_xlabel("Epoch")
         ax.set_ylabel("Efficiency (TPR)")
-        ax.set_title("Efficiency (TPR) pour Train et Validation (4 thresholds)")
+        ax.set_title("Train and Validation (4 thresholds)")
         ax.grid(True)
-        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         fig.tight_layout()
         fig.subplots_adjust(right=0.7)
         if show:
@@ -472,7 +486,8 @@ class NeutralsTrainer(ABC):
 
         last_epoch = self.epoch_metrics_df.index.max()
 
-        fig, ax = plt.subplots(figsize=(8, 4))
+        fig, ax = plt.subplots(figsize=(14, 8))
+
         for idx, th in enumerate(thresholds):
             train_col = f"train_{th}_rej"
             val_col   = f"val_{th}_rej"
@@ -502,9 +517,9 @@ class NeutralsTrainer(ABC):
 
         ax.set_xlabel("Epoch")
         ax.set_ylabel("Rejection")
-        ax.set_title("Rejection pour Train et Validation (4 thresholds)")
+        ax.set_title("Train and Validation (4 thresholds)")
         ax.grid(True)
-        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         fig.tight_layout()
         fig.subplots_adjust(right=0.7)
         if show:
@@ -522,7 +537,8 @@ class NeutralsTrainer(ABC):
 
         last_epoch = self.epoch_metrics_df.index.max()
 
-        fig, ax = plt.subplots(figsize=(8, 4))
+        fig, ax = plt.subplots(figsize=(14, 8))
+
         for idx, th in enumerate(thresholds):
             train_col = f"train_{th}_precision"
             val_col   = f"val_{th}_precision"
@@ -552,9 +568,9 @@ class NeutralsTrainer(ABC):
 
         ax.set_xlabel("Epoch")
         ax.set_ylabel("Precision")
-        ax.set_title("Precision pour Train et Validation (4 thresholds)")
+        ax.set_title("Train and Validation (4 thresholds)")
         ax.grid(True)
-        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         fig.tight_layout()
         fig.subplots_adjust(right=0.7)
         if show:
@@ -572,7 +588,8 @@ class NeutralsTrainer(ABC):
 
         last_epoch = self.epoch_metrics_df.index.max()
 
-        fig, ax = plt.subplots(figsize=(8, 4))
+        fig, ax = plt.subplots(figsize=(14, 8))
+
         for idx, th in enumerate(thresholds):
             train_col = f"train_{th}_balanced_accuracy"
             val_col   = f"val_{th}_balanced_accuracy"
@@ -602,9 +619,9 @@ class NeutralsTrainer(ABC):
 
         ax.set_xlabel("Epoch")
         ax.set_ylabel("Balanced Accuracy")
-        ax.set_title("Balanced Accuracy pour Train et Validation (4 thresholds)")
+        ax.set_title("Train and Validation (4 thresholds)")
         ax.grid(True)
-        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         fig.tight_layout()
         fig.subplots_adjust(right=0.7)
         if show:
@@ -642,7 +659,7 @@ class NeutralsTrainer(ABC):
             'tpr0.99': 'tab:purple'
         }
 
-        plt.figure(figsize=(6, 4))
+        plt.figure(figsize=(12, 10))
         # Plot the ROC‐derived TPR curve (TPR vs. threshold)
         plt.plot(thresholds, tpr_curve,
                  marker="o", linestyle="-", markersize=3,
@@ -702,7 +719,7 @@ class NeutralsTrainer(ABC):
         fom_curve = data['fom']
         th_opt = data['threshold_opt']
 
-        plt.figure(figsize=(6, 4))
+        plt.figure(figsize=(10, 8))
         plt.plot(thresholds, fom_curve,
                  marker="o", linestyle="-", markersize=3,
                  label="FOM = S / √(S + B)")

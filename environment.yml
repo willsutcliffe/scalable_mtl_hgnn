@@ -71,8 +71,6 @@ dependencies:
       - pillow==11.0.0
       - propcache==0.3.1
       - psutil==7.0.0
-      - pyg-lib==0.4.0+pt24cu124
-      - pyparsing==3.2.3
       - python-dateutil==2.9.0.post0
       - pytz==2025.2
       - pyyaml==6.0.2
@@ -101,4 +99,3 @@ dependencies:
       - xxhash==3.5.0
       - yarl==1.20.0
       - zipp==3.21.0
-prefix: /eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310

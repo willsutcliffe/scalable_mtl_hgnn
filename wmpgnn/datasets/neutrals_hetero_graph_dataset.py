@@ -102,6 +102,7 @@ class CustomNeutralsHeteroDataset(Dataset):
         evt_max = self.config_loader.get(f"dataset.evt_max_{self.split}", None)
         chunk_size = 100
         total_events = len(self.filenames_input)
+        print(total_events)
         if evt_max is not None:
             total_events = min(total_events, evt_max)
 
