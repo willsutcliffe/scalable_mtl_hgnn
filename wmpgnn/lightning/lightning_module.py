@@ -178,11 +178,11 @@ class HGNNLightningModule(L.LightningModule):
 
                 n_missing_sig_nodes = sig_nodes.shape[0] - torch.sum(sig_nodes_selbool)
                 n_mistag_bkg_nodes = torch.sum(bkg_nodes_selbool)
-                n_penalty = n_missing_sig_nodes + n_mistag_bkg_nodes
+                n_penalty = torch.tensor(n_missing_sig_nodes + n_mistag_bkg_nodes, device=self.device)
 
                 sig_ft_loss = self.ft_nodes_criterion(block.node_logits['ft'][nodes_selbool.squeeze()][sig_nodes_selbool], y_ft[nodes_selbool.squeeze()][sig_nodes_selbool])
                 bkg_ft_loss = self.ft_nodes_criterion(block.node_logits['ft'][~nodes_selbool.squeeze()][bkg_nodes_selbool], y_ft[~nodes_selbool.squeeze()][bkg_nodes_selbool])
-                loss_ft_nodes += torch.nan_to_num(sig_ft_loss, nan=0.0) + torch.nan_to_num(bkg_ft_loss, nan=0.0) + 1e-3 * torch.tensor([n_penalty], device=self.device) 
+                loss_ft_nodes += torch.nan_to_num(sig_ft_loss, nan=0.0) + torch.nan_to_num(bkg_ft_loss, nan=0.0) + 1e-3 * torch.tensor([n_penalty], device=self.device)  # maybe also log the impact of each part
                 # fragmentaion loss
                 loss_frag_nodes += self.frag_nodes_criterion(block.node_logits['frag'], y_frag)
             
@@ -221,8 +221,8 @@ class HGNNLightningModule(L.LightningModule):
         log_dict["combined_loss"].append(loss.item())
         for key, values in acc_LCA.items():
             log_dict[key].append(values)
-        log_dict["tPV_edge_acc"].append(acc_tPV_edge)
-        log_dict["PV_has_B_acc"].append(acc_PV_has_B)
+        log_dict["tPV_edge_acc"].append(acc_tPV_edge.item())
+        log_dict["PV_has_B_acc"].append(acc_PV_has_B.item())
         
         if self.current_epoch > self.no_FT_epochs:
             log_dict["frag_loss"].append(loss_frag_nodes.item())
@@ -233,7 +233,7 @@ class HGNNLightningModule(L.LightningModule):
         return loss
 
 
-    def training_step(self, batch, batch_idx): 
+    def training_step(self, batch, batch_idx):
         loss = self.shared_step(batch, batch_idx, log_dict=self.trn_log)
         return loss
 
@@ -286,54 +286,61 @@ class HGNNLightningModule(L.LightningModule):
                 bkg_nodes_score = block.node_weights['tracks'].squeeze()[~sig_nodes_selbool]
                 self.tst_log[f"sig_nodes_score_{i}"] = torch.cat([self.tst_log[f"sig_nodes_score_{i}"], sig_nodes_score.cpu()], dim=0)
                 self.tst_log[f"bkg_nodes_score_{i}"] = torch.cat([self.tst_log[f"bkg_nodes_score_{i}"], bkg_nodes_score.cpu()], dim=0)
+
             if self.get_edge_performance:
                 sig_edges_selbool = y_tt_edges == 1
                 sig_edges_score = block.edge_weights[('tracks', 'to', 'tracks')].squeeze()[sig_edges_selbool]
                 bkg_edges_score = block.edge_weights[('tracks', 'to', 'tracks')].squeeze()[~sig_edges_selbool]
                 self.tst_log[f"sig_edges_score_{i}"] = torch.cat([self.tst_log[f"sig_edges_score_{i}"], sig_edges_score.cpu()], dim=0)
                 self.tst_log[f"bkg_edges_score_{i}"] = torch.cat([self.tst_log[f"bkg_edges_score_{i}"], bkg_edges_score.cpu()], dim=0)
+
             if self.get_frag_performance and i >= len(self.model._blocks) - self.nFT_layers :
                 true_frag_selbool = y_frag == 1
                 frag_pos_part_score = block.node_weights['frag'][true_frag_selbool]
                 frag_neg_part_score = block.node_weights['frag'][~true_frag_selbool]
                 self.tst_log[f"frag_pos_part_score_{i}"] = torch.cat([self.tst_log[f"frag_pos_part_score_{i}"], frag_pos_part_score.cpu()], dim=0)
                 self.tst_log[f"frag_neg_part_score_{i}"] = torch.cat([self.tst_log[f"frag_neg_part_score_{i}"], frag_neg_part_score.cpu()], dim=0)
+
+            if self.get_reco_performance and self.current_epoch > self.no_FT_epochs: 
+                nodes_selbool = y_t_nodes.long() == 1
+                sig_nodes = block.node_weights['tracks'][nodes_selbool]
+                bkg_nodes = block.node_weights['tracks'][~nodes_selbool]
+                sig_nodes_selbool = sig_nodes >= self.node_pruning_val
+                bkg_nodes_selbool = bkg_nodes >= self.node_pruning_val
+
+                sig_ratio = sig_nodes.shape[0] / torch.sum(sig_nodes_selbool)  # predicted number of signal nodes / true number of signal nodes
+                bkg_ratio = bkg_nodes.shape[0] / torch.sum(bkg_nodes_selbool)
+
+                pred_sig_ft_prob = block.node_weights["ft"][nodes_selbool.squeeze()][sig_nodes_selbool]
+                pred_bkg_ft_prob = block.node_weights["ft"][~nodes_selbool.squeeze()][bkg_nodes_selbool]
+
+                self.tst_log[f"ft_score_{i}"] = torch.cat([self.tst_log[f"ft_score_{i}"], block.node_weights["ft"].cpu()], dim=0)
+                
+
         
         # removing the output of the unprunded model
         del outputs_np
 
         """Start the study for reco performance"""
         # Activate the pruning for reco performance studies, needs to grab it form somewhere
-        self.model._blocks[3].node_prune = True
-        self.model._blocks[3].edge_prune = True
-        outputs = self.model(reco_batch)
-        self.model._blocks[3].node_prune = False
-        self.model._blocks[3].edge_prune = False
-
-        """Edge node prediciont plots output""" # TODO include here again the different FT calculation
-        for i, block in enumerate(self.model._blocks):  # check if .item() is necessary
-            # Obtain FT accuracy/block ouput
-            if self.get_reco_performance and i >= len(self.model._blocks) - self.nFT_layers :  # for confusion matrix
-                bbar_ft_selbool = y_ft == 0
-                none_ft_selbool = y_ft == 1
-                b_ft_selbool = y_ft == 2
-
-                # softmax is fine cause CE w/ 3 classes
-                ft_score = block.node_weights['ft']
-                bbar_ft_score =  torch.softmax(block.node_logits['ft'][bbar_ft_selbool], dim=1)
-                none_ft_score = torch.softmax(block.node_logits['ft'][none_ft_selbool], dim=1)
-                b_ft_score = torch.softmax(block.node_logits['ft'][b_ft_selbool], dim=1)
-
-                self.tst_log[f"ft_score_{i}"] = torch.cat([self.tst_log[f"ft_score_{i}"], ft_score.cpu()], dim=0)
-                self.tst_log[f"bbar_ft_score_{i}"] = torch.cat([self.tst_log[f"bbar_ft_score_{i}"], bbar_ft_score.cpu()], dim=0)
-                self.tst_log[f"none_ft_score_{i}"] = torch.cat([self.tst_log[f"none_ft_score_{i}"], none_ft_score.cpu()], dim=0)
-                self.tst_log[f"b_ft_score_{i}"] = torch.cat([self.tst_log[f"b_ft_score_{i}"], b_ft_score.cpu()], dim=0)
-
-                # get pv score
-                pv_score = block.edge_weights[('tracks', 'to', 'pvs')]
-
-        """B reconstruction effiency"""
         if self.get_reco_performance:
+            self.model._blocks[3].node_prune = True
+            self.model._blocks[3].edge_prune = True
+            outputs = self.model(reco_batch)
+            self.model._blocks[3].node_prune = False
+            self.model._blocks[3].edge_prune = False
+
+            """Edge node prediciont plots output""" 
+            for i, block in enumerate(self.model._blocks):
+                # Obtain FT accuracy/block ouput
+                if self.get_reco_performance and i >= len(self.model._blocks) - self.nFT_layers :  # for performance
+                    # softmax is fine cause CE w/ 3 classes
+                    ft_score = block.node_weights['ft']
+
+                    # get pv score
+                    pv_score = block.edge_weights[('tracks', 'to', 'pvs')]
+
+            """B reconstruction effiency"""
             self.signal_df, self.event_df = eval_reco_performance(outputs, batch, batch_idx, self.signal_df, self.event_df, ft_score, pv_score, self.ref_signal)
 
         """Logging"""
@@ -408,7 +415,7 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, config, a
         monitor="val_combined_loss",
         verbose=True,
         mode="min",
-        patience=5,
+        patience=10,
     )
 
     best_model_callback = ModelCheckpoint(

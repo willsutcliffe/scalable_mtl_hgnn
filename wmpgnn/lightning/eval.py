@@ -1,6 +1,7 @@
 import sys
 import os
 import glob
+import re
 from optparse import OptionParser
 from tqdm import tqdm
 
@@ -52,8 +53,33 @@ if __name__ == "__main__":
     if config["eval"]["cpt"] == "None":
         print("Please specifiy checkpoint")
         exit()
+
+    # Loading in the dataframe and the cpt model    
     version = config["eval"]["version"]
-    checkpoint_path = f"lightning_logs/version_{version}/checkpoints/{config['eval']['cpt']}"   # load the previous last model to retrain
+        # Getting the data frame
+    dfs = []
+    cpts = []
+    bis_loss = []
+    for v in version:  # combine the individual metrics for loss plotting, and select the best model from all iterations
+        file_path = f"lightning_logs/version_{v}"
+        df = pd.read_csv(f"{file_path}/metrics.csv")
+        df = df.groupby('epoch').agg(lambda x: x.dropna().iloc[0] if not x.dropna().empty else None).reset_index()
+        dfs.append(df)
+        if config['eval']['cpt'] == "bis":
+            cpt = glob.glob(f"lightning_logs/version_{v}/checkpoints/best*.ckpt")[0]
+            cpts.append(cpt)
+            match = re.search(r"val_combined_loss=(-?\d+\.\d+)", cpt)
+            bis_loss.append(float(match[1]))
+    if config['eval']['cpt'] == "bis":
+        checkpoint_path = cpts[np.argmin(bis_loss)]
+    else:
+        try:
+            checkpoint_path = f"lightning_logs/version_{config['eval']['cpt'][0]}/checkpoints/{config['eval']['cpt'][1]}" 
+        except:
+            print("Wrong input format")
+
+    df = pd.concat(dfs, ignore_index=True)
+
     # the pos weight arent used but are requried to be passed on
     pos_weight = {'t_nodes': torch.tensor(0.), 'tt_edges': torch.tensor(0.), 'LCA': torch.tensor([0., 0., 0., 0.]), 'frag': torch.tensor(0.), 'FT': torch.tensor([0., 0., 0.])} # need to be load in from the hyperparams
     module = HGNNLightningModule.load_from_checkpoint(
@@ -78,24 +104,19 @@ if __name__ == "__main__":
     tst_loader = DataLoader(tst_dataset[:500], batch_size=1, num_workers=6, drop_last=True)
 
     """Start evaluation"""
-    # Getting the data frame
-    file_path = f"lightning_logs/version_{version}"
-    df = pd.read_csv(f"{file_path}/metrics.csv")
-    df = df.groupby('epoch').agg(lambda x: x.dropna().iloc[0] if not x.dropna().empty else None).reset_index()
-    
     # Plot the loss
-    plot_loss(df, version)
+    plot_loss(df, version[-1])
     # Obtain the LCA accuracy of the different classes as a function of the epochs
-    plot_LCA_acc(df, version)
+    plot_LCA_acc(df, version[-1])
 
     # Obtain the accuracy and peformance of the model
     trainer = Trainer(
-        default_root_dir=f"lightning_logs/version_{version}", # save the eval stuff in the dir of the model
+        default_root_dir=f"lightning_logs/version_{version[-1]}", # save the eval stuff in the dir of the model
     )
     trainer.test(module, dataloaders=tst_loader)
 
     # Load in signal df to calculate reco effiency and opposite side B finding
-    signal_df = pd.read_csv(f"lightning_logs/version_{version}/signal_df_{config['eval']['sample']}.csv") 
+    signal_df = pd.read_csv(f"lightning_logs/version_{version[-1]}/signal_df_{config['eval']['sample']}.csv") 
     sig_selbool = signal_df["SigMatch"] == 1
     signal_df = signal_df[sig_selbool]
     print(f"Number of signal B: {signal_df.shape[0]}")

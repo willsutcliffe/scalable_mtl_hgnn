@@ -11,11 +11,12 @@ model:
   use_node_weights: True
   node_types: ['tracks', 'pvs']
   edge_types: ["tracks_tracks","tracks_pvs"]
-  norm: "batch_norm"
-  dropout: 0.01
+  norm: "Graphnorm"
+  dropout: 0. # something like 0.001 should be fine 
   # Some FT flags
   nFT_layers: 1  # starting from the end
-  no_FT_epochs: 2 # counting start at 0 -> 3 epochs w/ FT disabled
+  no_FT_epochs: 2 # counting start at 0 -> n+1 epochs w/ FT disabled
+  # seperate FT layers from frag layers -> frag layers after each is fine
 
 # Now additional information for training++
 data_dir: "/eos/user/y/yukaiz/DFEI_data"
@@ -34,8 +35,8 @@ training:
 
 eval:
   sample: "Bs_JpsiPhi"
-  version: 7  # lightning_logs version number
-  cpt: "best-epoch=08-val_combined_loss=0.00.ckpt"
+  version: [1, 2]  # Here implement an [] to consider contineous training over versions (mainly to plot combined loss plots)
+  cpt: "bis"  # replace with bis / two numbers [version, epoch]
   performance:  # Flags for eval for performance determination
     nodes: True
     edges: True

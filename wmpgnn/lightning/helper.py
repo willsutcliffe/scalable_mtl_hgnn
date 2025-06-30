@@ -212,13 +212,15 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
 
             # Classify the reconstruction type of the event
             true_cluster = truth_cluster_dict[tc_firstkey]
-            FT = 0
+            ft_bbar_score = -1
+            ft_no_score = -1
+            ft_b_score = -1
             perfect_reco = 0
             all_particles = 0
             none_iso = 0
             part_reco = 0
             none_associated = 0
-            none_iso_n_bkg = -1000
+            none_iso_n_bkg = 0
             reco_pv_idx = -1
             true_pv_idx = -1
 
@@ -279,7 +281,7 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
                                             'SigMatch': signal_match,
                                             'Pred_FT_bbar_score': ft_bbar_score.item(), 
                                             'Pred_FT_no_scrore': ft_no_score.item(),
-                                            'Pred_FT_b_score' ft_b_score.item(),
+                                            'Pred_FT_b_score': ft_b_score.item(),
                                             'B_id': origin_B_id,
                                             'reco_pv_idx': reco_pv_idx,
                                             'true_pv_idx': true_pv_idx
