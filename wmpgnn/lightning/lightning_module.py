@@ -329,6 +329,9 @@ class HGNNLightningModule(L.LightningModule):
             outputs = self.model(reco_batch)
             self.model._blocks[3].node_prune = False
             self.model._blocks[3].edge_prune = False
+            if outputs == 0:
+                print("all edges pruned")
+                return {}
 
             """Edge node prediciont plots output""" 
             for i, block in enumerate(self.model._blocks):
