@@ -23,7 +23,6 @@ from wmpgnn.util.functions import get_hetero_weight
 
 from plot_helper import *
 
-
 if __name__ == "__main__":
     # python eval.py --config ../../config_files/simple.yaml --indir /eos/user/y/yukaiz/DFEI_data/Bs_JpsiPhi --version 21 --cpt epoch-epoch=15.ckpt
     usage = "usage: %prog [options]"
@@ -33,16 +32,16 @@ if __name__ == "__main__":
     parser.add_option("", "--indir", type=str, default=None,
                       dest="INDIR", help="Input directory where files are gobbled from")
     parser.add_option("", "--cpt", type=str, default=None,
-                       dest="CHECKPOINT", help="Model checkpoint to be evaluated")
+                      dest="CHECKPOINT", help="Model checkpoint to be evaluated")
     parser.add_option("", "--version", type=int, default=None,
-                       dest="VERSION", help="Lightning log version")
+                      dest="VERSION", help="Lightning log version")
     (option, args) = parser.parse_args()
     if len(args) != 0:
         raise RuntimeError("Got undefined arguments", " ".join(args))
 
-
     """Load config file"""
-    config_loader = ConfigLoader(option.CONFIG, environment_prefix="DL")  # One can include if it is included in the config loader and take that
+    config_loader = ConfigLoader(option.CONFIG,
+                                 environment_prefix="DL")  # One can include if it is included in the config loader and take that
     config = config_loader._load_config()
     config["mode"] = "Testing"
 
@@ -56,7 +55,7 @@ if __name__ == "__main__":
 
     # Loading in the dataframe and the cpt model    
     version = config["eval"]["version"]
-        # Getting the data frame
+    # Getting the data frame
     dfs = []
     cpts = []
     bis_loss = []
@@ -74,23 +73,24 @@ if __name__ == "__main__":
         checkpoint_path = cpts[np.argmin(bis_loss)]
     else:
         try:
-            checkpoint_path = f"lightning_logs/version_{config['eval']['cpt'][0]}/checkpoints/{config['eval']['cpt'][1]}" 
+            checkpoint_path = f"lightning_logs/version_{config['eval']['cpt'][0]}/checkpoints/{config['eval']['cpt'][1]}"
         except:
             print("Wrong input format")
 
     df = pd.concat(dfs, ignore_index=True)
 
     # the pos weight arent used but are requried to be passed on
-    pos_weight = {'t_nodes': torch.tensor(0.), 'tt_edges': torch.tensor(0.), 'LCA': torch.tensor([0., 0., 0., 0.]), 'frag': torch.tensor(0.), 'FT': torch.tensor([0., 0., 0.])} # need to be load in from the hyperparams
+    pos_weight = {'t_nodes': torch.tensor(0.), 'tt_edges': torch.tensor(0.), 'LCA': torch.tensor([0., 0., 0., 0.]),
+                  'frag': torch.tensor(0.), 'FT': torch.tensor([0., 0., 0.])}  # need to be load in from the hyperparams
     module = HGNNLightningModule.load_from_checkpoint(
-            checkpoint_path=checkpoint_path,
-            model=model,
-            pos_weights=pos_weight,
-            optimizer_class=torch.optim.Adam,
-            optimizer_params={"lr": 1e-3},
-            scheduler_params={},
-            config=config
-        )
+        checkpoint_path=checkpoint_path,
+        model=model,
+        pos_weights=pos_weight,
+        optimizer_class=torch.optim.Adam,
+        optimizer_params={"lr": 1e-3},
+        scheduler_params={},
+        config=config
+    )
     print(model)
 
     """Load data"""
@@ -111,12 +111,12 @@ if __name__ == "__main__":
 
     # Obtain the accuracy and peformance of the model
     trainer = Trainer(
-        default_root_dir=f"lightning_logs/version_{version[-1]}", # save the eval stuff in the dir of the model
+        default_root_dir=f"lightning_logs/version_{version[-1]}",  # save the eval stuff in the dir of the model
     )
     trainer.test(module, dataloaders=tst_loader)
 
     # Load in signal df to calculate reco effiency and opposite side B finding
-    signal_df = pd.read_csv(f"lightning_logs/version_{version[-1]}/signal_df_{config['eval']['sample']}.csv") 
+    signal_df = pd.read_csv(f"lightning_logs/version_{version[-1]}/signal_df_{config['eval']['sample']}.csv")
     sig_selbool = signal_df["SigMatch"] == 1
     signal_df = signal_df[sig_selbool]
     print(f"Number of signal B: {signal_df.shape[0]}")

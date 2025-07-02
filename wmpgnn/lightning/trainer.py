@@ -18,6 +18,7 @@ from wmpgnn.configs.config_loader import ConfigLoader
 from wmpgnn.model.model_loader import ModelLoader
 from wmpgnn.util.functions import get_hetero_weight
 
+
 class LazyTorchDataset(Dataset):  # this doesnt seem to work that well...
     def __init__(self, file_pattern):
         self.files = sorted(glob.glob(file_pattern))
@@ -31,7 +32,7 @@ class LazyTorchDataset(Dataset):  # this doesnt seem to work that well...
         for length in self.file_lengths:
             total += length
             self.cumulative_lengths.append(total)
-        
+
         self._cache_file_idx = None
         self._cache_data = None
 
@@ -42,20 +43,22 @@ class LazyTorchDataset(Dataset):  # this doesnt seem to work that well...
         file_idx = 0
         while idx >= self.cumulative_lengths[file_idx]:
             file_idx += 1
-        
+
         local_idx = idx if file_idx == 0 else idx - self.cumulative_lengths[file_idx - 1]
-        
+
         # Load file if not cached
         if self._cache_file_idx != file_idx:
             self._cache_data = torch.load(self.files[file_idx], weights_only=False, map_location='cpu')
             self._cache_file_idx = file_idx
-        
+
         return self._cache_data[local_idx]
+
 
 def load_file(path):
     files = torch.load(path, weights_only=False)
     print(f"file load: {path.split('/')[-1]}")
     return files
+
 
 if __name__ == "__main__":
     # python trainer.py  --config  ../../config_files/lightning.yaml
@@ -79,7 +82,7 @@ if __name__ == "__main__":
     model = model_loader.get_model()
     checkpoint_path = config["training"]["cpt"]  # load the previous last model to retrain
     print(model)
-    print("="*30)
+    print("=" * 30)
 
     # Get the dataset glob it and load
     samples = config["training"]["sample"]
@@ -109,11 +112,13 @@ if __name__ == "__main__":
     print(f"data read in, time needed {(end - start):.2f}")
     print(f"Train dataset       : {len(trn_dataset)}")
     print(f"Validation dataset  : {len(val_dataset)}")
-    print("="*30)
+    print("=" * 30)
 
     # here we can check what kind of gpu it is to specify bs, also num_workers = num_cpu * 2
-    trn_loader = DataLoader(trn_dataset, batch_size=config["training"]["batch_size"], num_workers=config["training"]["ncpu"]*2, drop_last=True, shuffle=True) 
-    val_loader = DataLoader(val_dataset, batch_size=config["training"]["batch_size"], num_workers=config["training"]["ncpu"]*2, drop_last=True) 
+    trn_loader = DataLoader(trn_dataset, batch_size=config["training"]["batch_size"],
+                            num_workers=config["training"]["ncpu"] * 2, drop_last=True, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=config["training"]["batch_size"],
+                            num_workers=config["training"]["ncpu"] * 2, drop_last=True)
 
     # Either recalculate the positive weight or take the old ones
     print("Getting pos weight:")
@@ -122,10 +127,11 @@ if __name__ == "__main__":
     else:
         pos_weight = {'t_nodes': torch.tensor(23.54585), 'tt_edges': torch.tensor(944.7520),
                       'LCA': torch.tensor([2.5026e-01, 9.7058e+02, 3.3759e+02, 4.2255e+03]),
-                      'frag': torch.tensor(593.7332), 'FT': torch.tensor([16.1860,  0.3476, 16.2423])}
+                      'frag': torch.tensor(593.7332), 'FT': torch.tensor([16.1860, 0.3476, 16.2423])}
     print(pos_weight)
-    print("="*30)
+    print("=" * 30)
 
     # Start the training here
     epochs = 30
-    training(model, pos_weight, epochs, config["training"]["ngpu"], trn_loader, val_loader, config, accumulate_grad_batches=config["training"]["gacc"], checkpoint_path=checkpoint_path)
+    training(model, pos_weight, epochs, config["training"]["ngpu"], trn_loader, val_loader, config,
+             accumulate_grad_batches=config["training"]["gacc"], checkpoint_path=checkpoint_path)

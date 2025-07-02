@@ -14,8 +14,6 @@ import mplhep as hep
 hep.style.use(hep.style.LHCb2)
 
 
-
-
 def plot_loss(df, version):
     # Combined output loss w/ the scaling beta
     trn_loss = np.array(df["train_combined_loss"])
@@ -129,7 +127,6 @@ def plot_LCA_acc(df, version):
     plt.close()
 
 
-
 def plot_gn_block_dist(df, feature, nlayers, version, ref_signal):
     # Create a proper var dict for frag
     pos_key = {"frag": "frag_pos_part", "nodes": "sig_nodes", "edges": "sig_edges"}
@@ -145,7 +142,7 @@ def plot_gn_block_dist(df, feature, nlayers, version, ref_signal):
     outdir = f"lightning_logs/version_{version}/plots_{ref_signal}"
     os.makedirs(outdir, exist_ok=True)
 
-    for i in range(nlayers): 
+    for i in range(nlayers):
         try:
             true_val = df[f"{pos_key[feature]}_score_{i}"]
             false_val = df[f"{neg_key[feature]}_score_{i}"]
@@ -156,8 +153,10 @@ def plot_gn_block_dist(df, feature, nlayers, version, ref_signal):
         fake_weights = np.ones_like(false_val) / len(false_val)
 
         f, ax = plt.subplots(figsize=(9, 6))
-        ax.hist(true_val, bins=100, range=[0, 1], alpha=.7, label=pos_label[feature], color='#B22222', weights=true_weights)
-        ax.hist(false_val, bins=100, range=[0, 1], alpha=.8, label=neg_label[feature], color='#4169E1', weights=fake_weights)
+        ax.hist(true_val, bins=100, range=[0, 1], alpha=.7, label=pos_label[feature], color='#B22222',
+                weights=true_weights)
+        ax.hist(false_val, bins=100, range=[0, 1], alpha=.8, label=neg_label[feature], color='#4169E1',
+                weights=fake_weights)
 
         ax.set_xlabel("NN weights [a.u.]")
         ax.set_ylabel("Normalized entries [a.u.]")
@@ -174,17 +173,18 @@ def plot_ft_nodes(df, nlayers, version, ref_signal):
     os.makedirs(outdir, exist_ok=True)
 
     labels = df["ft_y"]
-    for i in range(nlayers):  
+    for i in range(nlayers):
         try:  # TODO implement w/o try
             ft_score = df[f"ft_score_{i}"]
             pred = torch.argmax(ft_score, dim=1)
-        except: 
+        except:
             continue
 
         cm = confusion_matrix(labels.numpy(), pred.numpy())
 
         plt.figure(figsize=(6, 5))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['bbar', 'not b', 'b'], yticklabels=['bbar', 'not b', 'b'], annot_kws={"size": 10})
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['bbar', 'not b', 'b'],
+                    yticklabels=['bbar', 'not b', 'b'], annot_kws={"size": 10})
         plt.xlabel('Predicted', fontsize=18)
         plt.ylabel('True', fontsize=18)
         plt.tight_layout()

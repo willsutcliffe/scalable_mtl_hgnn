@@ -24,8 +24,8 @@ def make_loggable(hparams_dict):
 
 def get_ref_signal(ref_signal):  # Here we can define them all
     if 'Bs_JpsiPhi':
-        signal_decay = {'daughters' : ['mu+','mu-','K+','K-'], 'mothers' : ['B(s)0'] }
-        cc_signal_decay = {'daughters' : ['mu+','mu-','K+','K-'], 'mothers' : ['B(s)~0'] }
+        signal_decay = {'daughters': ['mu+', 'mu-', 'K+', 'K-'], 'mothers': ['B(s)0']}
+        cc_signal_decay = {'daughters': ['mu+', 'mu-', 'K+', 'K-'], 'mothers': ['B(s)~0']}
         return (signal_decay, cc_signal_decay)
     return {}
 
@@ -83,7 +83,7 @@ def lca_truth_matrix(graph):
     return truth_lca
 
 
-def get_pred_ft(graph, cluster, ft_score):
+def get_pred_ft(graph, cluster, ft_score):  # node weights
     ft_score = ft_score.cpu()
 
     cluster_keys = cluster['node_keys']
@@ -91,6 +91,7 @@ def get_pred_ft(graph, cluster, ft_score):
 
     b_daugthers_mask = np.isin(keys, cluster_keys)
     ft_bbar_score, ft_no_score, ft_b_score = ft_score[b_daugthers_mask].mean(dim=0)
+    # here we want to pass the node weights [0, 1] and weight them for FT decision
     return ft_bbar_score, ft_no_score, ft_b_score
 
 
@@ -106,7 +107,7 @@ def get_b_cand_pv(graph, cluster, true_cluster, pv_score):
     n_reco_daugthers = b_daugthers_reco_idx.size
     b_daugthers_true_idx = np.concatenate(np.argwhere(np.isin(keys, true_cluster_keys) == True))
     n_true_daugthers = b_daugthers_true_idx.size
-    
+
     # obtain their pv score
     edges = graph[("tracks", "to", "pvs")]["edge_index"][0].numpy()
     n_pvs = np.unique(graph[("tracks", "to", "pvs")]["edge_index"][1].numpy()).size
@@ -133,8 +134,8 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
     Bparts = float(torch.sum(torch.argmax(graph['tracks', 'to', 'tracks'].y, -1) > 0))
     if Bparts < 1:
         print("no B reco")
-        #continue  # but should still continue, check if also the reco found no B
-    
+        # continue  # but should still continue, check if also the reco found no B
+
     # Reco
     reco_LCA = lca_reco_matrix(output)
     particle_keys = list(output["final_keys"].numpy())
@@ -145,18 +146,24 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
     true_LCA = lca_truth_matrix(graph)
     particle_keys = list(graph["truth_part_keys"].numpy())
     particle_ids = list(map(particle_name, graph['truth_part_ids'].numpy()))
-    truth_cluster_dict, truth_num_clusters_per_order, max_full_chain_depth_in_event = reconstruct_decay(true_LCA, particle_keys, particle_ids=particle_ids, truth_level_simulation=1)
+    truth_cluster_dict, truth_num_clusters_per_order, max_full_chain_depth_in_event = reconstruct_decay(true_LCA,
+                                                                                                        particle_keys,
+                                                                                                        particle_ids=particle_ids,
+                                                                                                        truth_level_simulation=1)
 
     if truth_cluster_dict != {}:
         # Get the keys from the final state particle of the heavy hadron decay 
-        particles_from_heavy_hadron = flatten([truth_cluster_dict[tc_firstkey]['node_keys'] for tc_firstkey in truth_cluster_dict.keys()])
+        particles_from_heavy_hadron = flatten(
+            [truth_cluster_dict[tc_firstkey]['node_keys'] for tc_firstkey in truth_cluster_dict.keys()])
         number_of_particles_from_heavy_hadron = len(particles_from_heavy_hadron)
         number_of_background_particles = total_number_of_particles - number_of_particles_from_heavy_hadron
 
         if reco_cluster_dict != {}:
-            selected_particles = flatten([reco_cluster_dict[tc_firstkey]['node_keys'] for tc_firstkey in reco_cluster_dict.keys()])
+            selected_particles = flatten(
+                [reco_cluster_dict[tc_firstkey]['node_keys'] for tc_firstkey in reco_cluster_dict.keys()])
             number_of_selected_particles = len(selected_particles)
-            number_of_selected_particles_from_heavy_hadron = len(list(set(selected_particles).intersection(particles_from_heavy_hadron)))
+            number_of_selected_particles_from_heavy_hadron = len(
+                list(set(selected_particles).intersection(particles_from_heavy_hadron)))
             number_of_selected_background_particles = number_of_selected_particles - number_of_selected_particles_from_heavy_hadron
         else:
             number_of_selected_particles = 0
@@ -174,10 +181,11 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
             if ref_signal != None:
                 labels = truth_cluster_dict[tc_firstkey]['labels']
                 mothers = [label[3:] for label in labels if 'c' == label[0]]
-                node_keys  = truth_cluster_dict[tc_firstkey]['node_keys']
-                daughters =  [label.split(':')[1] for label in labels if int(label.split(':')[0][1:]) in node_keys]
+                node_keys = truth_cluster_dict[tc_firstkey]['node_keys']
+                daughters = [label.split(':')[1] for label in labels if int(label.split(':')[0][1:]) in node_keys]
 
-                if match_decays(daughters, ref_signal[0]['daughters']) or match_decays(daughters, ref_signal[1]['daughters']):
+                if match_decays(daughters, ref_signal[0]['daughters']) or match_decays(daughters,
+                                                                                       ref_signal[1]['daughters']):
                     signal_match = 1
                 else:
                     signal_match = 0
@@ -225,7 +233,8 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
             true_pv_idx = -1
 
             for cluster in reco_cluster_dict.values():
-                true_in_reco = np.sum(np.isin(true_cluster['node_keys'], cluster['node_keys'])) / len(true_cluster['node_keys'])
+                true_in_reco = np.sum(np.isin(true_cluster['node_keys'], cluster['node_keys'])) / len(
+                    true_cluster['node_keys'])
                 if cluster['node_keys'] == true_cluster['node_keys']:
                     all_particles = 1
                     # Check if the LCA is matching as well
@@ -241,7 +250,8 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
                     none_iso = 1  # background tracks in signal
 
                     ft_bbar_score, ft_no_score, ft_b_score = get_pred_ft(output, cluster, ft_score)
-                    none_iso_n_bkg = len(cluster['node_keys']) - len(true_cluster['node_keys'])   # 'purity of bkg in non iso'
+                    none_iso_n_bkg = len(cluster['node_keys']) - len(
+                        true_cluster['node_keys'])  # 'purity of bkg in non iso'
                     # Add PV reco and true PV
                     reco_pv_idx, true_pv_idx = get_b_cand_pv(output, cluster, true_cluster, pv_score)
                     break
@@ -249,7 +259,7 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
                     part_reco = 1
 
                     ft_bbar_score, ft_no_score, ft_b_score = get_pred_ft(output, cluster, ft_score)
-                    none_iso_n_bkg = len(cluster['node_keys']) - len(true_cluster['node_keys']) 
+                    none_iso_n_bkg = len(cluster['node_keys']) - len(true_cluster['node_keys'])
                     # Add PV reco and true PV
                     reco_pv_idx, true_pv_idx = get_b_cand_pv(output, cluster, true_cluster, pv_score)
             if all_particles == 1:
@@ -269,76 +279,76 @@ def eval_reco_performance(output, graph, event, signal_df, event_df, ft_score, p
             # Log whether true B is reco or not
             # Easiest here is to asign the PV w/ corr and wrong
             signal_df = signal_df._append({'EventNumber': event,
-                                            'NumParticlesInEvent': total_number_of_particles,
-                                            'NumSignalParticles': number_of_signal_particles,
-                                            'NumBkgParticles_noniso': none_iso_n_bkg,
-                                            'PerfectSignalReconstruction': perfect_signal_reconstruction,
-                                            'AllParticles': all_particles,
-                                            'PerfectReco': perfect_reco,
-                                            'NoneIso': none_iso,
-                                            'PartReco': part_reco,
-                                            'NotFound': none_associated,
-                                            'SigMatch': signal_match,
-                                            'Pred_FT_bbar_score': ft_bbar_score.item(), 
-                                            'Pred_FT_no_scrore': ft_no_score.item(),
-                                            'Pred_FT_b_score': ft_b_score.item(),
-                                            'B_id': origin_B_id,
-                                            'reco_pv_idx': reco_pv_idx,
-                                            'true_pv_idx': true_pv_idx
-                                            }, ignore_index=True)
+                                           'NumParticlesInEvent': total_number_of_particles,
+                                           'NumSignalParticles': number_of_signal_particles,
+                                           'NumBkgParticles_noniso': none_iso_n_bkg,
+                                           'PerfectSignalReconstruction': perfect_signal_reconstruction,
+                                           'AllParticles': all_particles,
+                                           'PerfectReco': perfect_reco,
+                                           'NoneIso': none_iso,
+                                           'PartReco': part_reco,
+                                           'NotFound': none_associated,
+                                           'SigMatch': signal_match,
+                                           'Pred_FT_bbar_score': ft_bbar_score.item(),
+                                           'Pred_FT_no_scrore': ft_no_score.item(),
+                                           'Pred_FT_b_score': ft_b_score.item(),
+                                           'B_id': origin_B_id,
+                                           'reco_pv_idx': reco_pv_idx,
+                                           'true_pv_idx': true_pv_idx
+                                           }, ignore_index=True)
 
         # Add same PV frag particle found, add same PV opposite side B reco type, add signal B reco type
         # Log for event df
-        if number_of_background_particles <=0:
+        if number_of_background_particles <= 0:
             number_of_background_particles = -1
-        if number_of_particles_from_heavy_hadron <=0:
+        if number_of_particles_from_heavy_hadron <= 0:
             number_of_particles_from_heavy_hadron = -1
         event_df = event_df._append({'EventNumber': event,
-                                    'NumParticlesInEvent': total_number_of_particles,
-                                    'NumParticlesFromHeavyHadronInEvent': number_of_particles_from_heavy_hadron,
-                                    'NumBackgroundParticlesInEvent': number_of_background_particles,
-                                    'NumSelectedParticlesInEvent': number_of_selected_particles,
-                                    'NumSelectedParticlesFromHeavyHadronInEvent': number_of_selected_particles_from_heavy_hadron,
-                                    'NumSelectedBackgroundParticlesInEvent': number_of_selected_background_particles,
-                                    'NumTruthClustersGen1': truth_num_clusters_per_order[0],
-                                    'NumTruthClustersGen2': truth_num_clusters_per_order[1],
-                                    'NumTruthClustersGen3': truth_num_clusters_per_order[2],
-                                    'NumTruthClustersGen4': truth_num_clusters_per_order[3],
-                                    'NumRecoClustersGen1': reco_num_clusters_per_order[0],
-                                    'NumRecoClustersGen2': reco_num_clusters_per_order[1],
-                                    'NumRecoClustersGen3': reco_num_clusters_per_order[2],
-                                    'NumRecoClustersGen4': reco_num_clusters_per_order[3],
-                                    'MaxTruthFullChainDepthInEvent': max_full_chain_depth_in_event,
-                                    'EfficiencyParticlesFromHeavyHadronInEvent': float(
-                                        number_of_selected_particles_from_heavy_hadron) / number_of_particles_from_heavy_hadron,
-                                    'EfficiencyBackgroundParticlesInEvent': float(
-                                        number_of_selected_background_particles) / number_of_background_particles,
-                                    'BackgroundRejectionPowerInEvent': 1. - float(
-                                        number_of_selected_background_particles) / number_of_background_particles,
-                                    'PerfectEventReconstruction': perfect_event_reconstruction,
-                                    'NumTrueSignalsInEvent': len(truth_cluster_dict.keys()),
-                                    'NumRecoSignalsInEvent': len(reco_cluster_dict.keys()),
-                                    #'TimeNodeFiltering': time_node_filtering,
-                                    #'TimeEdgeFiltering': time_edge_filtering,
-                                    #'TimeLCAReconstruction': time_LCA_reconstruction,
-                                    #'TimeSequence': time_node_filtering + time_edge_filtering + time_LCA_reconstruction,
-                                    #'TimeModel': time_model,
-                                    #'TimeReco': time_reco,
-                                    #'TimeTruth': time_truth
-                                    },
+                                     'NumParticlesInEvent': total_number_of_particles,
+                                     'NumParticlesFromHeavyHadronInEvent': number_of_particles_from_heavy_hadron,
+                                     'NumBackgroundParticlesInEvent': number_of_background_particles,
+                                     'NumSelectedParticlesInEvent': number_of_selected_particles,
+                                     'NumSelectedParticlesFromHeavyHadronInEvent': number_of_selected_particles_from_heavy_hadron,
+                                     'NumSelectedBackgroundParticlesInEvent': number_of_selected_background_particles,
+                                     'NumTruthClustersGen1': truth_num_clusters_per_order[0],
+                                     'NumTruthClustersGen2': truth_num_clusters_per_order[1],
+                                     'NumTruthClustersGen3': truth_num_clusters_per_order[2],
+                                     'NumTruthClustersGen4': truth_num_clusters_per_order[3],
+                                     'NumRecoClustersGen1': reco_num_clusters_per_order[0],
+                                     'NumRecoClustersGen2': reco_num_clusters_per_order[1],
+                                     'NumRecoClustersGen3': reco_num_clusters_per_order[2],
+                                     'NumRecoClustersGen4': reco_num_clusters_per_order[3],
+                                     'MaxTruthFullChainDepthInEvent': max_full_chain_depth_in_event,
+                                     'EfficiencyParticlesFromHeavyHadronInEvent': float(
+                                         number_of_selected_particles_from_heavy_hadron) / number_of_particles_from_heavy_hadron,
+                                     'EfficiencyBackgroundParticlesInEvent': float(
+                                         number_of_selected_background_particles) / number_of_background_particles,
+                                     'BackgroundRejectionPowerInEvent': 1. - float(
+                                         number_of_selected_background_particles) / number_of_background_particles,
+                                     'PerfectEventReconstruction': perfect_event_reconstruction,
+                                     'NumTrueSignalsInEvent': len(truth_cluster_dict.keys()),
+                                     'NumRecoSignalsInEvent': len(reco_cluster_dict.keys()),
+                                     # 'TimeNodeFiltering': time_node_filtering,
+                                     # 'TimeEdgeFiltering': time_edge_filtering,
+                                     # 'TimeLCAReconstruction': time_LCA_reconstruction,
+                                     # 'TimeSequence': time_node_filtering + time_edge_filtering + time_LCA_reconstruction,
+                                     # 'TimeModel': time_model,
+                                     # 'TimeReco': time_reco,
+                                     # 'TimeTruth': time_truth
+                                     },
                                     ignore_index=True)
     return signal_df, event_df
 
 
-    
 def intialize_test_df():
     signal_df = pd.DataFrame(
-                columns=['EventNumber',
-                         'NumParticlesInEvent', 'NumSignalParticles', 'NumBkgParticles_noniso', 
-                        'PerfectSignalReconstruction', 'AllParticles', 'PerfectReco', 'NoneIso', 'PartReco', 'NotFound', 'SigMatch', 
-                        'B_id', 'Pred_FT',
-                        'reco_pv_idx', 'true_pv_idx'
-                        ])
+        columns=['EventNumber',
+                 'NumParticlesInEvent', 'NumSignalParticles', 'NumBkgParticles_noniso',
+                 'PerfectSignalReconstruction', 'AllParticles', 'PerfectReco', 'NoneIso', 'PartReco', 'NotFound',
+                 'SigMatch',
+                 'B_id', 'Pred_FT',
+                 'reco_pv_idx', 'true_pv_idx'
+                 ])
     """
     signal_df = signal_df.astype(
                 {'EventNumber': np.int32, 'NumParticlesInEvent': np.int32, 'NumSignalParticles': np.int32, 'NumBkgParticles_noniso': np.int32,
@@ -348,17 +358,17 @@ def intialize_test_df():
     """
 
     event_df = pd.DataFrame(
-                columns=['EventNumber', 'NumParticlesInEvent', 'NumParticlesFromHeavyHadronInEvent',
-                        'NumBackgroundParticlesInEvent', 'NumSelectedParticlesInEvent',
-                        'NumSelectedParticlesFromHeavyHadronInEvent',
-                        'NumSelectedBackgroundParticlesInEvent', 'NumTruthClustersGen1', 'NumTruthClustersGen2',
-                        'NumTruthClustersGen3', 'NumTruthClustersGen4', 'NumRecoClustersGen1', 'NumRecoClustersGen2',
-                        'NumRecoClustersGen3', 'NumRecoClustersGen4', 'MaxTruthFullChainDepthInEvent',
-                        'EfficiencyParticlesFromHeavyHadronInEvent', 'EfficiencyBackgroundParticlesInEvent',
-                        'BackgroundRejectionPowerInEvent', 'PerfectEventReconstruction', 'TimeNodeFiltering',
-                        'TimeEdgeFiltering',
-                        'TimeLCAReconstruction', 'TimeSequence', 'NumTrueSignalsInEvent', 'NumRecoSignalsInEvent',
-                        'TimeModel', 'TimeReco', 'TimeTruth'
-                        ])
+        columns=['EventNumber', 'NumParticlesInEvent', 'NumParticlesFromHeavyHadronInEvent',
+                 'NumBackgroundParticlesInEvent', 'NumSelectedParticlesInEvent',
+                 'NumSelectedParticlesFromHeavyHadronInEvent',
+                 'NumSelectedBackgroundParticlesInEvent', 'NumTruthClustersGen1', 'NumTruthClustersGen2',
+                 'NumTruthClustersGen3', 'NumTruthClustersGen4', 'NumRecoClustersGen1', 'NumRecoClustersGen2',
+                 'NumRecoClustersGen3', 'NumRecoClustersGen4', 'MaxTruthFullChainDepthInEvent',
+                 'EfficiencyParticlesFromHeavyHadronInEvent', 'EfficiencyBackgroundParticlesInEvent',
+                 'BackgroundRejectionPowerInEvent', 'PerfectEventReconstruction', 'TimeNodeFiltering',
+                 'TimeEdgeFiltering',
+                 'TimeLCAReconstruction', 'TimeSequence', 'NumTrueSignalsInEvent', 'NumRecoSignalsInEvent',
+                 'TimeModel', 'TimeReco', 'TimeTruth'
+                 ])
 
     return signal_df, event_df
