@@ -71,6 +71,7 @@ if __name__ == "__main__":
             bis_loss.append(float(match[1]))
     if config['eval']['cpt'] == "bis":
         checkpoint_path = cpts[np.argmin(bis_loss)]
+        print(checkpoint_path)
     else:
         try:
             checkpoint_path = f"lightning_logs/version_{config['eval']['cpt'][0]}/checkpoints/{config['eval']['cpt'][1]}"
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     trainer.test(module, dataloaders=tst_loader)
 
     # Load in signal df to calculate reco effiency and opposite side B finding
-    signal_df = pd.read_csv(f"lightning_logs/version_{version[-1]}/signal_df_{config['eval']['sample']}.csv")
+    signal_df = pd.read_csv(f"lightning_logs/version_{version}/signal_df_{config['eval']['sample']}.csv")
     sig_selbool = signal_df["SigMatch"] == 1
     signal_df = signal_df[sig_selbool]
     print(f"Number of signal B: {signal_df.shape[0]}")

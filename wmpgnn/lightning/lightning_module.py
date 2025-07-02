@@ -171,8 +171,8 @@ class HGNNLightningModule(L.LightningModule):
             loss_tPV_edges += self.tPV_edges_criterion(block.edge_logits[('tracks', 'to', 'pvs')], y_tPV_edges)
 
             # The idea is to only interfere on the signal (b) nodes the flavour, if the b node is missing apply max penalty
-            if i >= len(
-                    self.model._blocks) - self.nFT_layers and self.current_epoch > self.no_FT_epochs:  # We want to add flavour tagging and fragmentation on the later blocks
+            # We want to add flavour tagging and fragmentation on the later blocks
+            if i >= len( self.model._blocks) - self.nFT_layers and self.current_epoch > self.no_FT_epochs:
                 nodes_selbool = y_t_nodes.long() == 1
                 sig_nodes = block.node_weights['tracks'][nodes_selbool]
                 bkg_nodes = block.node_weights['tracks'][~nodes_selbool]
@@ -314,7 +314,7 @@ class HGNNLightningModule(L.LightningModule):
                 self.tst_log[f"frag_neg_part_score_{i}"] = torch.cat(
                     [self.tst_log[f"frag_neg_part_score_{i}"], frag_neg_part_score.cpu()], dim=0)
 
-            if self.get_reco_performance and self.current_epoch > self.no_FT_epochs:
+            if self.get_reco_performance and i >= len(self.model._blocks) - self.nFT_layers: 
                 nodes_selbool = y_t_nodes.long() == 1
                 sig_nodes = block.node_weights['tracks'][nodes_selbool]
                 bkg_nodes = block.node_weights['tracks'][~nodes_selbool]
@@ -325,8 +325,8 @@ class HGNNLightningModule(L.LightningModule):
                     sig_nodes_selbool)  # predicted number of signal nodes / true number of signal nodes
                 bkg_ratio = bkg_nodes.shape[0] / torch.sum(bkg_nodes_selbool)
 
-                pred_sig_ft_prob = block.node_weights["ft"][nodes_selbool.squeeze()][sig_nodes_selbool]
-                pred_bkg_ft_prob = block.node_weights["ft"][~nodes_selbool.squeeze()][bkg_nodes_selbool]
+                pred_sig_ft_prob = block.node_weights["ft"][nodes_selbool.squeeze()][sig_nodes_selbool.squeeze()]
+                pred_bkg_ft_prob = block.node_weights["ft"][~nodes_selbool.squeeze()][bkg_nodes_selbool.squeeze()]
 
                 self.tst_log[f"ft_score_{i}"] = torch.cat(
                     [self.tst_log[f"ft_score_{i}"], block.node_weights["ft"].cpu()], dim=0)
@@ -417,6 +417,7 @@ def training(model, pos_weight, epochs, n_gpu, trn_loader, val_loader, config, a
         )
     else:
         print("Loading from checkpoint")
+        print(checkpoint_path)
         module = HGNNLightningModule.load_from_checkpoint(
             checkpoint_path=checkpoint_path,
             model=model,
