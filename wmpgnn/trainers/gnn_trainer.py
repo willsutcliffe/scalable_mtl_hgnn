@@ -167,7 +167,7 @@ class GNNTrainer(Trainer):
 
     def set_beta_bce_edges(self, beta):
         """Adjust weight of edge-level BCE loss."""
-        self.beta_BCE_edges = beta
+        self.beta_bce_edges = beta
 
     def eval_one_epoch(self, train=True):
         """
@@ -190,8 +190,11 @@ class GNNTrainer(Trainer):
         acc_one_epoch = []
         if train == True:
             data_loader = self.train_loader
+            self.model.train(True)
         else:
             data_loader = self.val_loader
+            self.model.train(False)
+            self.model.eval()
         last_batch = len(data_loader)
         for i, data in enumerate(data_loader):
             data['graph_globals'] = data['graph_globals'].unsqueeze(1)

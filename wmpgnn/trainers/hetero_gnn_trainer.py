@@ -99,15 +99,15 @@ class HeteroGNNTrainer(Trainer):
 
     def set_beta_bce_nodes(self, beta):
         """Set scaling factor for node-level BCE loss."""
-        self.beta_BCE_nodes = beta
+        self.beta_bce_nodes = beta
 
     def set_beta_bce_edges(self, beta):
         """Set scaling factor for edge-level BCE loss."""
-        self.beta_BCE_edges = beta
+        self.beta_bce_edges = beta
 
     def set_beta_bce_pvs(self, beta):
         """Set scaling factor for PV-association BCE loss."""
-        self.beta_BCE_pvs= beta
+        self.beta_bce_pvs= beta
 
     def eval_one_epoch(self, train=True):
         """
