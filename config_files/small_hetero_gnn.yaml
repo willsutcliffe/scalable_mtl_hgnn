@@ -18,9 +18,9 @@ model:
 loss:
   add_bce: True
   add_pv: True
-  beta_bce_nodes : 3
+  beta_bce_nodes : 1
   beta_bce_edges : 33 
-  beta_bce_pvs : 1
+  beta_bce_pvs : 3
 dataset:
   data_type: "heterogeneous"
   data_dir: "../cached_data"

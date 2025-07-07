@@ -15,7 +15,7 @@ model:
   norm: "batch_norm"
 loss:
   add_bce: True
-  beta_bce_nodes : 3
+  beta_bce_nodes : 1
   beta_bce_edges : 33 
   beta_bce_pvs : None
 dataset:
