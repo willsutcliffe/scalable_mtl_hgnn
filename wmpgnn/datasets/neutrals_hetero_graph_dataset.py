@@ -4,6 +4,7 @@ import pandas as pd
 import time
 import os
 import math
+import itertools
 from torch_geometric.data import Dataset, Data
 from torch_geometric.data import HeteroData
 
@@ -109,6 +110,7 @@ class CustomNeutralsHeteroDataset(Dataset):
         def get_cache_file(pol, start_idx, end_idx):
             dir = os.path.join(self.config_loader.get("dataset.data_dir"), pol, self.config_loader.get("dataset.data_type"))
             subdir = "graphs_balanced" if balanced else "graphs"
+            subdir = "graphs_nedges" if ("neutrals_neutrals" in self.config_loader.get("model.edges_type")) else subdir
             cache_dir = os.path.join(dir, subdir, f"{self.split}_graphs/")
             os.makedirs(cache_dir, exist_ok=True)
             return os.path.join(cache_dir, f"events_{start_idx:05d}_to_{end_idx:05d}_{self.split}.pt")
@@ -180,6 +182,7 @@ class CustomNeutralsHeteroDataset(Dataset):
                 keys_arr = np.array(graph['keys'])
                 edge_feats['sender_key'] = keys_arr[senders]
                 edge_feats['receiver_key'] = keys_arr[receivers]
+
                 # load labels array in same order
                 tgt = np.load(tgt_fn, allow_pickle=True).item()
                 labels = np.array([e[0] for e in tgt['edges']])
@@ -210,10 +213,68 @@ class CustomNeutralsHeteroDataset(Dataset):
 
                 # Neutral features
                 neutral_feats = torch.tensor(neutral_df[['px','py','pz','pt','eta']].values, dtype=torch.float)
+                neutral_keys_nn = neutral_df['key'].values
+                # neu2idx = {k: i for i, k in enumerate(neutral_keys_nn)}
+                num_neutrals = len(neutral_keys_nn)
 
-                #TODO
-                #px, py and sum(px,py,pz), theta wrt p_B
-                #px, py
+                # === Add neutral-neutral edges ===
+                if num_neutrals >= 2:
+                    # Build DataFrame for all unique (i<j) neutral-neutral pairs
+                    neutral_pairs = list(itertools.combinations(range(num_neutrals), 2))
+                    idx1 = torch.tensor([i for i, j in neutral_pairs], dtype=torch.long)
+                    idx2 = torch.tensor([j for i, j in neutral_pairs], dtype=torch.long)
+                    key1 = neutral_keys_nn[idx1]
+                    key2 = neutral_keys_nn[idx2]
+
+                    pair_df = pd.DataFrame({
+                        'sender_key': key1,
+                        'receiver_key': key2,
+                        'idx1': idx1.numpy(),
+                        'idx2': idx2.numpy()
+                    })
+                    pair_df['pair'] = list(zip(pair_df['sender_key'], pair_df['receiver_key']))
+
+                    # Create edge list from graph and flip
+                    ef_nn = pd.DataFrame(graph['edges'], columns=['theta','trdist','DOCA','delta_z0'])
+                    keys_arr_nn = np.array(graph['keys'])
+                    ef_nn['sender_key'] = keys_arr_nn[np.array(graph['senders'])]
+                    ef_nn['receiver_key'] = keys_arr_nn[np.array(graph['receivers'])]
+                    ef_nn['pair'] = list(zip(ef_nn['sender_key'], ef_nn['receiver_key']))
+
+                    ef_nn_flip = ef_nn.copy()
+                    ef_nn_flip['pair'] = list(zip(ef_nn_flip['receiver_key'], ef_nn_flip['sender_key']))
+                    all_ef_nn = pd.concat([ef_nn, ef_nn_flip], ignore_index=True)
+
+                    # Merge and keep theta for existing pairs only
+                    pair_df = pair_df.merge(all_ef_nn[['pair', 'theta']], on='pair', how='inner')
+
+                    # Now we have filtered idx1/idx2 with aligned theta values
+                    idx1 = torch.tensor(pair_df['idx1'].values, dtype=torch.long)
+                    idx2 = torch.tensor(pair_df['idx2'].values, dtype=torch.long)
+                    theta_vals = torch.tensor(pair_df['theta'].values, dtype=torch.float)
+
+                    # Build edge_index
+                    nn_edge_index = torch.stack([idx1, idx2], dim=0)
+
+                    # Build features
+                    p1 = neutral_feats[idx1]
+                    p2 = neutral_feats[idx2]
+                    nn_edge_attr = torch.stack([
+                        p1[:, 0] + p2[:, 0],                         # sum_px
+                        p1[:, 1] + p2[:, 1],                         # sum_py
+                        p1[:, 2] + p2[:, 2],                         # sum_pz
+                        p1[:, 3] + p2[:, 3],                         # sum_pt
+                        torch.abs(p1[:, 0] - p2[:, 0]),              # |Δpx|
+                        torch.abs(p1[:, 1] - p2[:, 1]),              # |Δpy|
+                        torch.abs(p1[:, 2] - p2[:, 2]),              # |Δpz|
+                        torch.abs(p1[:, 3] - p2[:, 3]),              # |Δpt|
+                        theta_vals                                   # theta from edges
+                    ], dim=1)
+                else:
+                    nn_edge_index = torch.empty((2, 0), dtype=torch.long)
+                    nn_edge_attr = torch.empty((0, 9), dtype=torch.float)
+                # === End neutral-neutral edge block ===
+
 
                 # Build full cross between neutrals and charged trees
                 neutral_keys = neutral_df[['key']].rename(columns={'key':'neutral_key'}).assign(tmp=1)
@@ -284,6 +345,8 @@ class CustomNeutralsHeteroDataset(Dataset):
                 data['chargedtree','to','neutrals'].y = edge_labels
                 data['chargedtree', 'to', 'neutrals'].edge_chargedtree_decay_id = torch.tensor(agg['decay_id'].values, dtype=torch.long)
                 data['chargedtree', 'to', 'neutrals'].edge_neutral_key = torch.tensor(agg['neutral_key'].values, dtype=torch.long)
+                data['neutrals', 'to', 'neutrals'].edge_index = nn_edge_index
+                data['neutrals', 'to', 'neutrals'].edges = nn_edge_attr
                 data['globals'].x = globals_
 
                 chunk_data.append(data)
