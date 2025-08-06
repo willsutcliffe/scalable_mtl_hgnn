@@ -86,12 +86,16 @@ class NeutralsHeteroGNN(nn.Module):
         # edge_models = {
         #     ('chargedtree', 'to', 'neutrals'): lambda: nn.Linear(mlp_output_size, 1)
         # }
-        edge_models = {
-            ('chargedtree', 'to', 'neutrals'): lambda: nn.Sequential(
-                nn.Linear(mlp_output_size, 1),
-                nn.Dropout(dropout)
-            )
-        }
+        edge_models = {}
+        for edge_type in edge_types:
+            if edge_type == ('chargedtree', 'to', 'neutrals'):
+                edge_models[edge_type] = lambda: nn.Sequential(
+                    nn.Linear(mlp_output_size, 1),
+                    nn.Dropout(dropout)
+                )
+            else:
+                edge_models[edge_type] = lambda: nn.Identity()
+                    
         # edge_models ={('tracks',
         #                 'to',
         #                 'tracks') : lambda: nn.Linear(mlp_output_size, 4).cuda()}

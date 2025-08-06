@@ -110,7 +110,7 @@ class CustomNeutralsHeteroDataset(Dataset):
         def get_cache_file(pol, start_idx, end_idx):
             dir = os.path.join(self.config_loader.get("dataset.data_dir"), pol, self.config_loader.get("dataset.data_type"))
             subdir = "graphs_balanced" if balanced else "graphs"
-            subdir = "graphs_nedges" if ("neutrals_neutrals" in self.config_loader.get("model.edges_type")) else subdir
+            subdir = "graphs_nedges" if ("neutrals_neutrals" in self.config_loader.get("model.edge_types")) else subdir
             cache_dir = os.path.join(dir, subdir, f"{self.split}_graphs/")
             os.makedirs(cache_dir, exist_ok=True)
             return os.path.join(cache_dir, f"events_{start_idx:05d}_to_{end_idx:05d}_{self.split}.pt")
