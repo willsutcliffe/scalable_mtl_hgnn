@@ -55,17 +55,20 @@ The list of required packages are avalaible in the file `environment.yml`
 A config file must be filled with the parameters. 
 You can take exemple on `./weighterd_MP_gnn/config_files/neutrals_hgnn_run3.yaml`.
 
-Comments on some parameters of the config file :
+Remarks on some parameters of the config file :
 - `model.type` should be `neutral_heterognn`~and `dataset.type` should be `neutrals`
 - Number of `gnn layers`, `mlp output_size`, `channels` and `layers` (idem for `weight mlp`) can be set
-- `model.node_types` are `['chargedtree', 'neutrals']` and `model.edge_types` is only `["chargedtree_neutrals"]`
+- `model.node_types` are `['chargedtree', 'neutrals']` and `model.edge_types` is `["chargedtree_neutrals"]` or `["chargedtree_neutrals", "neutrals_neutrals]`
 - the `model.threshold` is the value that discriminate signal and backgrounds in predictions values
+- the `model.dropout` set the fraction of dropout in the MLP modules of the GNN
 - `dataset.evt_max_train` and `dataset.evt_max_train` select the number of events used
 - The pre-processed graph can be saved if `dataset.save_graph` and loaded later if `dataset.load_graph`
 - It is possible to train with balanced class (discarding random background neutral particles) if `dataset.balanced_classes`
-- Trainig parameters can be modified (`training.epochs`, `training.batch_size`, `training.starting_learning_rate`, ...)
+- Training parameters can be modified (`training.epochs`, `training.batch_size`, `training.starting_learning_rate`, ...)
 - You can save and load checkpoint during training with `training.load_checkpoint` and `training.save_checkpoint`
-
+- An early stopping condition is used during training, set by  `training.early_stopping_patience` (patience coutner limit) and `training.early_stopping_min_delta` (minimum increasing of loss required)
+- After the early stopping condition reached, there are still epoch with reduced learning rate (/10) set by `training.dropped_lr_epochs`.
+- Each epoch used a random subsample of the train sample, the fraction of data excluded is set by `training.k_subsetRandomSampler` (exclude 1/k of total sample).
 
 ### Input files
 To run you need to have the `input.npy` and `target.npy` files ready (for both training and validation datasets)
@@ -78,7 +81,7 @@ They must be stored in two folders named `training_dataset/` and `validation_dat
 To train you model, call from the root folder (`./weighterd_MP_gnn/`) the following command (can be with another config file name): 
 
 ```bash
-python -m scripts.train neutrals_hgnn_run3.yaml
+python -m scripts.train config_file.yaml
 ```
 
 All outputs files and figures can be found in `./weighterd_MP_gnn/outputs/`
@@ -87,6 +90,11 @@ All outputs files and figures can be found in `./weighterd_MP_gnn/outputs/`
 You need GPUs to run the framework in this state. On lxplus, you can access some GPU nodes with :
 ```bash
 ssh <your_user_name>@lxplus-gpu.cern.ch
+```
+Another option is to run it with condor on lxplus.
+To do so, in the `submission_file.sub`, request GPUs with:
+```
+request_gpus = 1
 ```
 
 

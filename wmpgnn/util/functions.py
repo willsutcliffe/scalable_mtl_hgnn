@@ -5,8 +5,22 @@ from datetime import datetime
 from scipy.stats import ks_2samp
 
 
-
 def neutrals_hetero_positive_edge_weight(loader):
+    """
+    Computes the positive class weighting factor for edges in a heterogeneous graph
+    for binary classification (positive class = label 0).
+
+    Parameters
+    ----------
+    loader : DataLoader
+        A DataLoader yielding heterogeneous graphs with edge attributes
+        `y` for edge labels under key ('tracks', 'to', 'tracks').
+
+    Returns
+    -------
+    float
+        The ratio `total_edges / (2 * num_positive_edges)`, used for loss weighting.
+    """
     sum_edges = 0
     sum_pos = 0
     for data in loader:
@@ -16,8 +30,22 @@ def neutrals_hetero_positive_edge_weight(loader):
         sum_pos  += torch.sum(data[('chargedtree','to','neutrals')].y[:,0]==0).item()
     return sum_edges/(2*sum_pos)
 
-### TODO modify functions to adapt neutrals
 def neutrals_hetero_positive_node_weight(loader):
+    """
+    Computes the positive class weighting factor for nodes in a heterogeneous graph.
+    A node is considered positive if any incoming edge has a positive label (nonzero).
+
+    Parameters
+    ----------
+    loader : DataLoader
+        A DataLoader yielding heterogeneous graphs with edge labels `y` and
+        edge_index under key ('tracks', 'to', 'tracks').
+
+    Returns
+    -------
+    float
+        The ratio `total_nodes / (2 * num_positive_nodes)`, used for loss weighting.
+    """
     sum_nodes = 0
     sum_pos = 0
     for data in loader:
@@ -31,6 +59,21 @@ def neutrals_hetero_positive_node_weight(loader):
     return sum_nodes/(2*sum_pos)
 
 def hetero_positive_edge_weight(loader):
+        """
+    Computes the positive class weighting factor for edges in a heterogeneous graph
+    for binary classification (positive class = label 0).
+
+    Parameters
+    ----------
+    loader : DataLoader
+        A DataLoader yielding heterogeneous graphs with edge attributes
+        `y` for edge labels under key ('tracks', 'to', 'tracks').
+
+    Returns
+    -------
+    float
+        The ratio `total_edges / (2 * num_positive_edges)`, used for loss weighting.
+    """
     sum_edges = 0
     sum_pos = 0
     for data in loader:
@@ -41,6 +84,21 @@ def hetero_positive_edge_weight(loader):
     return sum_edges/(2*sum_pos)
 
 def hetero_positive_node_weight(loader):
+    """
+    Computes the positive class weighting factor for nodes in a heterogeneous graph.
+    A node is considered positive if any incoming edge has a positive label (nonzero).
+
+    Parameters
+    ----------
+    loader : DataLoader
+        A DataLoader yielding heterogeneous graphs with edge labels `y` and
+        edge_index under key ('tracks', 'to', 'tracks').
+
+    Returns
+    -------
+    float
+        The ratio `total_nodes / (2 * num_positive_nodes)`, used for loss weighting.
+    """
     sum_nodes = 0
     sum_pos = 0
     for data in loader:
@@ -55,6 +113,20 @@ def hetero_positive_node_weight(loader):
 
 
 def positive_edge_weight(loader):
+    """
+    Computes the positive class weighting factor for edges in a homogeneous graph
+    for binary classification (positive class = label 0).
+
+    Parameters
+    ----------
+    loader : DataLoader
+        A DataLoader yielding graphs with edge labels `y`.
+
+    Returns
+    -------
+    float
+        The ratio `total_edges / (2 * num_positive_edges)`, used for loss weighting.
+    """
     sum_edges = 0
     sum_pos = 0
     for data in loader:
@@ -65,6 +137,21 @@ def positive_edge_weight(loader):
     return sum_edges/(2*sum_pos)
 
 def positive_node_weight(loader):
+    """
+    Computes the positive class weighting factor for nodes in a homogeneous graph.
+    A node is considered positive if any of its incoming edges are positive
+    (nonzero labels).
+
+    Parameters
+    ----------
+    loader : DataLoader
+        A DataLoader yielding graphs with node features and edge labels `y`.
+
+    Returns
+    -------
+    float
+        The ratio `total_nodes / (2 * num_positive_nodes)`, used for loss weighting.
+    """
     sum_nodes = 0
     sum_pos = 0
     for data in loader:
@@ -76,23 +163,43 @@ def positive_node_weight(loader):
         sum_pos  += torch.sum(ynodes==1).item()
     return sum_nodes/(2*sum_pos)
 
-def compute_efficiency_error(num,den):
+def compute_efficiency_error(num, den):
     """
-    eff = num / den
-    but den = num + a
+    Compute the statistical error on efficiency.
+
+    Parameters
+    ----------
+    num : number of successes (e.g. true positives)
+    den : total number of trials (e.g. total positives)
+
+    Returns
+    -------
+    Efficiency error calculated as sqrt(num * (den - num) / den^3).
     """
     a = den - num
-    return torch.sqrt(num*a/((num+a)**3))
+    return torch.sqrt(num * a / ((num + a) ** 3))
+
 
 def eff_binary(pred, label):
     """
-    Compute binary signal efficiency (recall) for class 1:
-    eff = true positives for class 1 / total actual samples of class 1
+    Compute binary signal efficiency (recall) for class 1.
+
+    Efficiency = True Positives (class 1) / Total actual positives (class 1).
+
+    Parameters
+    ----------
+    pred : torch.Tensor
+        Predicted binary labels (0 or 1).
+    label : torch.Tensor
+        True binary labels (0 or 1).
+
+    Returns
+    -------
+    torch.Tensor
+        Signal efficiency for class 1.
     """
-    
-    true_positives = (pred * label).sum().float()  # TP for class 1
-    total_positives = label.sum().float()  # Total actual samples of class 1
-    
+    true_positives = (pred * label).sum().float()  # True Positives for class 1
+    total_positives = label.sum().float()          # Total actual positives for class 1
 
     if total_positives > 0:
         eff = true_positives / total_positives
@@ -101,103 +208,195 @@ def eff_binary(pred, label):
 
     return eff
 
+
 def rej_binary(pred, label):
     """
-    Compute binary background rejection for class 1:
-    rej = TN[1] / (TN[1] + FP[1])
+    Compute binary background rejection for class 1.
+
+    Rejection = True Negatives / (True Negatives + False Positives).
+
+    Parameters
+    ----------
+    pred : torch.Tensor
+        Predicted binary labels (0 or 1).
+    label : torch.Tensor
+        True binary labels (0 or 1).
+
+    Returns
+    -------
+    torch.Tensor
+        Background rejection for class 1.
     """
-    true_negatives = ((pred == 0) & (label == 0)).sum().float()  # TN for class 1
-    false_positives = ((pred == 1) & (label == 0)).sum().float()  # FP for class 1
-    
+    true_negatives = ((pred == 0) & (label == 0)).sum().float()  # True Negatives for class 1
+    false_positives = ((pred == 1) & (label == 0)).sum().float() # False Positives for class 1
+
     if (true_negatives + false_positives) > 0:
         rej = true_negatives / (true_negatives + false_positives)
     else:
         rej = torch.tensor(0.0)
+
     return rej
+
 
 def acc_binary(pred, label):
     """
-    Compute binary accuracy:
-    acc = correct predictions / total samples
+    Compute binary classification accuracy.
+
+    Accuracy = Number of correct predictions / Total samples.
+
+    Parameters
+    ----------
+    pred : torch.Tensor
+        Predicted binary labels (0 or 1).
+    label : torch.Tensor
+        True binary labels (0 or 1).
+
+    Returns
+    -------
+    torch.Tensor
+        Accuracy of predictions.
     """
-    correct_preds = (pred == label).sum().float()  # Correct predictions
+    correct_preds = (pred == label).sum().float()  # Count of correct predictions
     total_samples = label.size(0)
-    
+
     if total_samples > 0:
         acc = correct_preds / total_samples
     else:
         acc = torch.tensor(0.0)
+
     return acc
+
 
 def eff_n_class(pred, label, n_class=4):
     """
-    Compute per-class signal efficiency (recall):
-    eff[i] = true positives for class i / total actual samples of class i
+    Compute per-class signal efficiency (recall) for multi-class classification.
+
+    Efficiency for class i = True Positives for class i / Total actual samples of class i.
+
+    Parameters
+    ----------
+    pred : torch.Tensor
+        Predicted logits or probabilities, shape [N, n_class].
+    label : torch.Tensor
+        True class labels, shape [N].
+    n_class : int
+        Number of classes.
+
+    Returns
+    -------
+    torch.Tensor
+        Efficiency for each class, shape [n_class].
     """
     pred_argmax = torch.argmax(pred, dim=1)
     eff = torch.zeros(n_class)
-    eff_error = torch.zeros(n_class)
-    
+    # eff_error = torch.zeros(n_class)  # optional error calculation
+
     for i in range(n_class):
         true_mask = label == i
         total_true = true_mask.sum()
         if total_true > 0:
             correct_preds = (pred_argmax[true_mask] == label[true_mask]).sum()
             eff[i] = correct_preds.float() / total_true.float()
-            #eff_error[i] = compute_efficiency_error(correct_preds.float(),total_true.float())
+            # eff_error[i] = compute_efficiency_error(correct_preds.float(), total_true.float())
 
+    return eff  # , eff_error
 
-    return eff#,eff_error
 
 def rej_n_class(pred, label, n_class=4):
     """
-    Compute per-class background rejection:
-    rej[i] = TN[i] / (TN[i] + FP[i])
-    Where:
-        - TN[i]: true label != i and predicted label != i
-        - FP[i]: true label != i and predicted label == i
+    Compute per-class background rejection for multi-class classification.
+
+    Rejection for class i = TN[i] / (TN[i] + FP[i]), where:
+      - TN[i]: True negatives (samples not class i, predicted not class i)
+      - FP[i]: False positives (samples not class i, predicted as class i)
+
+    Parameters
+    ----------
+    pred : torch.Tensor
+        Predicted logits or probabilities, shape [N, n_class].
+    label : torch.Tensor
+        True class labels, shape [N].
+    n_class : int
+        Number of classes.
+
+    Returns
+    -------
+    torch.Tensor
+        Background rejection for each class, shape [n_class].
     """
     pred_argmax = torch.argmax(pred, dim=1)
     rej = torch.zeros(n_class)
-    rej_err = torch.zeros(n_class)
+    # rej_err = torch.zeros(n_class)  # optional error calculation
 
     for i in range(n_class):
-        bkg_mask = label != i  # background for class i
+        bkg_mask = label != i  # Background for class i
         if bkg_mask.sum() > 0:
-            fp = (bkg_mask & (pred_argmax == i)).sum()   # predicted as i but shouldn't be
-            tn = (bkg_mask & (pred_argmax != i)).sum()   # correctly not predicted as i
+            fp = (bkg_mask & (pred_argmax == i)).sum()  # False Positives
+            tn = (bkg_mask & (pred_argmax != i)).sum()  # True Negatives
             rej[i] = tn.float() / (tn.float() + fp.float())
-            #rej_err[i] = compute_efficiency_error(tn.float(), tn.float() + fp.float())
+            # rej_err[i] = compute_efficiency_error(tn.float(), tn.float() + fp.float())
 
-    return rej#, rej_err
+    return rej  # , rej_err
 
 
 def acc_n_class(pred, label, n_class=4):
-    correct = 0
-    correct_class = {i : 0 for i in range(n_class)}
+    """
+    Compute per-class accuracy for multi-class classification.
+
+    Accuracy for class i = Correct predictions for class i / Total actual samples of class i.
+
+    Parameters
+    ----------
+    pred : torch.Tensor
+        Predicted logits or probabilities, shape [N, n_class].
+    label : torch.Tensor
+        True class labels, shape [N].
+    n_class : int
+        Number of classes.
+
+    Returns
+    -------
+    torch.Tensor
+        Accuracy for each class, shape [n_class].
+    """
+    correct_class = {i: 0 for i in range(n_class)}
     pred_argmax = torch.argmax(pred, dim=1)
-    acc_err = torch.zeros(n_class)
-    
-    pred_class = {i : (pred_argmax == i).sum() for i in range(n_class)}
-    true_class = {i : (label == i).sum() for i in range(n_class)}
-    
+    # acc_err = torch.zeros(n_class)  # optional error calculation
+
+    pred_class = {i: (pred_argmax == i).sum() for i in range(n_class)}
+    true_class = {i: (label == i).sum() for i in range(n_class)}
+
     if len(pred) != len(label):
-        print("something goes wrong in acc_n_class")
+        print("Warning: prediction and label length mismatch in acc_n_class")
         print(len(pred), len(label))
     else:
         for i in range(n_class):
             correct_class[i] = torch.sum(pred_argmax[label == i] == label[label == i])
-            #acc_err[i] = compute_efficiency_error(correct_class[i], true_class[i])
+            # acc_err[i] = compute_efficiency_error(correct_class[i], true_class[i])
 
     correct_preds = torch.Tensor([correct_class[i] for i in range(n_class)])
-    all_preds = torch.Tensor(tuple(pred_class[i] for i in range(n_class)))
     all_label = torch.Tensor(tuple(true_class[i] for i in range(n_class)))
 
     acc = torch.div(correct_preds, all_label)
-    return acc#, acc_err
-    
+    return acc  # , acc_err
+
 
 def acc_four_class(pred, label):
+    """
+    Computes the per-class accuracy for a 4-class classification task.
+
+    Parameters
+    ----------
+    pred : torch.Tensor
+        The predicted logits or probabilities, shape [N, 4].
+    label : torch.Tensor
+        The true class labels, shape [N].
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor of shape [4] containing the accuracy for each class.
+    """
     #     print("pred", pred)
     correct = 0
     correct_class1 = 0
@@ -238,6 +437,21 @@ def acc_four_class(pred, label):
     return acc
 
 def weight_binary_class(dataset,hetero=True):
+     """
+    Computes inverse-frequency class weights for a 2-class classification task.
+
+    Parameters
+    ----------
+    dataset : iterable
+        A dataset of graph objects with 2-class labels.
+    hetero : bool, optional
+        If True, assumes heterogeneous graph format
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor of shape [2] containing the class weights.
+    """
     num_sample = 0
     true_class = {0: 0, 1: 0}  # Pour deux classes
 
@@ -268,6 +482,22 @@ def weight_binary_class(dataset,hetero=True):
   
 
 def weight_n_class(dataset,hetero=False,n_class=5):
+    """
+    Computes inverse-frequency class weights for a n-class classification task.
+
+    Parameters
+    ----------
+    dataset : iterable
+        A dataset of graph objects with multi-class labels.
+    hetero : bool, optional
+        If True, assumes heterogeneous graph format and accesses labels via
+        `('tracks', 'to', 'tracks')`.
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor of shape [n] containing the class weights.
+    """
     num_sample = 0
     true_class = {i: 0 for i in range(n_class)}
     
@@ -287,6 +517,22 @@ def weight_n_class(dataset,hetero=False,n_class=5):
     return weight
 
 def weight_four_class(dataset,hetero=False):
+     """
+    Computes inverse-frequency class weights for a 4-class classification task.
+
+    Parameters
+    ----------
+    dataset : iterable
+        A dataset of graph objects with multi-class labels.
+    hetero : bool, optional
+        If True, assumes heterogeneous graph format and accesses labels via
+        `('tracks', 'to', 'tracks')`.
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor of shape [4] containing the class weights.
+    """
     true_class1 = 0
     true_class2 = 0
     true_class3 = 0
@@ -315,6 +561,15 @@ def weight_four_class(dataset,hetero=False):
     return weight
 
 def init_plot_style():
+    """
+    Initializes and returns a dictionary of matplotlib RC parameters for
+    producing clean, publication-quality plots.
+
+    Returns
+    -------
+    dict
+        Dictionary of matplotlib style parameters.
+    """
     my_rc_params = {
         "xtick.direction": "in",
         "xtick.major.size": 8.0,
@@ -339,34 +594,65 @@ def init_plot_style():
     return(my_rc_params)
 
 def NOW(fmt="%H:%M:%S"):
-    """return current time formatted"""
+    """Return the current time formatted as a string."""
     return datetime.now().strftime(fmt)
 
-def msg(obj,fmt="%H:%M:%S"):
-    """print string with time information"""
-    print("[{}] ".format(NOW(fmt)),obj)
+
+def msg(obj, fmt="%H:%M:%S"):
+    """Print a message prefixed by the current time."""
+    print("[{}] ".format(NOW(fmt)), obj)
+
 
 def batched_predict_proba(model, X, batch_size=100_000):
+    """
+    Predict probabilities on large data X in batches to avoid memory issues.
+
+    Parameters:
+        model: model object with a predict_proba method
+        X: input data array
+        batch_size: number of samples per batch
+
+    Returns:
+        Numpy array of concatenated predicted probabilities for all samples
+    """
     probas = []
     for i in range(0, len(X), batch_size):
         batch = X[i:i+batch_size]
         probas.append(model.predict_proba(batch))
     return np.vstack(probas)
 
+
 def plt_smooth(ax, x, y, yerr, **kwargs):
-    """Plot a smooth curve with errors"""
+    """Plot a smooth step curve with error bands on a matplotlib axis."""
     curves = ax.step(x, y, where='mid', linewidth=.75, **kwargs)
     ax.fill_between(x, y - yerr, y + yerr, facecolor=curves[0].get_color(),
                     alpha=.3, step='mid')
 
+
 def hist(array, weights=None, *, bins=20, range=None, log=False):
-    """Create a histogram (with errors)"""
+    """
+    Compute a histogram with optional weights and error estimation.
+
+    Supports linear or logarithmic binning.
+
+    Parameters:
+        array: data array (numpy or torch tensor)
+        weights: optional weights for each data point
+        bins: number of bins or array of bin edges
+        range: tuple specifying the (min, max) range
+        log: if True, use logarithmic binning
+
+    Returns:
+        bins: array of bin edges
+        y: weighted histogram counts
+        yerr: statistical errors for each bin
+    """
     if np.shape(array)[1:] == (2, ):
         array, weights = array.T
 
-    # Check if array is a torch tensor and move to CPU
+    # Convert torch tensors to numpy arrays on CPU if needed
     if isinstance(array, torch.Tensor):
-        array = array.cpu().numpy()  # Move to CPU and convert to numpy array
+        array = array.cpu().numpy()
     if isinstance(weights, torch.Tensor):
         weights = weights.cpu().numpy()
 
@@ -378,24 +664,48 @@ def hist(array, weights=None, *, bins=20, range=None, log=False):
                 else np.linspace(lo, hi, bins))
     y, _ = np.histogram(array, bins=bins, weights=weights)
     w2, _ = np.histogram(array, bins=bins, weights=weights**2)
-    yerr = w2**0.5
-    yerr[yerr == 0] = np.mean(weights)
+    yerr = np.sqrt(w2)
+    yerr[yerr == 0] = np.mean(weights)  # Avoid zero errors
     return bins, y * 1.0, yerr
 
+
 def centers(bins, *, log=False, xerr=False):
-    """Get bin centers for linear and logarithmic spaces"""
+    """
+    Calculate bin centers for linear or logarithmic bins.
+
+    Parameters:
+        bins: array of bin edges
+        log: if True, calculate geometric mean centers (log scale)
+        xerr: if True, also return asymmetric errors for each bin center
+
+    Returns:
+        x: array of bin centers
+        err (optional): tuple of lower and upper errors for each center
+    """
     x = (np.sqrt(bins[1:] * bins[:-1]) if log else
-         .5 * (bins[1:] + bins[:-1]))
-    if not xerr: return x
+         0.5 * (bins[1:] + bins[:-1]))
+    if not xerr:
+        return x
     err = np.array((x - bins[:-1], bins[1:] - x))
     return x, err
 
 
 def plt_pull(ax, bins, hist, model, err=None):
-    """Create a pull plot"""
-    if err is None: err = hist**.5
-    # This min(err > 0) is a guess. The fully correct way would be 1/integral,
-    # but when we have zeros, it's likely we also have ones.
+    """
+    Draw a pull plot on a matplotlib axis showing deviations between data and model.
+
+    Parameters:
+        ax: matplotlib axis
+        bins: bin edges for the histogram
+        hist: observed data counts
+        model: expected model counts
+        err: errors on observed counts (optional, sqrt(hist) if None)
+
+    The pull is (data - model) / error, with special coloring for large pulls.
+    """
+    if err is None:
+        err = hist ** 0.5
+    # Avoid division by zero by using smallest positive error
     pull = (hist - model) / np.where(err > 0, err, np.min(err[err > 0]))
     ax.stairs(np.where(abs(pull) < 3, pull, 0), bins, linewidth=.5,
               fill=True, color=(.65, .65, .65), edgecolor='black')
@@ -411,8 +721,17 @@ def plt_pull(ax, bins, hist, model, err=None):
     ax.set_ylabel(r'$\frac{\mathrm{data} - \mathrm{fit}}{\sigma}$',
                   loc='center')
 
+
 def ks_test(responses):
-    """Perform a Kolmogorov-Smirnov test and summarize it"""
+    """
+    Perform Kolmogorov-Smirnov tests comparing training and validation samples.
+
+    Parameters:
+        responses: dictionary with keys like 'Signal (train)', 'Signal (val)', etc.
+
+    Returns:
+        Formatted string reporting KS test p-values for signal and background.
+    """
     _, signal = ks_2samp(responses['Signal (train)'][0],
                          responses['Signal (val)'][0])
     _, bkg = ks_2samp(responses['Bkg (train)'][0], responses['Bkg (val)'][0])
@@ -422,28 +741,36 @@ def ks_test(responses):
 
 def select_epoch_indices(n_epochs, n_dropped_epochs, n_samples=7):
     """
-    Return `n_samples` epoch indices (1-based, up to total_epochs),
-    including:
-    - The first epoch (1)
-    - The last `n_last` epochs
-    - Intermediate epochs spaced before the last ones
+    Select a set of epoch indices to sample training progress.
+
+    Always includes:
+    - The first epoch (index 1)
+    - The last few epochs (up to 5)
+    - Several evenly spaced intermediate epochs
+
+    Parameters:
+        n_epochs: total number of epochs run
+        n_dropped_epochs: epochs dropped/not considered
+        n_samples: number of indices to return (minimum 2)
+
+    Returns:
+        Sorted list of unique 1-based epoch indices.
     """
-    total_epochs = n_epochs + n_dropped_epochs - 1  # 0-based indexing, but we use 1-based outputs
+    total_epochs = n_epochs + n_dropped_epochs - 1  # Adjust for indexing
 
     if n_samples < 2:
         raise ValueError("n_samples must be at least 2 (first and last).")
 
     if total_epochs < n_samples:
-        # Not enough epochs — just return all from 1 to total_epochs
+        # Return all epochs if not enough to sample
         return list(range(1, total_epochs + 1))
 
-    # Number of last epochs to always include (at least 1)
-    n_last = min(5, n_samples - 2)  # Reserve 1 for first and 1 for intermediate
-    n_remaining = n_samples - n_last - 1  # How many to put between first and last
+    # Reserve some epochs at the end and some in the middle
+    n_last = min(5, n_samples - 2)
+    n_remaining = n_samples - n_last - 1
 
-    indices = [1]  # Always include first (1-based)
+    indices = [1]  # Always include first epoch
 
-    # Intermediate epochs between 2 and total_epochs - n_last
     if n_remaining > 0:
         start = 2
         end = total_epochs - n_last
@@ -452,7 +779,7 @@ def select_epoch_indices(n_epochs, n_dropped_epochs, n_samples=7):
             inter_indices = [round(x) for x in inter_indices]
             indices += inter_indices
 
-    # Add the last n_last epochs
+    # Add last epochs
     last_epochs = list(range(total_epochs - n_last + 1, total_epochs + 1))
     indices.extend(last_epochs)
 

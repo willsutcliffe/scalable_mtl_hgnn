@@ -11,53 +11,71 @@ from sklearn.metrics import roc_curve, auc, confusion_matrix
 
 
 class NeutralsHeteroGNNTrainer(NeutralsTrainer):
-    """ Class for training """
+    """
+    Trainer for heterogeneous GNNs for neutral inclusion:
+      - Binary edge classification (neutral inclusion task)
 
+    Inherits from:
+        Trainer: abstract base class for training loops.
+    """
     def __init__(self, config, model, train_loader, val_loader, add_bce=True,
                 use_bce_pos_weight=False, threshold=0.5):
+        """
+        Initialize the NuetralsHeteroGNNTrainer.
+
+        Args:
+            config (dict): Configuration dict (must include 'device').
+            model (nn.Module): Neutrals Heterogeneous GNN model.
+            train_loader: DataLoader for training graphs.
+            val_loader: DataLoader for validation graphs.
+            add_bce (bool): Include BCE losses for edges/nodes.
+            use_bce_pos_weight (bool): Use positive-class weighting in BCEWithLogitsLoss.
+            threshold: Set the value to separate background and signal
+        """
         super().__init__(config, model, train_loader, val_loader)
-        self.threshold=threshold
+        self.threshold = threshold
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001, weight_decay=5e-4)
         self.k_subsetRandomSampler = config.get("training.k_subsetRandomSampler")
         self._base_train_loader = self.train_loader
 
-        # Class weighting for the classification task
+        # Compute class weights for binary classification on edges
         weights = weight_binary_class(self.train_loader, hetero=True)
         pos_weight = (weights[1] / weights[0]).clone().detach().cuda()
 
-        # Initialize the criterion with pos_weight as computed
+        # Initialize the main criterion for BCE loss with logits and class weighting
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-        # BCE loss setup for edge prediction
+        # Setup BCE loss criterion for edge predictions
         if use_bce_pos_weight:
             pos_weight = neutrals_hetero_positive_edge_weight(train_loader)
             pos_weight = torch.tensor([pos_weight])
             self.criterion_bce_edges = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
             self.use_logits = True
         else:
-            self.criterion_bce_edges = nn.BCELoss() ### use this one
+            self.criterion_bce_edges = nn.BCELoss()  # Use standard BCE loss without logits
             self.use_logits = False
 
         print("Use logits", self.use_logits)
 
+        # Move loss functions and model to GPU
         self.criterion.to('cuda')
         self.criterion_bce_edges.cuda()
         self.model.cuda()
 
         self.add_bce = add_bce
-        self.beta_bce_edges = 33.2256  # You may want to recompute for new setup
+        self.beta_bce_edges = 33.2256  # Scaling factor for BCE edge loss; adjust if needed
 
+        # Lists to store loss history for training and validation
         self.ce_train_loss = []
         self.ce_val_loss = []
         self.bce_edges_train_loss = []
         self.bce_edges_val_loss = []
 
-        # Mark the last epoch in case of early stopping
-        self.last_epoch=0
+        # Track last epoch number for early stopping or resuming
+        self.last_epoch = 0
 
-    
-    def save_checkpoint(self,file_path:str):
-        """Saves the model and optimizer state to a checkpoint file."""
+    def save_checkpoint(self, file_path: str):
+        """Save model, optimizer, and loss state to a checkpoint file."""
         checkpoint = {
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
@@ -72,7 +90,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         print(f"Checkpoint saved to {file_path}")
     
     def load_checkpoint(self, file_path=None):
-        """Loads the model and optimizer state from a checkpoint file."""
+        """Load model, optimizer, and loss state from a checkpoint file."""
         checkpoint = torch.load(file_path, weights_only=True)
 
         if 'model_state_dict' in checkpoint:
@@ -88,34 +106,43 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         if 'epoch_warmstart' in checkpoint:
             self.epoch_warmstart = checkpoint['epoch_warmstart'] + 1
 
-
     def get_history(self):
-        """Returns the training and validation history of the heterogeneous model's metrics"""
+        """Retrieve training and validation loss history including edge BCE losses."""
         history = super().get_history()
-        # Retain only edge-level losses and metrics for chargedtree -> neutrals
         if self.add_bce:
             history['bce_edges_train_loss'] = self.bce_edges_train_loss
-            history['bce_edges_val_loss']   = self.bce_edges_val_loss
+            history['bce_edges_val_loss'] = self.bce_edges_val_loss
         return history
 
     def set_history(self, history):
-        """Set the training and validation history of the heterogeneous model's metrics"""
+        """Set training and validation loss history, restoring edge BCE losses if present."""
         super().set_history(history)
-        # Restore only edge-level losses
         if self.add_bce:
             self.bce_edges_train_loss = history.get('bce_edges_train_loss', [])
-            self.bce_edges_val_loss   = history.get('bce_edges_val_loss', [])
+            self.bce_edges_val_loss = history.get('bce_edges_val_loss', [])
         
     def set_beta_BCE_nodes(self, beta):
+        """Set scaling factor for node-level BCE loss."""
         self.beta_BCE_nodes = beta
 
     def set_beta_BCE_edges(self, beta):
+        """Set scaling factor for edge-level BCE loss."""
         self.beta_BCE_edges = beta
 
     def set_beta_BCE_pvs(self, beta):
-        self.beta_BCE_pvs= beta
+        """Set scaling factor for PV-association BCE loss."""
+        self.beta_BCE_pvs = beta
 
     def eval_one_epoch(self, train=True):
+        """
+        Evaluate one epoch of training or validation.
+        
+        Args:
+            train: If True, run training step (with backprop). If False, run validation.
+        
+        Returns:
+            metrics: Dictionary with predictions, labels, and loss for the epoch.
+        """
         running_loss = 0.
         last_loss = 0.
         running_ce_loss = 0.
@@ -123,25 +150,15 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         acc_one_epoch = []
         eff_one_epoch = []
         rej_one_epoch = []
-        preds_one_epoch =[]
+        preds_one_epoch = []
         labels_one_epoch = []
 
-        if train:
-            data_loader = self.train_loader
-            # self.model.train()
-            # torch.set_grad_enabled(True)
-        else:
-            data_loader = self.val_loader
-            # self.model.eval()
-            # self.model.train()
-            # torch.set_grad_enabled(False)
+        data_loader = self.train_loader if train else self.val_loader
 
         last_batch = len(data_loader)
-        # print(last_batch)
 
-        # with torch.no_grad():
+        # Loop over batches
         for i, data in enumerate(data_loader):
-            # Zero gradients if training
             if train:
                 self.optimizer.zero_grad()
             data.to('cuda')
@@ -150,66 +167,42 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             outputs = self.model(data)
             data = outputs
 
-            # --- Edge classification loss for chargedtree -> neutrals ---
-            # True labels: 0 = background, 1 = signal
-            # y is one-hot or logits over two classes
+            # Binary classification loss on edges from chargedtree to neutrals
             label_edges = data[('chargedtree', 'to', 'neutrals')].y
-            # Compute cross-entropy loss on edges
-
             loss = self.criterion(
                 outputs[('chargedtree', 'to', 'neutrals')].edges,
                 label_edges
             )
             running_ce_loss += loss.item()
 
-            # --- Determine which edges are predicted positive (signal) ---
+            # Compute predicted edge probabilities by applying sigmoid
             edge_probs = torch.sigmoid(
                 outputs[('chargedtree', 'to', 'neutrals')].edges
-            )[:,0]
+            )[:, 0]
 
-            ### [DEBUG]
+            # Move to CPU for analysis
             edge_probs = edge_probs.detach().cpu()
 
-            # Boolean mask of predicted positive edges
+            # Determine which edges are predicted positive by thresholding
             pred_positive = edge_probs > self.threshold
-            # label_edges = label_edges.squeeze() # transforms from [N,1] to [N]
 
-
-            ### [DEBUG]
-            label_edges = label_edges.squeeze().detach().cpu() # transforms from [N,1] to [N]
+            # Squeeze labels to 1D tensor and move to CPU
+            label_edges = label_edges.squeeze().detach().cpu()
 
             edge_index = data[('chargedtree', 'to', 'neutrals')].edge_index
 
-            # # --- Aggregate per neutral node: mark neutral as signal if any connecting edge is positive ---
-            # num_neutrals = data['neutrals'].num_nodes
-            # # For each edge, map to target neutral index
-            # neutral_targets = edge_index[1].detach().cpu()
-            # # Create tensor of zeros for accumulative signal counts
-            # sig_count = pred_positive.new_zeros(num_neutrals, dtype=torch.long)
-            # # Scatter add boolean mask (converted to long) to count positives per neutral
-            # sig_count = scatter_add(
-            #     pred_positive.long(),  # 1 for positive, 0 otherwise
-            #     neutral_targets,       # index per edge
-            #     dim=0,
-            #     out=sig_count
-            # )
-            # # Build node-level labels: signal if count > 0, else background
-            # label_neutrals = (sig_count > 0).long()
-
-            ## Compute additional losses and metrics for the new edge type
+            # Compute additional BCE loss on edge logits or weights if configured
             for block in self.model._blocks:
                 if self.use_logits:
                     if self.add_bce:
-                        # BCE loss on ('chargedtree', 'to', 'neutrals') edge logits
                         bce_edges_loss = self.beta_bce_edges * self.criterion_bce_edges(
                             block.edge_logits[('chargedtree', 'to', 'neutrals')],
-                            data[('chargedtree', 'to', 'neutrals')].y.float()  # Assuming binary class (0/1)
+                            data[('chargedtree', 'to', 'neutrals')].y.float()
                         )
                         running_bce_edge_loss += bce_edges_loss.item()
                         loss += bce_edges_loss
                 else:
                     if self.add_bce:
-                        # BCE loss on weights instead of logits
                         bce_edges_loss = self.beta_bce_edges * self.criterion_bce_edges(
                             block.edge_weights[('chargedtree', 'to', 'neutrals')],
                             data[('chargedtree', 'to', 'neutrals')].y.float()
@@ -217,42 +210,29 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                         running_bce_edge_loss += bce_edges_loss.item()
                         loss += bce_edges_loss
 
-            # Accuracy/effectiveness/rejection metrics for new edge type
-            # acc_one_batch = acc_binary(pred_positive, label_edges)
-            # eff_one_batch = eff_binary(pred_positive, label_edges)
-            # rej_one_batch = rej_binary(pred_positive, label_edges)
-            # acc_one_epoch.append(acc_one_batch)
-            # eff_one_epoch.append(eff_one_batch)
-            # rej_one_epoch.append(rej_one_batch)
+            # Store predictions and labels for the epoch
             preds_one_epoch.append(edge_probs)
             labels_one_epoch.append(label_edges)
 
-            # For training only
-            if train :
+            if train:
                 loss.backward()
                 self.optimizer.step()
 
             running_loss += loss.item()
+
+            # At last batch, compute average loss and print info
             if (i + 1) == last_batch:
-                last_loss = running_loss / last_batch  # loss per batch
-                info_msg = '  batch {} last_batch {} loss: {}'.format(i + 1, last_batch, last_loss)
+                last_loss = running_loss / last_batch
+                info_msg = f'  batch {i + 1} last_batch {last_batch} loss: {last_loss}'
                 print(info_msg)
                 running_loss = 0.
 
-        # Aggregate epoch-wise tensors/lists
-        # acc_one_epoch = torch.stack(acc_one_epoch) if acc_one_epoch else torch.tensor([])
-        # eff_one_epoch = torch.stack(eff_one_epoch) if eff_one_epoch else torch.tensor([])
-        # rej_one_epoch = torch.stack(rej_one_epoch) if rej_one_epoch else torch.tensor([])
-
+        # Concatenate predictions and labels from all batches
         if len(preds_one_epoch) > 0:
-            epoch_preds  = torch.cat(preds_one_epoch, dim=0)  # shape [total_edges_in_epoch]
-            epoch_labels = torch.cat(labels_one_epoch, dim=0) # même shape
+            epoch_preds = torch.cat(preds_one_epoch, dim=0)
+            epoch_labels = torch.cat(labels_one_epoch, dim=0)
         else:
-            # epoch_preds  = torch.tensor([], device='cuda')
-            # epoch_labels = torch.tensor([], device='cuda')
-
-            ## [DEBUG]
-            epoch_preds  = torch.tensor([], dtype=torch.float32)
+            epoch_preds = torch.tensor([], dtype=torch.float32)
             epoch_labels = torch.tensor([], dtype=torch.long)
 
         preds_one_epoch.clear()
@@ -261,92 +241,110 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         del outputs
         torch.cuda.empty_cache()
 
+        # Append losses to history
         if train:
             self.ce_train_loss.append(running_ce_loss / last_batch)
             self.bce_edges_train_loss.append(running_bce_edge_loss / last_batch)
-            # self.bce_nodes_train_loss.append(running_bce_node_loss / last_batch)
-            # self.bce_pvs_train_loss.append(running_bce_pv_loss / last_batch)
         else:
             self.ce_val_loss.append(running_ce_loss / last_batch)
             self.bce_edges_val_loss.append(running_bce_edge_loss / last_batch)
-            # self.bce_nodes_val_loss.append(running_bce_node_loss / last_batch)
-            # self.bce_pvs_val_loss.append(running_bce_pv_loss / last_batch)
 
         metrics = {
-            'preds' : epoch_preds,
+            'preds': epoch_preds,
             'labels': epoch_labels,
             'loss': last_loss,
-            # 'acc': acc_one_epoch.nanmean(dim=0),
-            # 'acc_err': acc_one_epoch.std(dim=0),
-            # 'eff': eff_one_epoch.nanmean(dim=0),
-            # 'eff_err': eff_one_epoch.std(dim=0),
-            # 'rej': rej_one_epoch.nanmean(dim=0),
-            # 'rej_err': rej_one_epoch.std(dim=0),
+            # Accuracy, efficiency, rejection metrics are commented out
         }
 
         return metrics
 
     def train(self, epochs=10, starting_epoch=0, learning_rate=0.001, early_stopping_patience=100, min_delta=0,
-              save_checkpoint=False, checkpoint_path=None, checkpoint_freq=0.3):
+            save_checkpoint=False, checkpoint_path=None, checkpoint_freq=0.3):
+        """
+        Train the model for a given number of epochs with optional early stopping and checkpoint saving.
+
+        Args:
+            epochs (int): Total number of epochs to train.
+            starting_epoch (int): Epoch number to start training from (useful for warm restarts).
+            learning_rate (float): Learning rate for the Adam optimizer.
+            early_stopping_patience (int): Number of epochs to wait without improvement before stopping early.
+            min_delta (float): Minimum change in validation loss to qualify as an improvement.
+            save_checkpoint (bool): Whether to save model checkpoints during training.
+            checkpoint_path (str): Directory path to save checkpoints.
+            checkpoint_freq (float): Fraction of total epochs after which to save a checkpoint (e.g. 0.3 means every 30% epochs).
+
+        Workflow:
+            - Use Adam optimizer.
+            - Support k-fold-like subsampling during training if k_subsetRandomSampler > 1.
+            - Evaluate on train and validation set every epoch.
+            - Track best validation loss for early stopping.
+            - Save checkpoints at specified frequency.
+            - Restore best model weights at the end.
+        """
+
+
+        # Initialize optimizer with Adam and the given learning rate
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        
         full_dataset = self.train_loader.dataset
         batch_size = self.train_loader.batch_size
         collate_fn = getattr(self.train_loader, "collate_fn", None)
         num_workers = getattr(self.train_loader, "num_workers", 0)
 
-        best_val_loss = float('inf')  # Best validation loss so far
-        best_model_state = None       # State dict of the best model
-        best_epoch = -1               # Epoch where best model occurred
-        patience_counter = 0          # Number of epochs without improvement
+        best_val_loss = float('inf')  # Best validation loss observed so far
+        best_model_state = None       # Stores model parameters at best validation loss
+        best_epoch = -1               # Epoch number where best model was found
+        patience_counter = 0          # Counts epochs without improvement for early stopping
 
         for epoch in range(starting_epoch, epochs):
             msg(f"At epoch {epoch}")
             self.epochs.append(epoch)
 
-             # --- TRAINING PHASE ---
+            # --- TRAINING PHASE ---
             if self.k_subsetRandomSampler == 1:
-                # Standard: use the full train_loader
+                # If no subsampling, use full train_loader for training
                 train_metrics = self.eval_one_epoch(train=True)
-
             else:
-                # 1) Generate a random permutation of all sample indices
+                # Subsampling approach for training data
+
+                # 1) Generate a random permutation of all indices in the dataset
                 num_samples = len(full_dataset)
                 indices = np.arange(num_samples)
                 np.random.shuffle(indices)
 
-                # 2) Exclude roughly 1/k_folds of the indices
+                # 2) Exclude approximately 1/k_subsetRandomSampler fraction of the data
                 exclude_size = num_samples // self.k_subsetRandomSampler
-                included_indices = indices[exclude_size:]
+                included_indices = indices[exclude_size:]  # keep this subset for training
 
-                # 3) Build a SubsetRandomSampler on the "included" indices
+                # 3) Create a SubsetRandomSampler with the included indices
                 train_sampler = SubsetRandomSampler(included_indices)
 
-                # 4) Create a temporary DataLoader for this epoch’s subsample
+                # 4) Create a temporary DataLoader for this subsample
                 train_loader_epoch = DataLoader(
                     full_dataset,
                     batch_size=batch_size,
                     sampler=train_sampler,
-                    shuffle=False,       # sampler already shuffles
+                    shuffle=False,       # sampler shuffles data already
                     num_workers=num_workers,
                     collate_fn=collate_fn
                 )
 
-                # 5) Temporarily override self.train_loader so eval_one_epoch sees it
+                # 5) Temporarily replace self.train_loader by the subsampled loader
                 original_loader = self.train_loader
                 self.train_loader = train_loader_epoch
 
-                # 6) Call eval_one_epoch(train=True) which uses self.train_loader internally
+                # 6) Perform training epoch using the subsampled loader
                 train_metrics = self.eval_one_epoch(train=True)
 
-                # 7) Restore the original train_loader for future epochs/validation
+                # 7) Restore original train_loader for next epochs/validation
                 self.train_loader = original_loader
 
-            self.model.train(False)
-            # Validation epoch
+            self.model.train(False)  # Switch model to eval mode for validation
+
+            # Validation phase
             val_metrics = self.eval_one_epoch(train=False)
 
-
-            # Append metrics
+            # Append predictions, labels, and losses for training and validation
             self.train_predictions.append(train_metrics['preds'])
             self.train_labels.append(train_metrics['labels'])
             self.train_loss.append(train_metrics['loss'])
@@ -354,43 +352,46 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             self.val_labels.append(val_metrics['labels'])
             self.val_loss.append(val_metrics['loss'])
 
-            # --- Compute thresholds and per-threshold metrics for TRAIN and VAL ---
+            # Convert tensors to numpy arrays for metric computations
             train_preds_np = train_metrics['preds'].numpy()
             train_labels_np = train_metrics['labels'].numpy()
             val_preds_np   = val_metrics['preds'].numpy()
             val_labels_np  = val_metrics['labels'].numpy()
-            train_loss=train_metrics['loss']
-            val_loss=val_metrics['loss']
+            train_loss = train_metrics['loss']
+            val_loss = val_metrics['loss']
 
-             # --- EARLY STOPPING LOGIC ---
+            # --- EARLY STOPPING LOGIC ---
             if val_loss is None:
                 raise ValueError("Validation loss metric not found in val_metrics")
 
-            if (val_loss < best_val_loss - min_delta) :
+            # Check if validation loss improved sufficiently
+            if val_loss < best_val_loss - min_delta:
                 best_val_loss = val_loss
                 best_epoch = epoch
                 best_model_state = copy.deepcopy(self.model.state_dict())
-                patience_counter = 0
+                patience_counter = 0  # reset patience counter
             else:
-                if val_loss < best_val_loss :
+                if val_loss < best_val_loss:
+                    # Slight improvement but less than min_delta, increment patience partially
                     best_val_loss = val_loss
                     best_epoch = epoch
                     best_model_state = copy.deepcopy(self.model.state_dict())
                     patience_counter += 0.5
                     print(f"Not enough improvement in validation loss (less than {min_delta}). Patience: {patience_counter}/{early_stopping_patience}")
-                else :
+                else:
+                    # No improvement, increment patience fully
                     patience_counter += 1
                     print(f"No improvement in validation loss. Patience: {patience_counter}/{early_stopping_patience}")
 
-
+            # Compute threshold-dependent metrics for train and val sets
             train_dict = self.compute_thresholds_and_metrics(
                 train_labels_np, train_preds_np, train_loss, key_prefix='train', epoch=epoch
             )
-            val_dict   = self.compute_thresholds_and_metrics(
-                val_labels_np,   val_preds_np, val_loss,  key_prefix='val', epoch=epoch
+            val_dict = self.compute_thresholds_and_metrics(
+                val_labels_np, val_preds_np, val_loss, key_prefix='val', epoch=epoch
             )
 
-            # Merge the two dicts to form this epoch's row
+            # Merge train and validation metrics for this epoch
             epoch_metric_dict = {**train_dict, **val_dict}
             epoch_series = pd.Series(epoch_metric_dict, name=epoch)
             self.epoch_metrics_df = pd.concat(
@@ -398,7 +399,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                 axis=0
             )
 
-            # --- Print metrics (default threshold) via get_epoch_metric ---
+            # --- Print main metrics for default threshold ---
             tm_acc  = self.get_epoch_metric('train_default_accuracy', epoch=epoch)
             vm_acc  = self.get_epoch_metric('val_default_accuracy', epoch=epoch)
             tm_tpr  = self.get_epoch_metric('train_default_TPR', epoch=epoch)
@@ -411,36 +412,51 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             print(f"Epoch {epoch} | default threshold:")
             print(f"  Train - Acc: {tm_acc:.4f}, Eff: {tm_tpr:.4f}, Rej: {tm_rej:.4f}, ROC AUC: {tm_roc_auc:.4f}")
             print(f"  Val   - Acc: {vm_acc:.4f}, Eff: {vm_tpr:.4f}, Rej: {vm_rej:.4f}, ROC AUC: {vm_roc_auc:.4f}")
-            
-           
-            # Checkpoint saving
+
+            # --- Checkpoint saving ---
             if save_checkpoint:
                 safe_epoch_frac = int(checkpoint_freq * epochs)
                 if safe_epoch_frac == 0:
-                    safe_epoch_frac = epochs + 1
+                    safe_epoch_frac = epochs + 1  # Avoid division by zero or zero modulo
                 if epoch % safe_epoch_frac == 0 and epoch != 0:
                     print(f"Saving checkpoint at epoch {epoch}")
                     self.epoch_warmstart = epoch
                     file_path = f'{checkpoint_path}checkpoint_{epoch}.pt'
                     self.save_checkpoint(file_path)
-            
-            # Stop training if patience exceeded
+
+            # --- Early stopping condition ---
             if patience_counter >= early_stopping_patience:
-                self.last_epoch=epoch
+                self.last_epoch = epoch
                 print(f"Early stopping at epoch {epoch}. Best epoch was {best_epoch} with val_loss={best_val_loss:.4f}")
                 break
-        
-        # Restore best model weights
+
+        # Restore model to best observed state after training loop finishes
         if best_model_state is not None:
             self.model.load_state_dict(best_model_state)
             print(f"Model weights restored to best epoch {best_epoch}")
 
+
     def save_dataframe(self, file_name):
+        """
+        Save training and validation metrics collected during training into a CSV file.
+
+        Args:
+            file_name (str): Path to the output CSV file.
+
+        Returns:
+            pd.DataFrame: The saved DataFrame containing losses and accuracy/efficiency/rejection metrics.
+        
+        Notes:
+            - Handles optional BCE loss metrics if enabled.
+            - Converts any tensor metrics to float before saving.
+        """
+
+        # Prepare dictionary to save losses and metrics into a DataFrame
         data = {
             "train_loss": self.train_loss,
             "val_loss": self.val_loss,
         }
-        # Metrics per class for edge classification
+        # Metrics related to accuracy, efficiency, and rejection (per class) for edge classification
         data["train_acc"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.train_acc]
         data["val_acc"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.val_acc]
         data["train_eff"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.train_eff]
@@ -448,117 +464,125 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         data["train_rej"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.train_rej]
         data["val_rej"] = [x.cpu().item() if torch.is_tensor(x) else float(x) for x in self.val_rej]
 
-        
+        # Include BCE losses if the BCE flag is active
         if self.add_bce:
             data["ce_train_loss"] = self.ce_train_loss
-            data["ce_val_loss"]  = self.ce_val_loss
+            data["ce_val_loss"] = self.ce_val_loss
+            # Commented out: node BCE losses are not saved currently
             # data["bce_nodes_train_loss"] = self.bce_nodes_train_loss
             # data["bce_nodes_val_loss"] = self.bce_nodes_val_loss
-            data["bce_edges_train_loss"]  = self.bce_edges_train_loss
+            data["bce_edges_train_loss"] = self.bce_edges_train_loss
             data["bce_edges_val_loss"] = self.bce_edges_val_loss
 
+        # Create a pandas DataFrame and save it to CSV
         df = pd.DataFrame(data)
         df.to_csv(file_name)
         return df
 
 
-    def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, loss, key_prefix: str, epoch=-1):
+        def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, loss, key_prefix: str, epoch=-1):
         """
-        Given true labels (0/1) and scores (float) for the entire epoch,
-        compute for 4 thresholds (manuel, opt, TPR=0.9, TPR=0.99) :
-          - confusion matrix (TP, FP, TN, FN)
-          - TPR (efficiency), Rejection (1 - FPR), Precision, Accuracy, Balanced accuracy
-        key_prefix = 'train' or 'val' to differentiate keys in the final DataFrame.
-        Returns a dict whose keys are, for example:
-          "train_default_TP", "train_default_FP", "train_default_TN", "train_default_FN",
-          "train_default_TPR", "train_default_rej", "train_default_precision",
-          "train_default_accuracy", "train_default_balanced_accuracy",
-          "train_default_threshold_value", and similarly for 'opt', 'tpr0.9', 'tpr0.99'.
+        Compute confusion matrix and performance metrics at several thresholds for a full epoch.
+
+        Parameters:
+        - y_true: true binary labels (0 or 1)
+        - y_score: predicted scores (float)
+        - loss: loss value for the epoch
+        - key_prefix: prefix string to label metrics (e.g. 'train' or 'val')
+        - epoch: current epoch number (default -1, unused)
+
+        Returns:
+        - A dictionary of metrics including TP, FP, TN, FN, TPR, rejection, precision, accuracy,
+        balanced accuracy, threshold values, loss, and ROC AUC for each considered threshold:
+            * default (self.threshold)
+            * optimal (maximizing S/sqrt(S+B))
+            * TPR = 0.9
+            * TPR = 0.99
+        Also stores detailed ROC info internally in self.tpr_and_threshold.
         """
         metrics_dict = {}
 
-        # Ensure labels are int
+        # Ensure labels are integers
         y_true = y_true.astype(int)
 
-        # Compute ROC curve (fpr, tpr, thresholds)
+        # Compute ROC curve: false positive rate, true positive rate, thresholds
         fpr, tpr, thresholds = roc_curve(y_true, y_score)
         roc_auc = auc(fpr, tpr)
 
+        # Remove first threshold (inf)
         thresholds = thresholds[1:]
         fpr = fpr[1:]
         tpr = tpr[1:]
 
-        # Number of signal/background
+        # Count positive (signal) and negative (background) samples
         N_signal = int((y_true == 1).sum())
         N_background = int((y_true == 0).sum())
 
-        # Compute S and B for each threshold
+        # Calculate signal (S) and background (B) counts at each threshold
         S_arr = tpr * N_signal
         B_arr = fpr * N_background
+
+        # Figure of merit (FOM) = S / sqrt(S + B)
         fom = np.divide(S_arr, np.sqrt(S_arr + B_arr), out=np.zeros_like(S_arr), where=(S_arr + B_arr) > 0)
+
+        # Find threshold that maximizes the FOM
         opt_idx = np.nanargmax(fom)
         opt_threshold = thresholds[opt_idx]
         tpr_at_opt = tpr[opt_idx]
 
-
-        # Helper to find the largest threshold that yields tpr >= target
+        # Helper function: find largest threshold with TPR >= target
         def find_threshold_for_tpr(target_tpr):
             idxs = np.where(tpr >= target_tpr)[0]
             if idxs.size == 0:
-                # If no threshold reaches that TPR, pick the smallest threshold
-                return thresholds[-1]
+                return thresholds[-1]  # fallback to lowest threshold if none found
             else:
-                # Return the last threshold in thresholds where tpr >= target_tpr
                 return thresholds[idxs[0]]
 
+        # Thresholds for fixed TPR values
         tpr09_threshold = find_threshold_for_tpr(0.9)
         tpr099_threshold = find_threshold_for_tpr(0.99)
 
         threshold_info = [
             ('default', self.threshold),
-            ('opt',    opt_threshold),
+            ('opt', opt_threshold),
             ('tpr0.9', tpr09_threshold),
-            ('tpr0.99',tpr099_threshold),
+            ('tpr0.99', tpr099_threshold),
         ]
 
         total_samples = y_true.shape[0]
 
         for name, thr in threshold_info:
-            # Binarize predictions at this threshold
+            # Binary predictions at threshold
             y_pred_bin = (y_score > thr).astype(int)
             tn, fp, fn, tp = confusion_matrix(y_true, y_pred_bin, labels=[0, 1]).ravel()
 
-            # TPR = TP / (TP + FN)
-            tpr_val  = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-            # Rejection = TN / (TN + FP)
-            rej_val  = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-            # Precision = TP / (TP + FP)
+            # Compute metrics
+            tpr_val = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            rej_val = tn / (tn + fp) if (tn + fp) > 0 else 0.0
             prec_val = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-            # Accuracy = (TP + TN) / total_samples
-            acc_val  = (tp + tn) / total_samples if total_samples > 0 else 0.0
-            # Balanced accuracy = 0.5 * (TPR + TN/(TN + FP))
+            acc_val = (tp + tn) / total_samples if total_samples > 0 else 0.0
             bal_acc_val = 0.5 * (tpr_val + rej_val)
 
             prefix = f"{key_prefix}_{name}"
-            metrics_dict[f"{prefix}_TP"]                = int(tp)
-            metrics_dict[f"{prefix}_FP"]                = int(fp)
-            metrics_dict[f"{prefix}_TN"]                = int(tn)
-            metrics_dict[f"{prefix}_FN"]                = int(fn)
-            metrics_dict[f"{prefix}_TPR"]               = float(tpr_val)
-            metrics_dict[f"{prefix}_rej"]               = float(rej_val)
-            metrics_dict[f"{prefix}_precision"]         = float(prec_val)
-            metrics_dict[f"{prefix}_accuracy"]          = float(acc_val)
+            metrics_dict[f"{prefix}_TP"] = int(tp)
+            metrics_dict[f"{prefix}_FP"] = int(fp)
+            metrics_dict[f"{prefix}_TN"] = int(tn)
+            metrics_dict[f"{prefix}_FN"] = int(fn)
+            metrics_dict[f"{prefix}_TPR"] = float(tpr_val)
+            metrics_dict[f"{prefix}_rej"] = float(rej_val)
+            metrics_dict[f"{prefix}_precision"] = float(prec_val)
+            metrics_dict[f"{prefix}_accuracy"] = float(acc_val)
             metrics_dict[f"{prefix}_balanced_accuracy"] = float(bal_acc_val)
 
-        # Also store the numeric threshold values themselves
-        metrics_dict[f"{key_prefix}_default_threshold_value"]   = float(self.threshold)
-        metrics_dict[f"{key_prefix}_opt_threshold_value"]      = float(opt_threshold)
-        metrics_dict[f"{key_prefix}_tpr0.9_threshold_value"]  = float(tpr09_threshold)
+        # Store threshold values and overall metrics
+        metrics_dict[f"{key_prefix}_default_threshold_value"] = float(self.threshold)
+        metrics_dict[f"{key_prefix}_opt_threshold_value"] = float(opt_threshold)
+        metrics_dict[f"{key_prefix}_tpr0.9_threshold_value"] = float(tpr09_threshold)
         metrics_dict[f"{key_prefix}_tpr0.99_threshold_value"] = float(tpr099_threshold)
         metrics_dict[f"{key_prefix}_loss"] = float(loss)
         metrics_dict[f"{key_prefix}_roc_auc"] = float(roc_auc)
 
-
+        # Store ROC curve and threshold info for later use
         self.tpr_and_threshold[key_prefix][epoch] = {
             'fpr': fpr,
             'tpr': tpr,
@@ -570,25 +594,44 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             'threshold_tpr_99': tpr099_threshold,
             'fom': fom
         }
+
         return metrics_dict
+
 
     def save_metrics(self, file_name: str):
         """
-        Save the per-epoch metrics DataFrame to CSV and return le DataFrame.
+        Save the DataFrame of epoch-wise metrics to a CSV file.
+
+        Parameters:
+        - file_name: path to the output CSV file
+
+        Returns:
+        - The DataFrame that was saved.
         """
         self.epoch_metrics_df.to_csv(file_name, index_label='epoch')
         return self.epoch_metrics_df
 
+
     def get_epoch_metric(self, column_name: str, epoch=None):
         """
-        If epoch is None, returns the entire column as a NumPy array.
-        Otherwise, returns the single value at (epoch, column_name).
+        Retrieve metric values from the epoch metrics DataFrame.
+
+        Parameters:
+        - column_name: the metric column to retrieve
+        - epoch: if None, returns the entire column as a NumPy array;
+                if integer, returns the value for that epoch.
+
+        Returns:
+        - The metric values as a float or NumPy array.
+
+        Raises:
+        - KeyError if the column or epoch is not found.
         """
         if column_name not in self.epoch_metrics_df.columns:
             raise KeyError(f"Column '{column_name}' not found in epoch_metrics_df.")
 
         if epoch is None:
-            # Return the whole column
+            # Return full column
             return self.epoch_metrics_df[column_name].values
         else:
             if epoch in self.epoch_metrics_df.index:

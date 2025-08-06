@@ -1,5 +1,10 @@
 import sys,os
 sys.path.append(os.getcwd())
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+import torch
+from torch import nn
+import argparse
+import glob
 
 from wmpgnn.configs.config_loader import ConfigLoader
 from wmpgnn.datasets.data_handler import DataHandler
@@ -9,11 +14,6 @@ from wmpgnn.trainers.hetero_gnn_trainer import HeteroGNNTrainer
 from wmpgnn.trainers.neutrals_hetero_gnn_trainer import NeutralsHeteroGNNTrainer
 from wmpgnn.util.functions import select_epoch_indices
 
-os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-import torch
-from torch import nn
-import argparse
-import glob
 
 def flatten_dict(d, parent_key='', sep='_'):
     items = []
@@ -35,13 +35,16 @@ def GetWarmstartFile(checkpoint_path, name_query="checkpoint*"):
         
     return checkpoint_file
 
+# load script arguments simply the config yaml
 parser = argparse.ArgumentParser(description="Argument parser for the training.")
 parser.add_argument("config", type=str, help="yaml config file for the training")
 args = parser.parse_args()
 
+# load config files with ConfigLoader class
 print("Loading Config")
 config_loader = ConfigLoader(f"config_files/{args.config}", environment_prefix="DL")
 
+# load dataset with DataHandler
 print(f"Loading Dataset {config_loader.get('dataset.data_type')}")
 data_loader = DataHandler(config_loader)
 print('Data loader created')
@@ -49,6 +52,7 @@ data_loader.load_data()
 train_loader = data_loader.get_train_dataloader()
 val_loader = data_loader.get_val_dataloader()
 
+# load model with ModelLoader
 print(f"Initializing model {config_loader.get('model.type')}")
 model_loader = ModelLoader(config_loader)
 model = model_loader.get_model()
@@ -63,6 +67,7 @@ if config_loader.get("dataset.balanced_classes", False) :
 output_folder = f"outputs/{model_file.replace('.pt','')}/"
 os.makedirs(output_folder, exist_ok=True)
 
+# initialized GNNTrainer or HeteroGNNTrainer or NeutralsHeteroGNNTrainer
 print("Training model")
 add_bce = config_loader.get('loss.add_bce')
 if config_loader.get('dataset.data_type') == "homogeneous":
@@ -73,6 +78,7 @@ elif config_loader.get('dataset.data_type') == "neutrals":
     threshold = config_loader.get('model.threshold')
     trainer = NeutralsHeteroGNNTrainer(config_loader, model, train_loader, val_loader, add_bce=add_bce, threshold=threshold)
 
+# Save checkpoints
 checkpoint_path = f"{output_folder}"
 print(f"Checkpoint path: {checkpoint_path}")
 if config_loader.get('training.load_checkpoint'):
@@ -83,13 +89,14 @@ if config_loader.get('training.load_checkpoint'):
     else:
         print("No checkpoint file found. Starting training from scratch.")
 
-
+# load training parameters
 epochs = config_loader.get('training.epochs')
 learning_rate = config_loader.get('training.starting_learning_rate')
 dropped_lr_epochs = config_loader.get('training.dropped_lr_epochs')
 min_delta = config_loader.get('training.early_stopping_min_delta')
 patience=config_loader.get('training.early_stopping_patience')
 
+# Run training loop with nominal learning rate
 print(f"Running {epochs} epochs with learning rate {learning_rate}")
 save_checkpoint = config_loader.get('training.save_checkpoint')
 trainer.train(epochs = epochs, learning_rate = learning_rate, early_stopping_patience=patience,
@@ -101,13 +108,16 @@ if trainer.last_epoch > 0:
 else :
     last_epoch_early_stopping = epochs
 
+# Drop learning rate and continue for dropped_lr_epochs
 if dropped_lr_epochs > 0:
     print(f"Running {dropped_lr_epochs} epochs with learning rate {learning_rate/10}")
     trainer.train(epochs=last_epoch_early_stopping+dropped_lr_epochs, starting_epoch=last_epoch_early_stopping, learning_rate=learning_rate/10)
 
+# save model
 print(f"Training finished. Saving model in {model_file}")
 trainer.save_model(output_folder+model_file, save_config=True)
 
+# save dataframe with training and validation losses
 # csv_file = model_file.replace(".pt", ".csv")
 # trainer.save_dataframe(output_folder+csv_file)
 
