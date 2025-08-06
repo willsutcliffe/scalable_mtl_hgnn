@@ -98,6 +98,7 @@ class CustomNeutralsHeteroDataset(Dataset):
         load_graph = self.config_loader.get("dataset.load_graph", False)
         balanced = self.config_loader.get("dataset.balanced_classes", False)
         polarity = self.config_loader.get("dataset.polarity", False)
+        neutrals_edges = True if ("neutrals_neutrals" in self.config_loader.get("model.edge_types")) else False
 
         # cache_path = os.path.join(cache_dir, f"{self.split}_graphs.pt")
         evt_max = self.config_loader.get(f"dataset.evt_max_{self.split}", None)
@@ -109,9 +110,14 @@ class CustomNeutralsHeteroDataset(Dataset):
 
         def get_cache_file(pol, start_idx, end_idx):
             dir = os.path.join(self.config_loader.get("dataset.data_dir"), pol, self.config_loader.get("dataset.data_type"))
-            subdir = "graphs_balanced" if balanced else "graphs"
-            subdir = "graphs_nedges" if ("neutrals_neutrals" in self.config_loader.get("model.edge_types")) else subdir
+            subdir = "graphs"
+            if balanced:
+                subdir += "_balanced"
+            if neutrals_edges:
+                subdir += "_nedges"
             cache_dir = os.path.join(dir, subdir, f"{self.split}_graphs/")
+ 
+
             os.makedirs(cache_dir, exist_ok=True)
             return os.path.join(cache_dir, f"events_{start_idx:05d}_to_{end_idx:05d}_{self.split}.pt")
 
