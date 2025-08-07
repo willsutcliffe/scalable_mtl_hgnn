@@ -12,7 +12,7 @@ def no_transform():
 
 
 class WrappedModelFnModule(AbstractModule):
-     """
+    """
     Adapter module that wraps a zero-argument model factory function into
     an `AbstractModule`, enabling it to participate in Sonnet-style
     variable scoping and PyTorch module hierarchies.
@@ -71,7 +71,7 @@ class HeteroGraphCoder(AbstractModule):
     """
     def __init__(self, node_types: list, edge_types: list,
                  edge_models=None, node_models=None, global_model=None, endecoder=True):
-                 """
+        """
         Initialize the heterogeneous graph coder.
 
         Args:

@@ -480,7 +480,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         return df
 
 
-        def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, loss, key_prefix: str, epoch=-1):
+    def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, loss, key_prefix: str, epoch=-1):
         """
         Compute confusion matrix and performance metrics at several thresholds for a full epoch.
 

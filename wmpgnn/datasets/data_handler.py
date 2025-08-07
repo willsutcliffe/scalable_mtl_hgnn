@@ -151,7 +151,8 @@ class DataHandler:
             - `self.dataset_tr`
             - `self.dataset_vl`
             - `self.dataset_tst`
-        """        self.dataset_tr = self.train_dataset.get()
+        """        
+        self.dataset_tr = self.train_dataset.get()
         self.dataset_vl = self.val_dataset.get()
         # self.dataset_tst = self.test_dataset.get()
 

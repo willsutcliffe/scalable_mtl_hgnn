@@ -59,7 +59,7 @@ def neutrals_hetero_positive_node_weight(loader):
     return sum_nodes/(2*sum_pos)
 
 def hetero_positive_edge_weight(loader):
-        """
+    """
     Computes the positive class weighting factor for edges in a heterogeneous graph
     for binary classification (positive class = label 0).
 
@@ -437,7 +437,7 @@ def acc_four_class(pred, label):
     return acc
 
 def weight_binary_class(dataset,hetero=True):
-     """
+    """
     Computes inverse-frequency class weights for a 2-class classification task.
 
     Parameters
@@ -517,7 +517,7 @@ def weight_n_class(dataset,hetero=False,n_class=5):
     return weight
 
 def weight_four_class(dataset,hetero=False):
-     """
+    """
     Computes inverse-frequency class weights for a 4-class classification task.
 
     Parameters

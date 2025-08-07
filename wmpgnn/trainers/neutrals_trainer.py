@@ -27,7 +27,7 @@ from wmpgnn.util.functions import (
 )
 
 class NeutralsTrainer(ABC):
-   """
+    """
     Abstract base class for model training loops.
 
     Manages:
@@ -114,7 +114,7 @@ class NeutralsTrainer(ABC):
 
     @abstractmethod
     def eval_one_epoch(self, train=True):
-       """
+        """
         Run a single epoch of evaluation (and training if train=True).
 
         Must:

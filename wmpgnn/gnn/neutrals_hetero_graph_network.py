@@ -143,7 +143,7 @@ class NeutralsHeteroGraphNetwork(AbstractModule):
                  global_model=None, use_globals=True, hidden_size=8, device="cuda",
                  use_edge_weights=True, use_node_weights=True, weight_mlp_layers=4, weight_mlp_channels=128,
                  weighted_mp = False, norm="batch_norm", dropout=0.0):
-                 """
+        """
         Initialize the HeteroGraphNetwork.
 
         Args:
