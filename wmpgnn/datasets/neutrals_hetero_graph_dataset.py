@@ -238,7 +238,7 @@ class CustomNeutralsHeteroDataset(Dataset):
         if balanced:
             print("Discarding random background neutral particles to have balanced class")
 
-        col_names = ['xProd', 'yProd', 'zProd', 'px', 'py', 'pz', 'pt', 'eta', 'charge', 'ParticleRecoType']
+        col_names = ['xProd', 'yProd', 'zProd', 'px', 'py', 'pz', 'pt', 'eta', 'charge', 'ParticleRecoType', 'id']
 
         for i in range(0, total_events, chunk_size):
             chunk_data = []
@@ -297,6 +297,8 @@ class CustomNeutralsHeteroDataset(Dataset):
                 neutral_feats = torch.tensor(neutral_df[['px', 'py', 'pz', 'pt', 'eta']].values, dtype=torch.float)
                 neutral_keys_nn = neutral_df['key'].values
                 num_neutrals = len(neutral_keys_nn)
+                neutral_ids = torch.tensor(neutral_df[['id']].values, dtype=torch.float)
+
 
                 # === Add neutral-neutral edges ===
                 if num_neutrals >= 2:
@@ -419,6 +421,7 @@ class CustomNeutralsHeteroDataset(Dataset):
                 data['chargedtree'].decay_id = torch.tensor(charged_nodes['decay_id'].values, dtype=torch.long)
                 data['neutrals'].x = neutral_feats
                 data['neutrals'].decay_id = torch.tensor(neutral_df['decay_id'].values, dtype=torch.long)
+                data['neutrals'].ids = neutral_ids
                 data['chargedtree', 'to', 'neutrals'].edge_index = edge_index
                 data['chargedtree', 'to', 'neutrals'].edges = edge_attr
                 data['chargedtree', 'to', 'neutrals'].y = edge_labels
