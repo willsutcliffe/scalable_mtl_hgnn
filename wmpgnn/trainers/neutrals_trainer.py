@@ -103,8 +103,10 @@ class NeutralsTrainer(ABC):
         # Prediction and label buffers
         self.train_predictions = []
         self.train_labels = []
+        self.train_neutrals_id = []
         self.val_predictions = []
         self.val_labels = []
+        self.val_neutrals_id = []
 
         # DataFrame to log metrics per epoch
         self.epoch_metrics_df = pd.DataFrame()

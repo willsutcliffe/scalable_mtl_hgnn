@@ -152,6 +152,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         rej_one_epoch = []
         preds_one_epoch = []
         labels_one_epoch = []
+        neutrals_id_one_epoch = []
 
         data_loader = self.train_loader if train else self.val_loader
 
@@ -169,6 +170,11 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
             # Binary classification loss on edges from chargedtree to neutrals
             label_edges = data[('chargedtree', 'to', 'neutrals')].y
+
+            ### DEBUG TODO !!!!
+            #neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].neutrals_id
+            neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].y
+
             loss = self.criterion(
                 outputs[('chargedtree', 'to', 'neutrals')].edges,
                 label_edges
@@ -188,7 +194,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
             # Squeeze labels to 1D tensor and move to CPU
             label_edges = label_edges.squeeze().detach().cpu()
-
+            neutral_id_edges = neutral_id_edges.squeeze().detach().cpu()
             edge_index = data[('chargedtree', 'to', 'neutrals')].edge_index
 
             # Compute additional BCE loss on edge logits or weights if configured
@@ -213,6 +219,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             # Store predictions and labels for the epoch
             preds_one_epoch.append(edge_probs)
             labels_one_epoch.append(label_edges)
+            neutrals_id_one_epoch.append(neutral_id_edges)
 
             if train:
                 loss.backward()
@@ -231,12 +238,16 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         if len(preds_one_epoch) > 0:
             epoch_preds = torch.cat(preds_one_epoch, dim=0)
             epoch_labels = torch.cat(labels_one_epoch, dim=0)
+            epoch_neutrals_id = torch.cat(neutrals_id_one_epoch, dim=0)
         else:
             epoch_preds = torch.tensor([], dtype=torch.float32)
             epoch_labels = torch.tensor([], dtype=torch.long)
+            epoch_neutrals_id = torch.tensor([], dtype=torch.float32)
+
 
         preds_one_epoch.clear()
         labels_one_epoch.clear()
+        neutrals_id_one_epoch.clear()
         del data
         del outputs
         torch.cuda.empty_cache()
@@ -252,6 +263,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         metrics = {
             'preds': epoch_preds,
             'labels': epoch_labels,
+            'neutrals_id': epoch_neutrals_id,
             'loss': last_loss,
             # Accuracy, efficiency, rejection metrics are commented out
         }
@@ -348,9 +360,12 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             self.train_predictions.append(train_metrics['preds'])
             self.train_labels.append(train_metrics['labels'])
             self.train_loss.append(train_metrics['loss'])
+            self.train_neutrals_id.append(train_metrics['neutrals_id'])
             self.val_predictions.append(val_metrics['preds'])
             self.val_labels.append(val_metrics['labels'])
             self.val_loss.append(val_metrics['loss'])
+            self.val_neutrals_id.append(val_metrics['neutrals_id'])
+
 
             # Convert tensors to numpy arrays for metric computations
             train_preds_np = train_metrics['preds'].numpy()
@@ -359,6 +374,9 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             val_labels_np  = val_metrics['labels'].numpy()
             train_loss = train_metrics['loss']
             val_loss = val_metrics['loss']
+            train_neutrals_id_np=train_metrics['neutrals_id'].numpy()
+            val_neutrals_id_np=val_metrics['neutrals_id'].numpy()
+
 
             # --- EARLY STOPPING LOGIC ---
             if val_loss is None:
@@ -385,10 +403,10 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
             # Compute threshold-dependent metrics for train and val sets
             train_dict = self.compute_thresholds_and_metrics(
-                train_labels_np, train_preds_np, train_loss, key_prefix='train', epoch=epoch
+                train_labels_np, train_preds_np, train_loss, train_neutrals_id_np, key_prefix='train', epoch=epoch
             )
             val_dict = self.compute_thresholds_and_metrics(
-                val_labels_np, val_preds_np, val_loss, key_prefix='val', epoch=epoch
+                val_labels_np, val_preds_np, val_loss, val_neutrals_id_np,key_prefix='val', epoch=epoch
             )
 
             # Merge train and validation metrics for this epoch
@@ -480,32 +498,24 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         return df
 
 
-    def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, loss, key_prefix: str, epoch=-1):
+    def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, loss, y_neutrals_id: np.ndarray, key_prefix: str, epoch=-1):
         """
-        Compute confusion matrix and performance metrics at several thresholds for a full epoch.
+        Compute performance metrics at multiple thresholds, both globally and for specific neutral particle types.
 
         Parameters:
         - y_true: true binary labels (0 or 1)
         - y_score: predicted scores (float)
         - loss: loss value for the epoch
+        - y_neutrals_id: array of PDG IDs for neutral particles
         - key_prefix: prefix string to label metrics (e.g. 'train' or 'val')
         - epoch: current epoch number (default -1, unused)
 
         Returns:
-        - A dictionary of metrics including TP, FP, TN, FN, TPR, rejection, precision, accuracy,
-        balanced accuracy, threshold values, loss, and ROC AUC for each considered threshold:
-            * default (self.threshold)
-            * optimal (maximizing S/sqrt(S+B))
-            * TPR = 0.9
-            * TPR = 0.99
-        Also stores detailed ROC info internally in self.tpr_and_threshold.
+        - A dictionary of metrics with metrics for the full dataset and per-particle subsamples.
         """
         metrics_dict = {}
-
-        # Ensure labels are integers
         y_true = y_true.astype(int)
 
-        # Compute ROC curve: false positive rate, true positive rate, thresholds
         fpr, tpr, thresholds = roc_curve(y_true, y_score)
         roc_auc = auc(fpr, tpr)
 
@@ -514,31 +524,22 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         fpr = fpr[1:]
         tpr = tpr[1:]
 
-        # Count positive (signal) and negative (background) samples
         N_signal = int((y_true == 1).sum())
         N_background = int((y_true == 0).sum())
 
-        # Calculate signal (S) and background (B) counts at each threshold
         S_arr = tpr * N_signal
         B_arr = fpr * N_background
 
-        # Figure of merit (FOM) = S / sqrt(S + B)
         fom = np.divide(S_arr, np.sqrt(S_arr + B_arr), out=np.zeros_like(S_arr), where=(S_arr + B_arr) > 0)
 
-        # Find threshold that maximizes the FOM
         opt_idx = np.nanargmax(fom)
         opt_threshold = thresholds[opt_idx]
         tpr_at_opt = tpr[opt_idx]
 
-        # Helper function: find largest threshold with TPR >= target
         def find_threshold_for_tpr(target_tpr):
             idxs = np.where(tpr >= target_tpr)[0]
-            if idxs.size == 0:
-                return thresholds[-1]  # fallback to lowest threshold if none found
-            else:
-                return thresholds[idxs[0]]
+            return thresholds[idxs[0]] if idxs.size > 0 else thresholds[-1]
 
-        # Thresholds for fixed TPR values
         tpr09_threshold = find_threshold_for_tpr(0.9)
         tpr099_threshold = find_threshold_for_tpr(0.99)
 
@@ -551,30 +552,34 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
         total_samples = y_true.shape[0]
 
-        for name, thr in threshold_info:
-            # Binary predictions at threshold
-            y_pred_bin = (y_score > thr).astype(int)
-            tn, fp, fn, tp = confusion_matrix(y_true, y_pred_bin, labels=[0, 1]).ravel()
+        def compute_and_store_metrics(y_true_sub, y_score_sub, prefix):
+            y_true_sub = y_true_sub.astype(int)
+            total = y_true_sub.shape[0]
+            for name, thr in threshold_info:
+                y_pred_bin = (y_score_sub > thr).astype(int)
+                tn, fp, fn, tp = confusion_matrix(y_true_sub, y_pred_bin, labels=[0, 1]).ravel()
 
-            # Compute metrics
-            tpr_val = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-            rej_val = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-            prec_val = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-            acc_val = (tp + tn) / total_samples if total_samples > 0 else 0.0
-            bal_acc_val = 0.5 * (tpr_val + rej_val)
+                tpr_val = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+                rej_val = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+                prec_val = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+                acc_val = (tp + tn) / total if total > 0 else 0.0
+                bal_acc_val = 0.5 * (tpr_val + rej_val)
 
-            prefix = f"{key_prefix}_{name}"
-            metrics_dict[f"{prefix}_TP"] = int(tp)
-            metrics_dict[f"{prefix}_FP"] = int(fp)
-            metrics_dict[f"{prefix}_TN"] = int(tn)
-            metrics_dict[f"{prefix}_FN"] = int(fn)
-            metrics_dict[f"{prefix}_TPR"] = float(tpr_val)
-            metrics_dict[f"{prefix}_rej"] = float(rej_val)
-            metrics_dict[f"{prefix}_precision"] = float(prec_val)
-            metrics_dict[f"{prefix}_accuracy"] = float(acc_val)
-            metrics_dict[f"{prefix}_balanced_accuracy"] = float(bal_acc_val)
+                key = f"{prefix}_{name}"
+                metrics_dict[f"{key}_TP"] = int(tp)
+                metrics_dict[f"{key}_FP"] = int(fp)
+                metrics_dict[f"{key}_TN"] = int(tn)
+                metrics_dict[f"{key}_FN"] = int(fn)
+                metrics_dict[f"{key}_TPR"] = float(tpr_val)
+                metrics_dict[f"{key}_rej"] = float(rej_val)
+                metrics_dict[f"{key}_precision"] = float(prec_val)
+                metrics_dict[f"{key}_accuracy"] = float(acc_val)
+                metrics_dict[f"{key}_balanced_accuracy"] = float(bal_acc_val)
 
-        # Store threshold values and overall metrics
+        # 1. Global metrics
+        compute_and_store_metrics(y_true, y_score, key_prefix)
+
+        # 2. Add global info
         metrics_dict[f"{key_prefix}_default_threshold_value"] = float(self.threshold)
         metrics_dict[f"{key_prefix}_opt_threshold_value"] = float(opt_threshold)
         metrics_dict[f"{key_prefix}_tpr0.9_threshold_value"] = float(tpr09_threshold)
@@ -582,7 +587,6 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         metrics_dict[f"{key_prefix}_loss"] = float(loss)
         metrics_dict[f"{key_prefix}_roc_auc"] = float(roc_auc)
 
-        # Store ROC curve and threshold info for later use
         self.tpr_and_threshold[key_prefix][epoch] = {
             'fpr': fpr,
             'tpr': tpr,
@@ -594,6 +598,40 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             'threshold_tpr_99': tpr099_threshold,
             'fom': fom
         }
+
+        '''
+
+        # 3. Per-particle subsample metrics
+        particle_masks = {
+            22: "gamma",     # photon
+            111: "pi0",      # neutral pion
+            130: "k0L",      # K0_L
+            310: "k0S",      # K0_S
+            3122: "lambda0", # Lambda
+        }
+
+        known_ids = set(particle_masks.keys())
+        masks = {}
+
+        # Build masks for known particle types
+        for pdg_id, id_suffix in particle_masks.items():
+            mask = y_neutrals_id == pdg_id
+            if np.sum(mask) > 0:
+                masks[id_suffix] = mask
+
+        # Add mask for all other types
+        mask_other = ~np.isin(y_neutrals_id, list(known_ids))
+        if np.sum(mask_other) > 0:
+            masks["other"] = mask_other
+
+        # Compute metrics for each mask
+        for id_suffix, mask in masks.items():
+            y_true_sub = y_true[mask]
+            y_score_sub = y_score[mask]
+            sub_prefix = f"{key_prefix}_{id_suffix}"
+            compute_and_store_metrics(y_true_sub, y_score_sub, sub_prefix)
+
+        '''
 
         return metrics_dict
 
