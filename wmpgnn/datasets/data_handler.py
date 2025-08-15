@@ -53,6 +53,8 @@ class DataHandler:
         polarity = config.get("dataset.polarity")
         data_type = config.get("dataset.data_type")
         load_graph = config.get("dataset.load_graph")
+        data_subfolder = f"{data_type}_with_id"
+
 
         # Initialize input/target file lists
         files_input_tr, files_target_tr = [], []
@@ -63,8 +65,8 @@ class DataHandler:
         if polarity == 'magall':
             if not load_graph:
                 # Construct paths for both polarities
-                path_up = os.path.join(data_path, 'magup', data_type)
-                path_down = os.path.join(data_path, 'magdown', data_type)
+                path_up = os.path.join(data_path, 'magup', data_subfolder)
+                path_down = os.path.join(data_path, 'magdown', data_subfolder)
 
                 # Training files (magup)
                 input_up_1 = sorted(glob.glob(f'{path_up}/training_dataset/input_*'), key=natural_sort_key)
@@ -106,7 +108,7 @@ class DataHandler:
 
         elif polarity in ['magup', 'magdown']:
             if not load_graph:
-                data_path = os.path.join(data_path, polarity, data_type)
+                data_path = os.path.join(data_path, polarity, data_subfolder)
                 input_tr_1 = sorted(glob.glob(f'{data_path}/training_dataset/input_*'), key=natural_sort_key)
                 target_tr_1 = sorted(glob.glob(f'{data_path}/training_dataset/target_*'), key=natural_sort_key)
                 input_tr_2 = sorted(glob.glob(f'{data_path}/training_dataset_2/input_*'), key=natural_sort_key)

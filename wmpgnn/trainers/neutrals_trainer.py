@@ -114,6 +114,8 @@ class NeutralsTrainer(ABC):
         # Dictionary to store TPR vs threshold curves
         self.tpr_and_threshold = {'train': {}, 'val': {}}
 
+        self.particle_list = []
+
     @abstractmethod
     def eval_one_epoch(self, train=True):
         """
@@ -477,7 +479,7 @@ class NeutralsTrainer(ABC):
         else:
             plt.close()
 
-    def plot_accuracy(self, file_name="acc.png", show=True):
+    def plot_accuracy(self, particle, file_name="acc.png", show=True):
         """
         Plot train/val accuracy for the four thresholds, with threshold values in the labels.
         """
@@ -491,8 +493,8 @@ class NeutralsTrainer(ABC):
 
         for idx, th in enumerate(thresholds):
             # Retrieve accuracy values for both train and val
-            train_vals = self.get_epoch_metric(f"train_{th}_accuracy", epoch=None)
-            val_vals   = self.get_epoch_metric(f"val_{th}_accuracy", epoch=None)
+            train_vals = self.get_epoch_metric(f"train_{particle}{th}_accuracy", epoch=None)
+            val_vals   = self.get_epoch_metric(f"val_{particle}{th}_accuracy", epoch=None)
 
             # Get corresponding threshold values
             if th == 'default':
@@ -500,7 +502,6 @@ class NeutralsTrainer(ABC):
             else:
                 th_value_train = self.get_epoch_metric(f"train_{th}_threshold_value", epoch=last_epoch)
                 th_value_val   = self.get_epoch_metric(f"val_{th}_threshold_value",   epoch=last_epoch)
-
             # Format labels
             label_train = f"Train {th.title()} (th={th_value_train:.2f})"
             label_val   = f"Val   {th.title()} (th={th_value_val:.2f})"
@@ -527,7 +528,7 @@ class NeutralsTrainer(ABC):
 
 
 
-    def plot_efficiency(self, file_name="eff.png", show=True):
+    def plot_efficiency(self, particle,file_name="eff.png", show=True):
         """
         Plot train/val efficiency (True Positive Rate) for the four thresholds, with threshold values in the labels.
         """
@@ -540,8 +541,8 @@ class NeutralsTrainer(ABC):
         fig, ax = plt.subplots(figsize=(14, 8))
 
         for idx, th in enumerate(thresholds):
-            train_vals = self.get_epoch_metric(f"train_{th}_TPR", epoch=None)
-            val_vals   = self.get_epoch_metric(f"val_{th}_TPR", epoch=None)
+            train_vals = self.get_epoch_metric(f"train_{particle}{th}_TPR", epoch=None)
+            val_vals   = self.get_epoch_metric(f"val_{particle}{th}_TPR", epoch=None)
 
             if th == 'default':
                 th_value_train = th_value_val = self.threshold
@@ -571,7 +572,7 @@ class NeutralsTrainer(ABC):
         fig.savefig(file_name)
 
 
-    def plot_rejection(self, file_name="rej.png", show=True):
+    def plot_rejection(self, particle, file_name="rej.png", show=True):
         """
         Plot train/val rejection pour les quatre thresholds, avec la valeur du seuil.
         """
@@ -585,8 +586,8 @@ class NeutralsTrainer(ABC):
         fig, ax = plt.subplots(figsize=(14, 8))
 
         for idx, th in enumerate(thresholds):
-            train_col = f"train_{th}_rej"
-            val_col   = f"val_{th}_rej"
+            train_col = f"train_{particle}{th}_rej"
+            val_col   = f"val_{particle}{th}_rej"
 
             train_vals = self.get_epoch_metric(train_col, epoch=None)
             val_vals   = self.get_epoch_metric(val_col, epoch=None)
@@ -622,7 +623,7 @@ class NeutralsTrainer(ABC):
             plt.show()
         fig.savefig(file_name)
 
-    def plot_precision(self, file_name="prec.png", show=True):
+    def plot_precision(self, particle, file_name="prec.png", show=True):
         """
         Plot train/val precision pour les quatre thresholds, avec la valeur du seuil.
         """
@@ -636,8 +637,8 @@ class NeutralsTrainer(ABC):
         fig, ax = plt.subplots(figsize=(14, 8))
 
         for idx, th in enumerate(thresholds):
-            train_col = f"train_{th}_precision"
-            val_col   = f"val_{th}_precision"
+            train_col = f"train_{particle}{th}_precision"
+            val_col   = f"val_{particle}{th}_precision"
 
             train_vals = self.get_epoch_metric(train_col, epoch=None)
             val_vals   = self.get_epoch_metric(val_col, epoch=None)
@@ -673,7 +674,7 @@ class NeutralsTrainer(ABC):
             plt.show()
         fig.savefig(file_name)
 
-    def plot_balanced_accuracy(self, file_name="bal_acc.png", show=True):
+    def plot_balanced_accuracy(self, particle, file_name="bal_acc.png", show=True):
         """
         Plot train/val balanced accuracy pour les quatre thresholds, avec la valeur du seuil.
         """
@@ -687,8 +688,8 @@ class NeutralsTrainer(ABC):
         fig, ax = plt.subplots(figsize=(14, 8))
 
         for idx, th in enumerate(thresholds):
-            train_col = f"train_{th}_balanced_accuracy"
-            val_col   = f"val_{th}_balanced_accuracy"
+            train_col = f"train_{particle}{th}_balanced_accuracy"
+            val_col   = f"val_{particle}{th}_balanced_accuracy"
 
             train_vals = self.get_epoch_metric(train_col, epoch=None)
             val_vals   = self.get_epoch_metric(val_col, epoch=None)

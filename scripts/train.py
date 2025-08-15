@@ -121,24 +121,46 @@ trainer.save_model(output_folder+model_file, save_config=True)
 # csv_file = model_file.replace(".pt", ".csv")
 # trainer.save_dataframe(output_folder+csv_file)
 
-# make plots
+### Make plots
 plot_name = model_file.replace(".pt", "_loss.png")
 trainer.plot_loss(output_folder+plot_name, show=False)
 
 plot_name = model_file.replace(".pt", "_acc.png")
-trainer.plot_accuracy(output_folder+plot_name, show=False)
+trainer.plot_accuracy('',output_folder+plot_name, show=False)
 
 plot_name = model_file.replace(".pt", "_eff.png")
-trainer.plot_efficiency(output_folder+plot_name, show=False)
+trainer.plot_efficiency('',output_folder+plot_name, show=False)
 
 plot_name = model_file.replace(".pt", "_rej.png")
-trainer.plot_rejection(output_folder+plot_name, show=False)
+trainer.plot_rejection('',output_folder+plot_name, show=False)
 
 plot_name = model_file.replace(".pt", "_balacc.png")
-trainer.plot_balanced_accuracy(output_folder+plot_name, show=False)
+trainer.plot_balanced_accuracy('',output_folder+plot_name, show=False)
 
 plot_name = model_file.replace(".pt", "_pre.png")
-trainer.plot_precision(output_folder+plot_name, show=False)
+trainer.plot_precision('',output_folder+plot_name, show=False)
+
+particles= { "gamma","pi0", "k0L","k0S", "lambda0"}
+
+for particle in particles:
+    if (particle in trainer.particle_list):
+        path = os.path.join(output_folder, f"{particle}/")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        plot_name = model_file.replace(".pt", f"_{particle}_acc.png")
+        trainer.plot_accuracy(f"{particle}_", path+plot_name, show=False)
+
+        plot_name = model_file.replace(".pt", f"_{particle}_eff.png")
+        trainer.plot_efficiency( f"{particle}_", path+plot_name,show=False)
+
+        plot_name = model_file.replace(".pt", f"_{particle}_rej.png")
+        trainer.plot_rejection(f"{particle}_", path+plot_name, show=False)
+
+        plot_name = model_file.replace(".pt", f"_{particle}_balacc.png")
+        trainer.plot_balanced_accuracy(f"{particle}_", path+plot_name, show=False)
+
+        plot_name = model_file.replace(".pt", f"_{particle}_pre.png")
+        trainer.plot_precision(f"{particle}_", path+plot_name, show=False)
 
 for i in select_epoch_indices(last_epoch_early_stopping,dropped_lr_epochs,patience+2):
     plot_name = model_file.replace(".pt", f"_pred_epoch{i}.png")

@@ -172,8 +172,8 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             label_edges = data[('chargedtree', 'to', 'neutrals')].y
 
             ### DEBUG TODO !!!!
-            #neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].neutrals_id
-            neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].y
+            neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].neutrals_id
+            # neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].y
 
             loss = self.criterion(
                 outputs[('chargedtree', 'to', 'neutrals')].edges,
@@ -599,7 +599,10 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             'fom': fom
         }
 
-        '''
+
+        ### DEBUG TODO !!!!
+
+        # '''
 
         # 3. Per-particle subsample metrics
         particle_masks = {
@@ -617,6 +620,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         for pdg_id, id_suffix in particle_masks.items():
             mask = y_neutrals_id == pdg_id
             if np.sum(mask) > 0:
+                self.particle_list.append(id_suffix)
                 masks[id_suffix] = mask
 
         # Add mask for all other types
@@ -631,7 +635,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             sub_prefix = f"{key_prefix}_{id_suffix}"
             compute_and_store_metrics(y_true_sub, y_score_sub, sub_prefix)
 
-        '''
+        # '''
 
         return metrics_dict
 
