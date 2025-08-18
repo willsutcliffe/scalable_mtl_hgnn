@@ -183,7 +183,11 @@ class CustomNeutralsHeteroDataset(Dataset):
             Get the cache file path based on polarity and index range.
             """
             data_type =self.config_loader.get("dataset.data_type")
-            data_subfolder =f"{data_type}_with_id"
+
+            ### DEBUG TODO !!!!
+            # data_subfolder =f"{data_type}_with_id"
+            data_subfolder =f"{data_type}"
+            
             dir = os.path.join(self.config_loader.get("dataset.data_dir"), pol, data_subfolder)
             subdir = "graphs"
             if balanced:
