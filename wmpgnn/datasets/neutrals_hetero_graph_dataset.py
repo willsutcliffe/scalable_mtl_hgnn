@@ -244,8 +244,8 @@ class CustomNeutralsHeteroDataset(Dataset):
             print("Discarding random background neutral particles to have balanced class")
 
         ### DEBUG TODO !!!!
-        # col_names = ['xProd', 'yProd', 'zProd', 'px', 'py', 'pz', 'pt', 'eta', 'charge', 'ParticleRecoType']
-        col_names = ['xProd', 'yProd', 'zProd', 'px', 'py', 'pz', 'pt', 'eta', 'charge', 'ParticleRecoType', 'id']
+        col_names = ['xProd', 'yProd', 'zProd', 'px', 'py', 'pz', 'pt', 'eta', 'charge', 'ParticleRecoType']
+        #col_names = ['xProd', 'yProd', 'zProd', 'px', 'py', 'pz', 'pt', 'eta', 'charge','ParticleType', 'ParticleRecoType', 'id']
 
         for i in range(0, total_events, chunk_size):
             chunk_data = []
@@ -305,7 +305,7 @@ class CustomNeutralsHeteroDataset(Dataset):
                 neutral_keys_nn = neutral_df['key'].values
                 num_neutrals = len(neutral_keys_nn)
                 ### DEBUG TODO !!!!
-                neutral_id = torch.tensor(neutral_df[['id']].values, dtype=torch.float)
+                #neutral_id = torch.tensor(neutral_df[['id']].values, dtype=torch.float)
 
 
                 # === Add neutral-neutral edges ===
@@ -408,7 +408,8 @@ class CustomNeutralsHeteroDataset(Dataset):
                     angle_phi(cval[:, 0:2], nval[:, 0:2])                   # phi (between heavy hadron and neutral)
                 ], dim=1)
                 edge_labels = torch.tensor(agg['label'].values, dtype=torch.float).unsqueeze(-1)
-                neutrals_id_edges = torch.tensor(neutral_df.iloc[agg['n_idx']]['id'].values, dtype=torch.float)
+                ### DEBUG TODO !!!!
+                # neutrals_id_edges = torch.tensor(neutral_df.iloc[agg['n_idx']]['id'].values, dtype=torch.float)
 
                 # === Balance and assemble the final graph ===
                 if edge_index.size(1) == 0:
@@ -435,7 +436,7 @@ class CustomNeutralsHeteroDataset(Dataset):
                 data['chargedtree', 'to', 'neutrals'].edges = edge_attr
                 data['chargedtree', 'to', 'neutrals'].y = edge_labels
                 ### DEBUG TODO !!!!
-                data['chargedtree', 'to', 'neutrals'].neutrals_id = neutrals_id_edges
+                #data['chargedtree', 'to', 'neutrals'].neutrals_id = neutrals_id_edges
                 data['chargedtree', 'to', 'neutrals'].edge_chargedtree_decay_id = torch.tensor(agg['decay_id'].values, dtype=torch.long)
                 data['chargedtree', 'to', 'neutrals'].edge_neutral_key = torch.tensor(agg['neutral_key'].values, dtype=torch.long)
                 data['neutrals', 'to', 'neutrals'].edge_index = nn_edge_index

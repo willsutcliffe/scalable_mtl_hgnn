@@ -53,7 +53,11 @@ class DataHandler:
         polarity = config.get("dataset.polarity")
         data_type = config.get("dataset.data_type")
         load_graph = config.get("dataset.load_graph")
-        data_subfolder = f"{data_type}_with_id"
+        
+        ### DEBUG TODO !!!!
+        # data_subfolder = f"{data_type}_with_id"
+        data_subfolder = f"{data_type}"
+
 
 
         # Initialize input/target file lists
