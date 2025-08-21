@@ -170,10 +170,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
             # Binary classification loss on edges from chargedtree to neutrals
             label_edges = data[('chargedtree', 'to', 'neutrals')].y
-
-            ### DEBUG TODO !!!!
-            #neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].neutrals_id
-            neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].y
+            neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].neutrals_id
 
             loss = self.criterion(
                 outputs[('chargedtree', 'to', 'neutrals')].edges,
@@ -600,10 +597,6 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         }
 
 
-        ### DEBUG TODO !!!!
-
-        '''
-
         # 3. Per-particle subsample metrics
         particle_masks = {
             22: "gamma",     # photon
@@ -635,7 +628,6 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             sub_prefix = f"{key_prefix}_{id_suffix}"
             compute_and_store_metrics(y_true_sub, y_score_sub, sub_prefix)
 
-        '''
 
         return metrics_dict
 

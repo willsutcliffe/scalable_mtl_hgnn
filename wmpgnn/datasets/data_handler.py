@@ -55,8 +55,8 @@ class DataHandler:
         load_graph = config.get("dataset.load_graph")
         
         ### DEBUG TODO !!!!
-        # data_subfolder = f"{data_type}_with_id"
-        data_subfolder = f"{data_type}"
+        data_subfolder = f"{data_type}_with_id"
+        # data_subfolder = f"{data_type}"
 
 
 

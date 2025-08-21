@@ -521,10 +521,12 @@ class NeutralsTrainer(ABC):
                 frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         fig.tight_layout()
         fig.subplots_adjust(right=0.7)
-
+        fig.savefig(file_name)
         if show:
             plt.show()
-        fig.savefig(file_name)
+        else:
+            plt.close()
+        
 
 
 
@@ -566,10 +568,12 @@ class NeutralsTrainer(ABC):
                 frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         fig.tight_layout()
         fig.subplots_adjust(right=0.7)
-
+        fig.savefig(file_name)
         if show:
             plt.show()
-        fig.savefig(file_name)
+        else:
+            plt.close()
+        
 
 
     def plot_rejection(self, particle, file_name="rej.png", show=True):
@@ -619,9 +623,11 @@ class NeutralsTrainer(ABC):
         ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         fig.tight_layout()
         fig.subplots_adjust(right=0.7)
+        fig.savefig(file_name)
         if show:
             plt.show()
-        fig.savefig(file_name)
+        else:
+            plt.close()
 
     def plot_precision(self, particle, file_name="prec.png", show=True):
         """
@@ -670,9 +676,12 @@ class NeutralsTrainer(ABC):
         ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         fig.tight_layout()
         fig.subplots_adjust(right=0.7)
+        
+        fig.savefig(file_name)
         if show:
             plt.show()
-        fig.savefig(file_name)
+        else:
+            plt.close()
 
     def plot_balanced_accuracy(self, particle, file_name="bal_acc.png", show=True):
         """
@@ -721,9 +730,12 @@ class NeutralsTrainer(ABC):
         ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=True, facecolor='white', edgecolor='black', framealpha=1)
         fig.tight_layout()
         fig.subplots_adjust(right=0.7)
+
+        fig.savefig(file_name)
         if show:
             plt.show()
-        fig.savefig(file_name)
+        else:
+            plt.close()
 
     def plot_tpr_thresholds(self, path, file_name, key_prefix: str = 'val', epoch: int =-1, show: bool = True):
         """
@@ -838,7 +850,7 @@ class NeutralsTrainer(ABC):
         output_path = os.path.join(path, "fom", file_name)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         plt.savefig(output_path)
-
+        
         plt.close()
 
    
