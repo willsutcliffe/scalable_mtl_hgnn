@@ -170,7 +170,8 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
 
             # Binary classification loss on edges from chargedtree to neutrals
             label_edges = data[('chargedtree', 'to', 'neutrals')].y
-            neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].neutrals_id
+            neutral_id_edges = data[('chargedtree', 'to', 'neutrals')].neutrals_id[:,0]
+            neutral_ParticleRecoType_edges = data[('chargedtree', 'to', 'neutrals')].neutrals_id[:,1]
 
             loss = self.criterion(
                 outputs[('chargedtree', 'to', 'neutrals')].edges,
@@ -192,6 +193,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             # Squeeze labels to 1D tensor and move to CPU
             label_edges = label_edges.squeeze().detach().cpu()
             neutral_id_edges = neutral_id_edges.squeeze().detach().cpu()
+            neutral_ParticelRecoType_edges = neutral_ParticelRecoType_edges.squeeze().detach().cpu()
             edge_index = data[('chargedtree', 'to', 'neutrals')].edge_index
 
             # Compute additional BCE loss on edge logits or weights if configured
@@ -217,7 +219,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             preds_one_epoch.append(edge_probs)
             labels_one_epoch.append(label_edges)
             neutrals_id_one_epoch.append(neutral_id_edges)
-
+            neutrals_ParticelRecoType_one_epoch.append(neutral_ParticelRecoType_edges)
             if train:
                 loss.backward()
                 self.optimizer.step()
@@ -236,10 +238,12 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             epoch_preds = torch.cat(preds_one_epoch, dim=0)
             epoch_labels = torch.cat(labels_one_epoch, dim=0)
             epoch_neutrals_id = torch.cat(neutrals_id_one_epoch, dim=0)
+            epoch_neutrals_ParticelRecoType = torch.cat(neutrals_ParticelRecoType_one_epoch, dim=0)
         else:
             epoch_preds = torch.tensor([], dtype=torch.float32)
             epoch_labels = torch.tensor([], dtype=torch.long)
             epoch_neutrals_id = torch.tensor([], dtype=torch.float32)
+            epoch_neutrals_ParticelRecoType = torch.tensor([], dtype=torch.float32)
 
 
         preds_one_epoch.clear()
@@ -261,6 +265,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             'preds': epoch_preds,
             'labels': epoch_labels,
             'neutrals_id': epoch_neutrals_id,
+            'neutrals_ParticelRecoType': epoch_neutrals_ParticelRecoType,
             'loss': last_loss,
             # Accuracy, efficiency, rejection metrics are commented out
         }
@@ -373,7 +378,8 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             val_loss = val_metrics['loss']
             train_neutrals_id_np=train_metrics['neutrals_id'].numpy()
             val_neutrals_id_np=val_metrics['neutrals_id'].numpy()
-
+            train_neutrals_ParticelRecoType_np=train_metrics['neutrals_ParticelRecoType'].numpy()
+            val_neutrals_ParticelRecoType_np=val_metrics['neutrals_ParticelRecoType'].numpy()
 
             # --- EARLY STOPPING LOGIC ---
             if val_loss is None:
@@ -399,11 +405,11 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                     print(f"No improvement in validation loss. Patience: {patience_counter}/{early_stopping_patience}")
 
             # Compute threshold-dependent metrics for train and val sets
-            train_dict = self.compute_thresholds_and_metrics(
-                train_labels_np, train_preds_np, train_loss, train_neutrals_id_np, key_prefix='train', epoch=epoch
+            train_dict = self.compute_thresholds_and_metrics( 
+                train_labels_np, train_preds_np, train_loss, train_neutrals_id_np, train_neutrals_ParticelRecoType_np, key_prefix='train', epoch=epoch
             )
             val_dict = self.compute_thresholds_and_metrics(
-                val_labels_np, val_preds_np, val_loss, val_neutrals_id_np,key_prefix='val', epoch=epoch
+                val_labels_np, val_preds_np, val_loss, val_neutrals_id_np, val_neutrals_ParticelRecoType_np, key_prefix='val', epoch=epoch
             )
 
             # Merge train and validation metrics for this epoch
@@ -495,7 +501,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         return df
 
 
-    def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, loss, y_neutrals_id: np.ndarray, key_prefix: str, epoch=-1):
+    def compute_thresholds_and_metrics(self, y_true: np.ndarray, y_score: np.ndarray, loss, y_neutrals_id: np.ndarray, y_neutrals_ParticleRecoType: np.ndarray, key_prefix: str, epoch=-1):
         """
         Compute performance metrics at multiple thresholds, both globally and for specific neutral particle types.
 
@@ -504,6 +510,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
         - y_score: predicted scores (float)
         - loss: loss value for the epoch
         - y_neutrals_id: array of PDG IDs for neutral particles
+        - y_neutrals_ParticleRecoType: array of ParticleRecoType for neutral particles (helps distinguish respi0 and merpi0)
         - key_prefix: prefix string to label metrics (e.g. 'train' or 'val')
         - epoch: current epoch number (default -1, unused)
 
@@ -616,6 +623,19 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
                 self.particle_list.append(id_suffix)
                 masks[id_suffix] = mask
 
+                # Special case: pi0 → split into respi0 and merpi0
+                if pdg_id == 111:
+                    mask_respi0 = mask & (y_neutrals_ParticleRecoType == 5)
+                    mask_merpi0 = mask & (y_neutrals_ParticleRecoType == 3)
+
+                    if np.sum(mask_respi0) > 0:
+                        self.particle_list.append("respi0")
+                        masks["respi0"] = mask_respi0
+
+                    if np.sum(mask_merpi0) > 0:
+                        self.particle_list.append("merpi0")
+                        masks["merpi0"] = mask_merpi0
+
         # Add mask for all other types
         mask_other = ~np.isin(y_neutrals_id, list(known_ids))
         if np.sum(mask_other) > 0:
@@ -627,6 +647,7 @@ class NeutralsHeteroGNNTrainer(NeutralsTrainer):
             y_score_sub = y_score[mask]
             sub_prefix = f"{key_prefix}_{id_suffix}"
             compute_and_store_metrics(y_true_sub, y_score_sub, sub_prefix)
+
 
 
         return metrics_dict

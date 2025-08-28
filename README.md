@@ -69,6 +69,7 @@ Remarks on some parameters of the config file :
 - An early stopping condition is used during training, set by  `training.early_stopping_patience` (patience coutner limit) and `training.early_stopping_min_delta` (minimum increasing of loss required)
 - After the early stopping condition reached, there are still epoch with reduced learning rate (/10) set by `training.dropped_lr_epochs`.
 - Each epoch used a random subsample of the train sample, the fraction of data excluded is set by `training.k_subsetRandomSampler` (exclude 1/k of total sample).
+- If your sample si full MC, you can choose the polarity with `data.polarity`. If your sample is PYTHIA, simply set `data.polarity=PYTHIA`.
 
 ### Input files
 To run you need to have the `input.npy` and `target.npy` files ready (for both training and validation datasets)

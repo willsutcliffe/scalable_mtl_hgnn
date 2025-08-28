@@ -184,11 +184,11 @@ class CustomNeutralsHeteroDataset(Dataset):
             """
             data_type =self.config_loader.get("dataset.data_type")
 
-            ### DEBUG TODO !!!!
             data_subfolder =f"{data_type}_with_id"
-            # data_subfolder =f"{data_type}"
-
-            dir = os.path.join(self.config_loader.get("dataset.data_dir"), pol, data_subfolder)
+            if pol in ['magup', 'magdown']:
+                dir = os.path.join(self.config_loader.get("dataset.data_dir"), pol, data_subfolder)
+            else:
+                dir = os.path.join(self.config_loader.get("dataset.data_dir"), data_subfolder)
             subdir = "graphs"
             if balanced:
                 subdir += "_balanced"
@@ -227,15 +227,23 @@ class CustomNeutralsHeteroDataset(Dataset):
                     # print(f'Path for magdown: {cache_file}')
                     dataset.extend(torch.load(cache_file, weights_only=False))
 
-            elif polarity in ('magdown', 'magup'):
+            elif polarity in ('magdown', 'magup', 'PYTHIA'):
                 for i in range(num_chunks_needed):
                     cache_file = get_cache_file(polarity, i * chunk_size, min((i + 1) * chunk_size, total_events) - 1)
                     if not os.path.exists(cache_file):
                         raise RuntimeError(f"Missing cache chunk {cache_file}. Cannot load full dataset.")
                     # print(f'Path : {cache_file}')
                     dataset.extend(torch.load(cache_file, weights_only=False))
+            
+            # elif polarity == 'PYTHIA':
+            #     for i in range(num_chunks_needed):
+            #         cache_file = get_cache_file(polarity, i * chunk_size, min((i + 1) * chunk_size, total_events) - 1)
+            #         if not os.path.exists(cache_file):
+            #             raise RuntimeError(f"Missing cache chunk {cache_file}. Cannot load full dataset.")
+            #         # print(f'Path : {cache_file}')
+            #         dataset.extend(torch.load(cache_file, weights_only=False))
             else:
-                raise Exception(f"Unexpected magnet polarity {polarity}. Please use magdown, magup or magall.")
+                raise Exception(f"Unexpected magnet polarity {polarity}. Please use magdown, magup or magall. You can also set PYTHIA for the simplified simulation.")
 
             dataset = dataset[:total_events]
             total = time.time() - start_time
@@ -247,8 +255,7 @@ class CustomNeutralsHeteroDataset(Dataset):
         if balanced:
             print("Discarding random background neutral particles to have balanced class")
 
-        ### DEBUG TODO !!!!
-        # col_names = ['xProd', 'yProd', 'zProd', 'px', 'py', 'pz', 'pt', 'eta', 'charge', 'ParticleRecoType']
+
         col_names = ['xProd', 'yProd', 'zProd', 'px', 'py', 'pz', 'pt', 'eta', 'charge','ParticleType', 'ParticleRecoType', 'id']
 
         for i in range(0, total_events, chunk_size):
@@ -308,8 +315,7 @@ class CustomNeutralsHeteroDataset(Dataset):
                 neutral_feats = torch.tensor(neutral_df[['px', 'py', 'pz', 'pt', 'eta']].values, dtype=torch.float)
                 neutral_keys_nn = neutral_df['key'].values
                 num_neutrals = len(neutral_keys_nn)
-                ### DEBUG TODO !!!!
-                neutral_id = torch.tensor(neutral_df[['id']].values, dtype=torch.float)
+                neutral_id = torch.tensor(neutral_df[['id','ParticleRecoType']].values, dtype=torch.float)
 
 
                 # === Add neutral-neutral edges ===
@@ -412,8 +418,10 @@ class CustomNeutralsHeteroDataset(Dataset):
                     angle_phi(cval[:, 0:2], nval[:, 0:2])                   # phi (between heavy hadron and neutral)
                 ], dim=1)
                 edge_labels = torch.tensor(agg['label'].values, dtype=torch.float).unsqueeze(-1)
-                ### DEBUG TODO !!!!
-                neutrals_id_edges = torch.tensor(neutral_df.iloc[agg['n_idx']]['id'].values, dtype=torch.float)
+                neutrals_id_edges = torch.tensor(
+                    neutral_df.iloc[agg['n_idx']][['id', 'ParticleRecoType']].values,
+                    dtype=torch.float
+                )
 
                 # === Balance and assemble the final graph ===
                 if edge_index.size(1) == 0:
@@ -435,12 +443,10 @@ class CustomNeutralsHeteroDataset(Dataset):
                 data['chargedtree'].decay_id = torch.tensor(charged_nodes['decay_id'].values, dtype=torch.long)
                 data['neutrals'].x = neutral_feats
                 data['neutrals'].decay_id = torch.tensor(neutral_df['decay_id'].values, dtype=torch.long)
-                ### DEBUG TODO !!!!
                 data['neutrals'].id = neutral_id
                 data['chargedtree', 'to', 'neutrals'].edge_index = edge_index
                 data['chargedtree', 'to', 'neutrals'].edges = edge_attr
                 data['chargedtree', 'to', 'neutrals'].y = edge_labels
-                ### DEBUG TODO !!!!
                 data['chargedtree', 'to', 'neutrals'].neutrals_id = neutrals_id_edges
                 data['chargedtree', 'to', 'neutrals'].edge_chargedtree_decay_id = torch.tensor(agg['decay_id'].values, dtype=torch.long)
                 data['chargedtree', 'to', 'neutrals'].edge_neutral_key = torch.tensor(agg['neutral_key'].values, dtype=torch.long)

@@ -54,9 +54,7 @@ class DataHandler:
         data_type = config.get("dataset.data_type")
         load_graph = config.get("dataset.load_graph")
         
-        ### DEBUG TODO !!!!
         data_subfolder = f"{data_type}_with_id"
-        # data_subfolder = f"{data_type}"
 
 
 
@@ -113,6 +111,7 @@ class DataHandler:
         elif polarity in ['magup', 'magdown']:
             if not load_graph:
                 data_path = os.path.join(data_path, polarity, data_subfolder)
+                
                 input_tr_1 = sorted(glob.glob(f'{data_path}/training_dataset/input_*'), key=natural_sort_key)
                 target_tr_1 = sorted(glob.glob(f'{data_path}/training_dataset/target_*'), key=natural_sort_key)
                 input_tr_2 = sorted(glob.glob(f'{data_path}/training_dataset_2/input_*'), key=natural_sort_key)
@@ -122,11 +121,24 @@ class DataHandler:
 
                 files_input_vl = sorted(glob.glob(f'{data_path}/validation_dataset/input_*'), key=natural_sort_key)[:evt_max_val]
                 files_target_vl = sorted(glob.glob(f'{data_path}/validation_dataset/target_*'), key=natural_sort_key)[:evt_max_val]
+            
+            else:
+                # No loading from file list
+                pass
+
+        elif polarity == 'PYTHIA':
+            if not load_graph:
+                data_path = os.path.join(data_path, data_subfolder)
+                files_input_tr = sorted(glob.glob(f'{data_path}/training_dataset/input_*'), key=natural_sort_key)[:evt_max_train]
+                files_target_tr = sorted(glob.glob(f'{data_path}/training_dataset/target_*'), key=natural_sort_key)[:evt_max_train]
+
+                files_input_vl = sorted(glob.glob(f'{data_path}/validation_dataset/input_*'), key=natural_sort_key)[:evt_max_val]
+                files_target_vl = sorted(glob.glob(f'{data_path}/validation_dataset/target_*'), key=natural_sort_key)[:evt_max_val]
             else:
                 # No loading from file list
                 pass
         else:
-            raise Exception(f"Unexpected magnet polarity {polarity}. Use magup, magdown or magall.")
+            raise Exception(f"Unexpected magnet polarity {polarity}. Use magup, magdown or magall. You can also set PYTHIA for the simplified simulation.")
 
         # Dataset instantiation
         if data_type == "homogeneous":

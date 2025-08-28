@@ -140,11 +140,7 @@ trainer.plot_balanced_accuracy('',output_folder+plot_name, show=False)
 plot_name = model_file.replace(".pt", "_pre.png")
 trainer.plot_precision('',output_folder+plot_name, show=False)
 
-### DEBUG TODO !!!!
-
-# '''
-
-particles= { "gamma","pi0", "k0L","k0S", "lambda0"}
+particles= { "gamma","pi0", "k0L","k0S", "lambda0", "respi0", "merpi0"}
 
 for particle in particles:
     if (particle in trainer.particle_list):
@@ -166,7 +162,6 @@ for particle in particles:
         plot_name = model_file.replace(".pt", f"_{particle}_pre.png")
         trainer.plot_precision(f"{particle}_", path+plot_name, show=False)
 
-# '''
 
 for i in select_epoch_indices(last_epoch_early_stopping,dropped_lr_epochs,patience+2):
     plot_name = model_file.replace(".pt", f"_pred_epoch{i}.png")
