@@ -1,0 +1,138 @@
+Wed Jun  4 16:37:48 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.51.03              Driver Version: 575.51.03      CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100S-PCIE-32GB          Off |   00000000:07:00.0 Off |                    0 |
+| N/A   33C    P0             25W /  250W |       4MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Loading Config
+Loading Dataset neutrals
+Using 800 events for training
+Using 100 events for validation
+data_path : /eos/user/e/ebornand/DFEI/FullMC/npy_array/magup/neutrals
+creating custom datasets...
+Data loader created
+Generating graphs from scratch...
+Event 0...
+Event 25...
+Event 50...
+Event 75...
+Saving chunk 0 to /eos/user/e/ebornand/DFEI/FullMC/npy_array/magup/neutrals/graphs/train_graphs/events_00000_to_00099_train.pt with 82 events
+Event 100...
+Event 125...
+Event 150...
+Event 175...
+Saving chunk 1 to /eos/user/e/ebornand/DFEI/FullMC/npy_array/magup/neutrals/graphs/train_graphs/events_00100_to_00199_train.pt with 87 events
+Event 200...
+Event 225...
+Event 250...
+Event 275...
+Saving chunk 2 to /eos/user/e/ebornand/DFEI/FullMC/npy_array/magup/neutrals/graphs/train_graphs/events_00200_to_00299_train.pt with 80 events
+Event 300...
+Event 325...
+Event 350...
+Event 375...
+Saving chunk 3 to /eos/user/e/ebornand/DFEI/FullMC/npy_array/magup/neutrals/graphs/train_graphs/events_00300_to_00399_train.pt with 82 events
+Event 400...
+Event 425...
+Event 450...
+Event 475...
+Saving chunk 4 to /eos/user/e/ebornand/DFEI/FullMC/npy_array/magup/neutrals/graphs/train_graphs/events_00400_to_00499_train.pt with 83 events
+Event 500...
+Event 525...
+Event 550...
+Event 575...
+Saving chunk 5 to /eos/user/e/ebornand/DFEI/FullMC/npy_array/magup/neutrals/graphs/train_graphs/events_00500_to_00599_train.pt with 84 events
+Event 600...
+Event 625...
+Event 650...
+Event 675...
+Saving chunk 6 to /eos/user/e/ebornand/DFEI/FullMC/npy_array/magup/neutrals/graphs/train_graphs/events_00600_to_00699_train.pt with 86 events
+Event 700...
+Event 725...
+Event 750...
+Event 775...
+Saving chunk 7 to /eos/user/e/ebornand/DFEI/FullMC/npy_array/magup/neutrals/graphs/train_graphs/events_00700_to_00799_train.pt with 82 events
+Processed 666 events in 218.23s, avg 0.33s/event
+Generating graphs from scratch...
+Event 0...
+Event 25...
+Event 50...
+Event 75...
+Saving chunk 0 to /eos/user/e/ebornand/DFEI/FullMC/npy_array/magup/neutrals/graphs/val_graphs/events_00000_to_00099_val.pt with 85 events
+Processed 85 events in 22.50s, avg 0.26s/event
+Generating graphs from scratch...
+Processed 0 events in 0.00s, avg 0.00s/event
+Initializing model neutral_heterognn
+Training model
+Weights :tensor([ 0.5112, 22.9010])
+Use logits False
+Checkpoint path: outputs/Final_neutrals_magup_2block_5_epochs_message_passing_BCE/
+Running 5 epochs with learning rate 0.001
+[16:46:28]  At epoch 0
+  batch 10 last_batch 10 loss: 1.3644648671150208
+  batch 1 last_batch 1 loss: 1.4048084020614624
+Epoch 0 | Manual threshold:
+  Train - Acc: 0.4406, Eff: 0.5597, Rej: 0.4379
+  Val   - Acc: 0.0235, Eff: 1.0000, Rej: 0.0000
+[16:46:34]  At epoch 1
+  batch 10 last_batch 10 loss: 1.3578715920448303
+  batch 1 last_batch 1 loss: 1.4050122499465942
+Epoch 1 | Manual threshold:
+  Train - Acc: 0.0218, Eff: 1.0000, Rej: 0.0000
+  Val   - Acc: 0.0235, Eff: 1.0000, Rej: 0.0000
+Saving checkpoint at epoch 1
+Checkpoint saved to outputs/Final_neutrals_magup_2block_5_epochs_message_passing_BCE/checkpoint_1.pt
+[16:46:35]  At epoch 2
+  batch 10 last_batch 10 loss: 1.3577157735824585
+  batch 1 last_batch 1 loss: 1.4052618741989136
+Epoch 2 | Manual threshold:
+  Train - Acc: 0.0218, Eff: 1.0000, Rej: 0.0000
+  Val   - Acc: 0.0235, Eff: 1.0000, Rej: 0.0000
+Saving checkpoint at epoch 2
+Checkpoint saved to outputs/Final_neutrals_magup_2block_5_epochs_message_passing_BCE/checkpoint_2.pt
+[16:46:35]  At epoch 3
+  batch 10 last_batch 10 loss: 1.3576326608657836
+  batch 1 last_batch 1 loss: 1.405432105064392
+Epoch 3 | Manual threshold:
+  Train - Acc: 0.0218, Eff: 1.0000, Rej: 0.0000
+  Val   - Acc: 0.0235, Eff: 1.0000, Rej: 0.0000
+Saving checkpoint at epoch 3
+Checkpoint saved to outputs/Final_neutrals_magup_2block_5_epochs_message_passing_BCE/checkpoint_3.pt
+[16:46:36]  At epoch 4
+  batch 10 last_batch 10 loss: 1.3575750946998597
+  batch 1 last_batch 1 loss: 1.4055194854736328
+Epoch 4 | Manual threshold:
+  Train - Acc: 0.0218, Eff: 1.0000, Rej: 0.0000
+  Val   - Acc: 0.0235, Eff: 1.0000, Rej: 0.0000
+Saving checkpoint at epoch 4
+Checkpoint saved to outputs/Final_neutrals_magup_2block_5_epochs_message_passing_BCE/checkpoint_4.pt
+Running 2 epochs with learning rate 0.0001
+[16:46:37]  At epoch 5
+  batch 10 last_batch 10 loss: 1.357521641254425
+  batch 1 last_batch 1 loss: 1.4055272340774536
+Epoch 5 | Manual threshold:
+  Train - Acc: 0.0218, Eff: 1.0000, Rej: 0.0000
+  Val   - Acc: 0.0235, Eff: 1.0000, Rej: 0.0000
+[16:46:37]  At epoch 6
+  batch 10 last_batch 10 loss: 1.3574853420257569
+  batch 1 last_batch 1 loss: 1.4054985046386719
+Epoch 6 | Manual threshold:
+  Train - Acc: 0.0218, Eff: 1.0000, Rej: 0.0000
+  Val   - Acc: 0.0235, Eff: 1.0000, Rej: 0.0000
+Training finished. Saving model in Final_neutrals_magup_2block_5_epochs_message_passing_BCE.pt
+Checkpoint saved to outputs/Final_neutrals_magup_2block_5_epochs_message_passing_BCE/Final_neutrals_magup_2block_5_epochs_message_passing_BCE.pt
+Saving config file as txt file

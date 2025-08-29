@@ -21,9 +21,9 @@ loss:
 dataset:
   data_type: "neutrals"
   polarity: "magall"
-  # data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array"
+  data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array"
   # data_dir: /panfs/ebornand/DFEI/FullMC/npy_array/magdown/neutrals_/
-  data_dir: "/home/ebornand/Data/DFEI/FullMC/npy_array/"
+  # data_dir: "/home/ebornand/Data/DFEI/FullMC/npy_array/"
   evt_max_train: 160000
   evt_max_val: 21486 #10754 #10732 #
   load_graph: True

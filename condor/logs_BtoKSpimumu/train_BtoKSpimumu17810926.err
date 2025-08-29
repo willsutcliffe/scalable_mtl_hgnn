@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 102, in <module>
+    trainer.train(epochs = epochs, learning_rate = learning_rate, early_stopping_patience=patience,
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/trainers/neutrals_hetero_gnn_trainer.py", line 346, in train
+    train_metrics = self.eval_one_epoch(train=True)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/trainers/neutrals_hetero_gnn_trainer.py", line 168, in eval_one_epoch
+    outputs = self.model(data)
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/model/neutrals_hetero_gnn_model.py", line 185, in forward
+    core_input = hetero_graph_concat(latent0, latent)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/model/neutrals_hetero_gnn_model.py", line 43, in hetero_graph_concat
+    graph[edge_type].edges = torch.cat( [g1[edge_type].edges, g2[edge_type].edges], -1)
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 796.00 MiB. GPU 0 has a total capacity of 11.82 GiB of which 546.00 MiB is free. Including non-PyTorch memory, this process has 9.78 GiB memory in use. Of the allocated memory 9.44 GiB is allocated by PyTorch, and 181.55 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

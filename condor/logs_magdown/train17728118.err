@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 53, in <module>
+    model_loader = ModelLoader(config_loader)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/model/model_loader.py", line 44, in __init__
+    self.model = NeutralsHeteroGNN(node_types=nodes, edge_types=edges,
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/model/neutrals_hetero_gnn_model.py", line 98, in __init__
+    
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/gnn/hetero_graphcoder.py", line 34, in __init__
+    self._edge_models[edge_type] = WrappedModelFnModule(edge_models[edge_type])
+KeyError: ('neutrals', 'to', 'neutrals')

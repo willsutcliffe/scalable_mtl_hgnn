@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 59, in <module>
+    model_file = model_file.format(**flatten_config)
+ValueError: unexpected '{' in field name

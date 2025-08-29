@@ -1,0 +1,47 @@
+000 (17761300.000.000) 08/13 19:45:14 Job submitted from host: <137.138.76.70:9618?addrs=137.138.76.70-9618+[2001-1458-d00-1c--49]-9618&alias=bigbird11.cern.ch&noUDP&sock=schedd_590795_cee9>
+...
+040 (17761300.000.000) 08/13 19:54:05 Started transferring input files
+	Transferring to host: <128.142.241.101:9618?addrs=128.142.241.101-9618+[2001-1458-301-ce--100-380]-9618&alias=b9g47n7141.cern.ch&noUDP&sock=slot1_1_2296020_8c30_22>
+...
+040 (17761300.000.000) 08/13 19:54:06 Finished transferring input files
+...
+001 (17761300.000.000) 08/13 19:54:07 Job executing on host: <128.142.241.101:9618?addrs=128.142.241.101-9618+[2001-1458-301-ce--100-380]-9618&alias=b9g47n7141.cern.ch&noUDP&sock=startd_2295982_4246>
+	SlotName: slot1_1@b9g47n7141.cern.ch
+	AvailableGPUs = { GPUs_GPU_0572701c }
+	CondorScratchDir = "/pool/condor/dir_2298945"
+	Cpus = 4
+	Disk = 2048
+	GPUs = 1
+	GPUs_GPU_0572701c = [ GlobalMemoryMb = 32494; MaxSupportedVersion = 12090; DriverVersion = 12.9; ComputeUnits = 80; ECCEnabled = true; DeviceUuid = "0572701c-5755-af2e-c726-d89fef0ed954"; DeviceName = "Tesla V100-PCIE-32GB"; CoresPerCU = 64; ClockMhz = 1380.0; DevicePciBusId = "0000:07:00.0"; Capability = 7.0; Id = "GPU-0572701c" ]
+	Memory = 12000
+...
+006 (17761300.000.000) 08/13 19:54:20 Image size of job updated: 7536
+	8  -  MemoryUsage of job (MB)
+	7536  -  ResidentSetSize of job (KB)
+...
+006 (17761300.000.000) 08/13 19:59:10 Image size of job updated: 428792
+	8  -  MemoryUsage of job (MB)
+	7536  -  ResidentSetSize of job (KB)
+...
+040 (17761300.000.000) 08/13 19:59:10 Started transferring output files
+...
+040 (17761300.000.000) 08/13 19:59:10 Finished transferring output files
+...
+005 (17761300.000.000) 08/13 19:59:11 Job terminated.
+	(1) Normal termination (return value 1)
+		Usr 0 00:00:10, Sys 0 00:00:07  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:10, Sys 0 00:00:07  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	8014  -  Run Bytes Sent By Job
+	551  -  Run Bytes Received By Job
+	8014  -  Total Bytes Sent By Job
+	551  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated Assigned
+	   Cpus                 :                 4         4 
+	   Disk (KB)            :       29        1      2048 
+	   Gpus (Average)       :                 1         1 "GPU-0572701c"
+	   Memory (MB)          :        8    12000     12000 
+
+	Job terminated of its own accord at 2025-08-13T17:59:10Z with exit-code 1.
+...

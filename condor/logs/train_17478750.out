@@ -1,0 +1,20 @@
+Loading Config
+Loading Dataset neutrals
+Using 50000 events for training
+Using 5000 events for validation
+creating custom datasets...
+Data loader created
+Loading preprocessed graphs for split train
+Loaded 42701 graphs from cache in 500 files (in 76.78s).
+Loading preprocessed graphs for split val
+Loaded 4237 graphs from cache in 50 files (in 10.46s).
+Loading preprocessed graphs for split test
+Loaded 0 graphs from cache in 0 files (in 0.00s).
+Initializing model neutral_heterognn
+Training model
+Weights :tensor([ 0.5101, 25.2710])
+Use logits False
+Checkpoint path: outputs/Final_neutrals_6block_50_epochs_message_passing_BCE/
+Running 50 epochs with learning rate 0.001
+[11:55:37]  At epoch 0
+  batch 333 last_batch 333 loss: 1.2075970326815997

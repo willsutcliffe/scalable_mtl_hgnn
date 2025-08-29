@@ -11,7 +11,6 @@ model:
   use_node_weights: True
   node_types: ['chargedtree', 'neutrals']
   edge_types: ["chargedtree_neutrals", "neutrals_neutrals"]
-  # edge_types: ["chargedtree_neutrals"]
   norm: "batch_norm"
   neutrals_classes: 2
   threshold: 0.5
@@ -22,18 +21,18 @@ loss:
 dataset:
   data_type: "neutrals"
   polarity: "magall"
-  # data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array"
+  data_dir: "/eos/user/e/ebornand/DFEI/FullMC/npy_array"
   # data_dir: /panfs/ebornand/DFEI/FullMC/npy_array/magdown/neutrals_/
-  data_dir: "/home/ebornand/Data/DFEI/FullMC/npy_array/"
+  # data_dir: "/home/ebornand/Data/DFEI/FullMC/npy_array/"
   evt_max_train: 160000
   evt_max_val: 21486 #10754 #10732 #
   load_graph: True
   save_graph: False
-  balanced_classes: False
+  balanced_classes: Falsec
 training:
   train: True
   starting_learning_rate: 0.001
-  epochs: 41
+  epochs: 60
   dropped_lr_epochs: 5
   batch_size: 16
   early_stopping_patience: 6

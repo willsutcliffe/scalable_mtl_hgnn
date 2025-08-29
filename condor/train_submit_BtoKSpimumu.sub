@@ -1,0 +1,23 @@
+universe          = vanilla
+executable        = run_train_BtoKSpimumu.sh
+arguments         = 
+output            = logs_BtoKSpimumu/train_BtoKSpimumu$(ClusterId).out
+error             = logs_BtoKSpimumu/train_BtoKSpimumu$(ClusterId).err
+log               = logs_BtoKSpimumu/train_BtoKSpimumu$(ClusterId).log
+
+# Temps maximum
++MaxRuntime       = 120000
+
+# Demande de ressources
+request_gpus      = 1
+request_memory    = 10000MB
+request_cpus      = 1
+# requirements = regexp("A100", TARGET.GPUs_DeviceName)
+
+# Environnement nécessaire
++JobFlavour       = "longlunch"
+
+# Transfert d'environnement utilisateur
+getenv            = True
+
+queue

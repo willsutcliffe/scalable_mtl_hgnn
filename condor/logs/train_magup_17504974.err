@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 9, in <module>
+    from wmpgnn.trainers.neutrals_hetero_gnn_trainer import NeutralsHeteroGNNTrainer
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/trainers/neutrals_hetero_gnn_trainer.py", line 1, in <module>
+    from wmpgnn.trainers.neutrals_trainer import NeutralsTrainer
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/trainers/neutrals_trainer.py", line 355
+    def plot_accuracy(self, file_name="acc.png", show=True):
+                                                            ^
+IndentationError: unindent does not match any outer indentation level

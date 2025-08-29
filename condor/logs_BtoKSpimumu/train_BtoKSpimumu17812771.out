@@ -1,0 +1,691 @@
+Tue Aug 26 17:29:09 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.51.03              Driver Version: 575.51.03      CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100S-PCIE-32GB          Off |   00000000:07:00.0 Off |                    0 |
+| N/A   33C    P0             25W /  250W |       4MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Loading Config
+Loading Dataset neutrals
+Using 4000 events for training
+Using 1000 events for validation
+Creating neutrals dataset...
+Data loader created
+Generating graphs from scratch...
+Event 0...
+Event 25...
+Event 50...
+Event 75...
+Saving chunk 0 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_00000_to_00099_train.pt with 100 events
+Event 100...
+Event 125...
+Event 150...
+Event 175...
+Saving chunk 1 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_00100_to_00199_train.pt with 100 events
+Event 200...
+Event 225...
+Event 250...
+Event 275...
+Saving chunk 2 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_00200_to_00299_train.pt with 100 events
+Event 300...
+Event 325...
+Event 350...
+Event 375...
+Saving chunk 3 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_00300_to_00399_train.pt with 100 events
+Event 400...
+Event 425...
+Event 450...
+Event 475...
+Saving chunk 4 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_00400_to_00499_train.pt with 100 events
+Event 500...
+Event 525...
+Event 550...
+Event 575...
+Saving chunk 5 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_00500_to_00599_train.pt with 100 events
+Event 600...
+Event 625...
+Event 650...
+Event 675...
+Saving chunk 6 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_00600_to_00699_train.pt with 100 events
+Event 700...
+Event 725...
+Event 750...
+Event 775...
+Saving chunk 7 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_00700_to_00799_train.pt with 100 events
+Event 800...
+Event 825...
+Event 850...
+Event 875...
+Saving chunk 8 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_00800_to_00899_train.pt with 100 events
+Event 900...
+Event 925...
+Event 950...
+Event 975...
+Saving chunk 9 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_00900_to_00999_train.pt with 99 events
+Event 1000...
+Event 1025...
+Event 1050...
+Event 1075...
+Saving chunk 10 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_01000_to_01099_train.pt with 100 events
+Event 1100...
+Event 1125...
+Event 1150...
+Event 1175...
+Saving chunk 11 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_01100_to_01199_train.pt with 99 events
+Event 1200...
+Event 1225...
+Event 1250...
+Event 1275...
+Saving chunk 12 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_01200_to_01299_train.pt with 100 events
+Event 1300...
+Event 1325...
+Event 1350...
+Event 1375...
+Saving chunk 13 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_01300_to_01399_train.pt with 99 events
+Event 1400...
+Event 1425...
+Event 1450...
+Event 1475...
+Saving chunk 14 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_01400_to_01499_train.pt with 100 events
+Event 1500...
+Event 1525...
+Event 1550...
+Event 1575...
+Saving chunk 15 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_01500_to_01599_train.pt with 100 events
+Event 1600...
+Event 1625...
+Event 1650...
+Event 1675...
+Saving chunk 16 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_01600_to_01699_train.pt with 100 events
+Event 1700...
+Event 1725...
+Event 1750...
+Event 1775...
+Saving chunk 17 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_01700_to_01799_train.pt with 100 events
+Event 1800...
+Event 1825...
+Event 1850...
+Event 1875...
+Saving chunk 18 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_01800_to_01899_train.pt with 100 events
+Event 1900...
+Event 1925...
+Event 1950...
+Event 1975...
+Saving chunk 19 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_01900_to_01999_train.pt with 100 events
+Event 2000...
+Event 2025...
+Event 2050...
+Event 2075...
+Saving chunk 20 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_02000_to_02099_train.pt with 98 events
+Event 2100...
+Event 2125...
+Event 2150...
+Event 2175...
+Saving chunk 21 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_02100_to_02199_train.pt with 100 events
+Event 2200...
+Event 2225...
+Event 2250...
+Event 2275...
+Saving chunk 22 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_02200_to_02299_train.pt with 100 events
+Event 2300...
+Event 2325...
+Event 2350...
+Event 2375...
+Saving chunk 23 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_02300_to_02399_train.pt with 100 events
+Event 2400...
+Event 2425...
+Event 2450...
+Event 2475...
+Saving chunk 24 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_02400_to_02499_train.pt with 100 events
+Event 2500...
+Event 2525...
+Event 2550...
+Event 2575...
+Saving chunk 25 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_02500_to_02599_train.pt with 100 events
+Event 2600...
+Event 2625...
+Event 2650...
+Event 2675...
+Saving chunk 26 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_02600_to_02699_train.pt with 100 events
+Event 2700...
+Event 2725...
+Event 2750...
+Event 2775...
+Saving chunk 27 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_02700_to_02799_train.pt with 100 events
+Event 2800...
+Event 2825...
+Event 2850...
+Event 2875...
+Saving chunk 28 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_02800_to_02899_train.pt with 98 events
+Event 2900...
+Event 2925...
+Event 2950...
+Event 2975...
+Saving chunk 29 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_02900_to_02999_train.pt with 100 events
+Event 3000...
+Event 3025...
+Event 3050...
+Event 3075...
+Saving chunk 30 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_03000_to_03099_train.pt with 100 events
+Event 3100...
+Event 3125...
+Event 3150...
+Event 3175...
+Saving chunk 31 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_03100_to_03199_train.pt with 100 events
+Event 3200...
+Event 3225...
+Event 3250...
+Event 3275...
+Saving chunk 32 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_03200_to_03299_train.pt with 100 events
+Event 3300...
+Event 3325...
+Event 3350...
+Event 3375...
+Saving chunk 33 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_03300_to_03399_train.pt with 100 events
+Event 3400...
+Event 3425...
+Event 3450...
+Event 3475...
+Saving chunk 34 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_03400_to_03499_train.pt with 99 events
+Event 3500...
+Event 3525...
+Event 3550...
+Event 3575...
+Saving chunk 35 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_03500_to_03599_train.pt with 100 events
+Event 3600...
+Event 3625...
+Event 3650...
+Event 3675...
+Saving chunk 36 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_03600_to_03699_train.pt with 100 events
+Event 3700...
+Event 3725...
+Event 3750...
+Event 3775...
+Saving chunk 37 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_03700_to_03799_train.pt with 100 events
+Event 3800...
+Event 3825...
+Event 3850...
+Event 3875...
+Saving chunk 38 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_03800_to_03899_train.pt with 100 events
+Event 3900...
+Event 3925...
+Event 3950...
+Event 3975...
+Saving chunk 39 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/train_graphs/events_03900_to_03999_train.pt with 99 events
+Processed 3991 events in 1565.81s, avg 0.39s/event
+Generating graphs from scratch...
+Event 0...
+Event 25...
+Event 50...
+Event 75...
+Saving chunk 0 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/val_graphs/events_00000_to_00099_val.pt with 100 events
+Event 100...
+Event 125...
+Event 150...
+Event 175...
+Saving chunk 1 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/val_graphs/events_00100_to_00199_val.pt with 100 events
+Event 200...
+Event 225...
+Event 250...
+Event 275...
+Saving chunk 2 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/val_graphs/events_00200_to_00299_val.pt with 100 events
+Event 300...
+Event 325...
+Event 350...
+Event 375...
+Saving chunk 3 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/val_graphs/events_00300_to_00399_val.pt with 99 events
+Event 400...
+Event 425...
+Event 450...
+Event 475...
+Saving chunk 4 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/val_graphs/events_00400_to_00499_val.pt with 99 events
+Event 500...
+Event 525...
+Event 550...
+Event 575...
+Saving chunk 5 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/val_graphs/events_00500_to_00599_val.pt with 100 events
+Event 600...
+Event 625...
+Event 650...
+Event 675...
+Saving chunk 6 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/val_graphs/events_00600_to_00699_val.pt with 99 events
+Event 700...
+Event 725...
+Event 750...
+Event 775...
+Saving chunk 7 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/val_graphs/events_00700_to_00799_val.pt with 100 events
+Event 800...
+Event 825...
+Event 850...
+Event 875...
+Saving chunk 8 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/val_graphs/events_00800_to_00899_val.pt with 100 events
+Event 900...
+Event 925...
+Event 950...
+Event 975...
+Saving chunk 9 to /eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/npy_array/neutrals_with_id/graphs/val_graphs/events_00900_to_00999_val.pt with 100 events
+Processed 997 events in 417.30s, avg 0.42s/event
+Initializing model neutral_heterognn
+Training model
+Amount signal: 11736, 0.018784663033300522
+Amount bkg: 613029, 0.9812153369666995
+Amount total: 624765
+Weights :tensor([ 0.5096, 26.6175])
+Use logits False
+Checkpoint path: outputs/Final_neutrals_8block_50+10_epochs_message_passing_BCE/
+Running 50 epochs with learning rate 0.001
+[18:04:40]  At epoch 0
+  batch 47 last_batch 47 loss: 1.3848823587945167
+  batch 15 last_batch 15 loss: 1.3858580350875855
+Epoch 0 | default threshold:
+  Train - Acc: 0.7913, Eff: 0.1916, Rej: 0.8029, ROC AUC: 0.4978
+  Val   - Acc: 0.9801, Eff: 0.0010, Rej: 0.9996, ROC AUC: 0.5322
+[18:05:03]  At epoch 1
+  batch 47 last_batch 47 loss: 1.3477511659581611
+  batch 15 last_batch 15 loss: 1.3131088018417358
+Epoch 1 | default threshold:
+  Train - Acc: 0.6303, Eff: 0.4831, Rej: 0.6331, ROC AUC: 0.5876
+  Val   - Acc: 0.2073, Eff: 0.9937, Rej: 0.1916, ROC AUC: 0.7030
+[18:05:20]  At epoch 2
+  batch 47 last_batch 47 loss: 1.2201380146310685
+  batch 15 last_batch 15 loss: 1.2135624567667642
+Epoch 2 | default threshold:
+  Train - Acc: 0.4847, Eff: 0.8036, Rej: 0.4786, ROC AUC: 0.6870
+  Val   - Acc: 0.3410, Eff: 0.9590, Rej: 0.3287, ROC AUC: 0.7679
+[18:05:37]  At epoch 3
+  batch 47 last_batch 47 loss: 1.0960793710769492
+  batch 15 last_batch 15 loss: 1.0017628033955892
+Epoch 3 | default threshold:
+  Train - Acc: 0.6093, Eff: 0.7499, Rej: 0.6066, ROC AUC: 0.7679
+  Val   - Acc: 0.7628, Eff: 0.7108, Rej: 0.7639, ROC AUC: 0.8284
+[18:05:53]  At epoch 4
+  batch 47 last_batch 47 loss: 0.9799943642413362
+  batch 15 last_batch 15 loss: 0.9896820743878683
+Epoch 4 | default threshold:
+  Train - Acc: 0.7182, Eff: 0.7499, Rej: 0.7176, ROC AUC: 0.8230
+  Val   - Acc: 0.7807, Eff: 0.6928, Rej: 0.7824, ROC AUC: 0.8359
+[18:06:10]  At epoch 5
+  batch 47 last_batch 47 loss: 0.9548292109306823
+  batch 15 last_batch 15 loss: 0.9640114823977153
+Epoch 5 | default threshold:
+  Train - Acc: 0.7229, Eff: 0.7624, Rej: 0.7222, ROC AUC: 0.8329
+  Val   - Acc: 0.6994, Eff: 0.7901, Rej: 0.6976, ROC AUC: 0.8388
+[18:06:26]  At epoch 6
+  batch 47 last_batch 47 loss: 0.9582479215682821
+  batch 15 last_batch 15 loss: 0.9969854553540548
+No improvement in validation loss. Patience: 1/10
+Epoch 6 | default threshold:
+  Train - Acc: 0.6957, Eff: 0.7838, Rej: 0.6940, ROC AUC: 0.8330
+  Val   - Acc: 0.6270, Eff: 0.8617, Rej: 0.6223, ROC AUC: 0.8409
+[18:06:42]  At epoch 7
+  batch 47 last_batch 47 loss: 0.9453562054228275
+  batch 15 last_batch 15 loss: 0.9511325120925903
+Epoch 7 | default threshold:
+  Train - Acc: 0.7318, Eff: 0.7505, Rej: 0.7314, ROC AUC: 0.8343
+  Val   - Acc: 0.7018, Eff: 0.7987, Rej: 0.6999, ROC AUC: 0.8423
+[18:06:59]  At epoch 8
+  batch 47 last_batch 47 loss: 0.9402672749884585
+  batch 15 last_batch 15 loss: 0.9406135559082032
+Epoch 8 | default threshold:
+  Train - Acc: 0.7045, Eff: 0.7904, Rej: 0.7029, ROC AUC: 0.8403
+  Val   - Acc: 0.8222, Eff: 0.6485, Rej: 0.8257, ROC AUC: 0.8499
+[18:07:15]  At epoch 9
+  batch 47 last_batch 47 loss: 0.9276220443400931
+  batch 15 last_batch 15 loss: 0.987372632821401
+No improvement in validation loss. Patience: 1/10
+Epoch 9 | default threshold:
+  Train - Acc: 0.7072, Eff: 0.7871, Rej: 0.7057, ROC AUC: 0.8412
+  Val   - Acc: 0.5221, Eff: 0.9417, Rej: 0.5138, ROC AUC: 0.8479
+[18:07:31]  At epoch 10
+  batch 47 last_batch 47 loss: 0.9170016024975066
+  batch 15 last_batch 15 loss: 0.9176890810330709
+Epoch 10 | default threshold:
+  Train - Acc: 0.6965, Eff: 0.8001, Rej: 0.6945, ROC AUC: 0.8431
+  Val   - Acc: 0.5725, Eff: 0.9414, Rej: 0.5652, ROC AUC: 0.8591
+[18:07:48]  At epoch 11
+  batch 47 last_batch 47 loss: 0.90700844754564
+  batch 15 last_batch 15 loss: 0.8590457439422607
+Epoch 11 | default threshold:
+  Train - Acc: 0.6953, Eff: 0.8193, Rej: 0.6929, ROC AUC: 0.8488
+  Val   - Acc: 0.7094, Eff: 0.8540, Rej: 0.7065, ROC AUC: 0.8691
+[18:08:04]  At epoch 12
+  batch 47 last_batch 47 loss: 0.920532726226969
+  batch 15 last_batch 15 loss: 0.9233238657315572
+No improvement in validation loss. Patience: 1/10
+Epoch 12 | default threshold:
+  Train - Acc: 0.6813, Eff: 0.8301, Rej: 0.6784, ROC AUC: 0.8461
+  Val   - Acc: 0.7147, Eff: 0.7861, Rej: 0.7133, ROC AUC: 0.8475
+[18:08:21]  At epoch 13
+  batch 47 last_batch 47 loss: 0.9491466080888789
+  batch 15 last_batch 15 loss: 0.9940272728602092
+No improvement in validation loss. Patience: 2/10
+Epoch 13 | default threshold:
+  Train - Acc: 0.6829, Eff: 0.8002, Rej: 0.6807, ROC AUC: 0.8321
+  Val   - Acc: 0.7926, Eff: 0.6828, Rej: 0.7948, ROC AUC: 0.8390
+[18:08:37]  At epoch 14
+  batch 47 last_batch 47 loss: 0.937714140465919
+  batch 15 last_batch 15 loss: 0.9409776329994202
+No improvement in validation loss. Patience: 3/10
+Epoch 14 | default threshold:
+  Train - Acc: 0.6972, Eff: 0.7840, Rej: 0.6956, ROC AUC: 0.8347
+  Val   - Acc: 0.6148, Eff: 0.8860, Rej: 0.6094, ROC AUC: 0.8482
+[18:08:53]  At epoch 15
+  batch 47 last_batch 47 loss: 0.9109162459982202
+  batch 15 last_batch 15 loss: 0.8979750474294027
+No improvement in validation loss. Patience: 4/10
+Epoch 15 | default threshold:
+  Train - Acc: 0.6763, Eff: 0.8245, Rej: 0.6735, ROC AUC: 0.8450
+  Val   - Acc: 0.6468, Eff: 0.8847, Rej: 0.6420, ROC AUC: 0.8574
+Saving checkpoint at epoch 15
+Checkpoint saved to outputs/Final_neutrals_8block_50+10_epochs_message_passing_BCE/checkpoint_15.pt
+[18:09:11]  At epoch 16
+  batch 47 last_batch 47 loss: 0.8929628882002323
+  batch 15 last_batch 15 loss: 0.9375941157341003
+No improvement in validation loss. Patience: 5/10
+Epoch 16 | default threshold:
+  Train - Acc: 0.6755, Eff: 0.8501, Rej: 0.6721, ROC AUC: 0.8538
+  Val   - Acc: 0.7628, Eff: 0.7384, Rej: 0.7633, ROC AUC: 0.8584
+[18:09:27]  At epoch 17
+  batch 47 last_batch 47 loss: 0.8442216299949808
+  batch 15 last_batch 15 loss: 0.8096093694368999
+Epoch 17 | default threshold:
+  Train - Acc: 0.6820, Eff: 0.8639, Rej: 0.6786, ROC AUC: 0.8661
+  Val   - Acc: 0.7613, Eff: 0.8214, Rej: 0.7601, ROC AUC: 0.8852
+[18:09:43]  At epoch 18
+  batch 47 last_batch 47 loss: 0.7910717193116533
+  batch 15 last_batch 15 loss: 0.7729122320810954
+Epoch 18 | default threshold:
+  Train - Acc: 0.7410, Eff: 0.8603, Rej: 0.7388, ROC AUC: 0.8884
+  Val   - Acc: 0.7182, Eff: 0.9060, Rej: 0.7144, ROC AUC: 0.8993
+[18:10:00]  At epoch 19
+  batch 47 last_batch 47 loss: 0.7503439961595738
+  batch 15 last_batch 15 loss: 0.7361948092778524
+Epoch 19 | default threshold:
+  Train - Acc: 0.7389, Eff: 0.8844, Rej: 0.7361, ROC AUC: 0.8989
+  Val   - Acc: 0.7104, Eff: 0.9394, Rej: 0.7058, ROC AUC: 0.9126
+[18:10:17]  At epoch 20
+  batch 47 last_batch 47 loss: 0.7749936872340263
+  batch 15 last_batch 15 loss: 0.7374908804893494
+No improvement in validation loss. Patience: 1/10
+Epoch 20 | default threshold:
+  Train - Acc: 0.7295, Eff: 0.8796, Rej: 0.7266, ROC AUC: 0.8930
+  Val   - Acc: 0.7381, Eff: 0.9100, Rej: 0.7347, ROC AUC: 0.9078
+[18:10:33]  At epoch 21
+  batch 47 last_batch 47 loss: 0.7251290082931519
+  batch 15 last_batch 15 loss: 0.6642734209696451
+Epoch 21 | default threshold:
+  Train - Acc: 0.7619, Eff: 0.8848, Rej: 0.7596, ROC AUC: 0.9096
+  Val   - Acc: 0.8209, Eff: 0.8670, Rej: 0.8200, ROC AUC: 0.9286
+[18:10:49]  At epoch 22
+  batch 47 last_batch 47 loss: 0.672951470030115
+  batch 15 last_batch 15 loss: 0.6007130920886994
+Epoch 22 | default threshold:
+  Train - Acc: 0.8104, Eff: 0.8797, Rej: 0.8091, ROC AUC: 0.9255
+  Val   - Acc: 0.8537, Eff: 0.8817, Rej: 0.8531, ROC AUC: 0.9438
+[18:11:06]  At epoch 23
+  batch 47 last_batch 47 loss: 0.7033061118836098
+  batch 15 last_batch 15 loss: 0.9227816184361776
+No improvement in validation loss. Patience: 1/10
+Epoch 23 | default threshold:
+  Train - Acc: 0.8062, Eff: 0.8611, Rej: 0.8052, ROC AUC: 0.9176
+  Val   - Acc: 0.6475, Eff: 0.8687, Rej: 0.6431, ROC AUC: 0.8529
+[18:11:22]  At epoch 24
+  batch 47 last_batch 47 loss: 0.7383294726939912
+  batch 15 last_batch 15 loss: 0.6727753043174743
+No improvement in validation loss. Patience: 2/10
+Epoch 24 | default threshold:
+  Train - Acc: 0.7485, Eff: 0.8936, Rej: 0.7457, ROC AUC: 0.9057
+  Val   - Acc: 0.8147, Eff: 0.8884, Rej: 0.8132, ROC AUC: 0.9291
+[18:11:38]  At epoch 25
+  batch 47 last_batch 47 loss: 0.6406299611355396
+  batch 15 last_batch 15 loss: 0.6057034452756246
+No improvement in validation loss. Patience: 3/10
+Epoch 25 | default threshold:
+  Train - Acc: 0.8218, Eff: 0.8929, Rej: 0.8204, ROC AUC: 0.9313
+  Val   - Acc: 0.8528, Eff: 0.8994, Rej: 0.8519, ROC AUC: 0.9443
+[18:11:54]  At epoch 26
+  batch 47 last_batch 47 loss: 0.5917822211346728
+  batch 15 last_batch 15 loss: 0.6383848031361897
+No improvement in validation loss. Patience: 4/10
+Epoch 26 | default threshold:
+  Train - Acc: 0.8321, Eff: 0.9132, Rej: 0.8305, ROC AUC: 0.9405
+  Val   - Acc: 0.8619, Eff: 0.8630, Rej: 0.8619, ROC AUC: 0.9352
+[18:12:10]  At epoch 27
+  batch 47 last_batch 47 loss: 0.538695771643456
+  batch 15 last_batch 15 loss: 0.5386167248090108
+Epoch 27 | default threshold:
+  Train - Acc: 0.8526, Eff: 0.9214, Rej: 0.8513, ROC AUC: 0.9511
+  Val   - Acc: 0.8771, Eff: 0.8984, Rej: 0.8767, ROC AUC: 0.9566
+[18:12:26]  At epoch 28
+  batch 47 last_batch 47 loss: 0.4888003709468436
+  batch 15 last_batch 15 loss: 0.4518401602904002
+Epoch 28 | default threshold:
+  Train - Acc: 0.8718, Eff: 0.9283, Rej: 0.8707, ROC AUC: 0.9596
+  Val   - Acc: 0.8843, Eff: 0.9404, Rej: 0.8832, ROC AUC: 0.9666
+[18:12:42]  At epoch 29
+  batch 47 last_batch 47 loss: 0.4540256585212464
+  batch 15 last_batch 15 loss: 0.5520817458629608
+No improvement in validation loss. Patience: 1/10
+Epoch 29 | default threshold:
+  Train - Acc: 0.8860, Eff: 0.9316, Rej: 0.8851, ROC AUC: 0.9643
+  Val   - Acc: 0.8233, Eff: 0.9420, Rej: 0.8209, ROC AUC: 0.9527
+[18:12:58]  At epoch 30
+  batch 47 last_batch 47 loss: 0.45557929733966257
+  batch 15 last_batch 15 loss: 0.4447013815244039
+Epoch 30 | default threshold:
+  Train - Acc: 0.8813, Eff: 0.9336, Rej: 0.8803, ROC AUC: 0.9635
+  Val   - Acc: 0.8930, Eff: 0.9334, Rej: 0.8922, ROC AUC: 0.9669
+Saving checkpoint at epoch 30
+Checkpoint saved to outputs/Final_neutrals_8block_50+10_epochs_message_passing_BCE/checkpoint_30.pt
+[18:13:16]  At epoch 31
+  batch 47 last_batch 47 loss: 0.44798385399453183
+  batch 15 last_batch 15 loss: 0.45887732903162637
+No improvement in validation loss. Patience: 1/10
+Epoch 31 | default threshold:
+  Train - Acc: 0.8873, Eff: 0.9342, Rej: 0.8864, ROC AUC: 0.9657
+  Val   - Acc: 0.8739, Eff: 0.9467, Rej: 0.8725, ROC AUC: 0.9656
+[18:13:32]  At epoch 32
+  batch 47 last_batch 47 loss: 0.49139447605356257
+  batch 15 last_batch 15 loss: 0.47814449667930603
+No improvement in validation loss. Patience: 2/10
+Epoch 32 | default threshold:
+  Train - Acc: 0.8770, Eff: 0.9230, Rej: 0.8761, ROC AUC: 0.9591
+  Val   - Acc: 0.9056, Eff: 0.9074, Rej: 0.9056, ROC AUC: 0.9639
+[18:13:48]  At epoch 33
+  batch 47 last_batch 47 loss: 0.43488054072603266
+  batch 15 last_batch 15 loss: 0.4478443205356598
+No improvement in validation loss. Patience: 3/10
+Epoch 33 | default threshold:
+  Train - Acc: 0.8956, Eff: 0.9340, Rej: 0.8948, ROC AUC: 0.9680
+  Val   - Acc: 0.9121, Eff: 0.9067, Rej: 0.9122, ROC AUC: 0.9681
+[18:14:04]  At epoch 34
+  batch 47 last_batch 47 loss: 0.4310124351623211
+  batch 15 last_batch 15 loss: 0.4592471619447072
+No improvement in validation loss. Patience: 4/10
+Epoch 34 | default threshold:
+  Train - Acc: 0.8916, Eff: 0.9322, Rej: 0.8908, ROC AUC: 0.9672
+  Val   - Acc: 0.9135, Eff: 0.8994, Rej: 0.9138, ROC AUC: 0.9669
+[18:14:21]  At epoch 35
+  batch 47 last_batch 47 loss: 0.4528707392672275
+  batch 15 last_batch 15 loss: 0.41025686661402383
+Epoch 35 | default threshold:
+  Train - Acc: 0.8911, Eff: 0.9300, Rej: 0.8903, ROC AUC: 0.9653
+  Val   - Acc: 0.9077, Eff: 0.9340, Rej: 0.9072, ROC AUC: 0.9721
+[18:14:37]  At epoch 36
+  batch 47 last_batch 47 loss: 0.4263262076580778
+  batch 15 last_batch 15 loss: 0.43110102812449136
+No improvement in validation loss. Patience: 1/10
+Epoch 36 | default threshold:
+  Train - Acc: 0.8969, Eff: 0.9334, Rej: 0.8962, ROC AUC: 0.9688
+  Val   - Acc: 0.9074, Eff: 0.9224, Rej: 0.9071, ROC AUC: 0.9695
+[18:14:53]  At epoch 37
+  batch 47 last_batch 47 loss: 0.4055860702027666
+  batch 15 last_batch 15 loss: 0.3976668318112691
+Epoch 37 | default threshold:
+  Train - Acc: 0.9000, Eff: 0.9376, Rej: 0.8993, ROC AUC: 0.9712
+  Val   - Acc: 0.8966, Eff: 0.9490, Rej: 0.8955, ROC AUC: 0.9735
+[18:15:09]  At epoch 38
+  batch 47 last_batch 47 loss: 0.39039366676452314
+  batch 15 last_batch 15 loss: 0.3995019495487213
+No improvement in validation loss. Patience: 1/10
+Epoch 38 | default threshold:
+  Train - Acc: 0.9038, Eff: 0.9408, Rej: 0.9031, ROC AUC: 0.9729
+  Val   - Acc: 0.8939, Eff: 0.9477, Rej: 0.8928, ROC AUC: 0.9737
+[18:15:26]  At epoch 39
+  batch 47 last_batch 47 loss: 0.3980542998364631
+  batch 15 last_batch 15 loss: 0.4595192551612854
+No improvement in validation loss. Patience: 2/10
+Epoch 39 | default threshold:
+  Train - Acc: 0.9031, Eff: 0.9396, Rej: 0.9024, ROC AUC: 0.9719
+  Val   - Acc: 0.8620, Eff: 0.9560, Rej: 0.8602, ROC AUC: 0.9686
+[18:15:41]  At epoch 40
+  batch 47 last_batch 47 loss: 0.44242086689522925
+  batch 15 last_batch 15 loss: 0.4131074845790863
+No improvement in validation loss. Patience: 3/10
+Epoch 40 | default threshold:
+  Train - Acc: 0.8871, Eff: 0.9345, Rej: 0.8862, ROC AUC: 0.9655
+  Val   - Acc: 0.8780, Eff: 0.9583, Rej: 0.8764, ROC AUC: 0.9719
+[18:15:57]  At epoch 41
+  batch 47 last_batch 47 loss: 0.4037902925876861
+  batch 15 last_batch 15 loss: 0.4171066681543986
+No improvement in validation loss. Patience: 4/10
+Epoch 41 | default threshold:
+  Train - Acc: 0.8925, Eff: 0.9448, Rej: 0.8915, ROC AUC: 0.9707
+  Val   - Acc: 0.8882, Eff: 0.9474, Rej: 0.8870, ROC AUC: 0.9710
+[18:16:13]  At epoch 42
+  batch 47 last_batch 47 loss: 0.39633708558184033
+  batch 15 last_batch 15 loss: 0.3895828406016032
+Epoch 42 | default threshold:
+  Train - Acc: 0.8975, Eff: 0.9441, Rej: 0.8966, ROC AUC: 0.9721
+  Val   - Acc: 0.8950, Eff: 0.9573, Rej: 0.8937, ROC AUC: 0.9762
+[18:16:30]  At epoch 43
+  batch 47 last_batch 47 loss: 0.4227376275874199
+  batch 15 last_batch 15 loss: 0.3902583618958791
+No improvement in validation loss. Patience: 1/10
+Epoch 43 | default threshold:
+  Train - Acc: 0.9022, Eff: 0.9380, Rej: 0.9016, ROC AUC: 0.9701
+  Val   - Acc: 0.9153, Eff: 0.9380, Rej: 0.9149, ROC AUC: 0.9747
+[18:16:45]  At epoch 44
+  batch 47 last_batch 47 loss: 0.40753983373337604
+  batch 15 last_batch 15 loss: 0.39712547858556113
+No improvement in validation loss. Patience: 2/10
+Epoch 44 | default threshold:
+  Train - Acc: 0.9019, Eff: 0.9405, Rej: 0.9012, ROC AUC: 0.9713
+  Val   - Acc: 0.9091, Eff: 0.9447, Rej: 0.9084, ROC AUC: 0.9736
+[18:17:02]  At epoch 45
+  batch 47 last_batch 47 loss: 0.38643891760643495
+  batch 15 last_batch 15 loss: 0.36880645354588826
+Epoch 45 | default threshold:
+  Train - Acc: 0.8997, Eff: 0.9500, Rej: 0.8988, ROC AUC: 0.9736
+  Val   - Acc: 0.8977, Eff: 0.9583, Rej: 0.8965, ROC AUC: 0.9774
+Saving checkpoint at epoch 45
+Checkpoint saved to outputs/Final_neutrals_8block_50+10_epochs_message_passing_BCE/checkpoint_45.pt
+[18:17:20]  At epoch 46
+  batch 47 last_batch 47 loss: 0.37631040114037534
+  batch 15 last_batch 15 loss: 0.4380853692690531
+No improvement in validation loss. Patience: 1/10
+Epoch 46 | default threshold:
+  Train - Acc: 0.9040, Eff: 0.9457, Rej: 0.9032, ROC AUC: 0.9746
+  Val   - Acc: 0.8803, Eff: 0.9444, Rej: 0.8790, ROC AUC: 0.9668
+[18:17:36]  At epoch 47
+  batch 47 last_batch 47 loss: 0.3697397049437178
+  batch 15 last_batch 15 loss: 0.35632922450701393
+Epoch 47 | default threshold:
+  Train - Acc: 0.9081, Eff: 0.9447, Rej: 0.9074, ROC AUC: 0.9754
+  Val   - Acc: 0.9123, Eff: 0.9537, Rej: 0.9114, ROC AUC: 0.9781
+[18:17:52]  At epoch 48
+  batch 47 last_batch 47 loss: 0.350290281975523
+  batch 15 last_batch 15 loss: 0.3982538223266602
+No improvement in validation loss. Patience: 1/10
+Epoch 48 | default threshold:
+  Train - Acc: 0.9114, Eff: 0.9497, Rej: 0.9107, ROC AUC: 0.9775
+  Val   - Acc: 0.9198, Eff: 0.9157, Rej: 0.9199, ROC AUC: 0.9742
+[18:18:08]  At epoch 49
+  batch 47 last_batch 47 loss: 0.34785895176390386
+  batch 15 last_batch 15 loss: 0.42424790064493817
+No improvement in validation loss. Patience: 2/10
+Epoch 49 | default threshold:
+  Train - Acc: 0.9104, Eff: 0.9525, Rej: 0.9096, ROC AUC: 0.9776
+  Val   - Acc: 0.9317, Eff: 0.8977, Rej: 0.9324, ROC AUC: 0.9732
+Model weights restored to best epoch 47
+Running 10 epochs with learning rate 0.0001
+[18:18:24]  At epoch 50
+  batch 47 last_batch 47 loss: 0.3285340302168055
+  batch 15 last_batch 15 loss: 0.3334001421928406
+Epoch 50 | default threshold:
+  Train - Acc: 0.9214, Eff: 0.9480, Rej: 0.9209, ROC AUC: 0.9802
+  Val   - Acc: 0.9137, Eff: 0.9590, Rej: 0.9128, ROC AUC: 0.9805
+[18:18:40]  At epoch 51
+  batch 47 last_batch 47 loss: 0.3024391665103588
+  batch 15 last_batch 15 loss: 0.34354594349861145
+No improvement in validation loss. Patience: 1/100
+Epoch 51 | default threshold:
+  Train - Acc: 0.9249, Eff: 0.9578, Rej: 0.9243, ROC AUC: 0.9823
+  Val   - Acc: 0.9111, Eff: 0.9517, Rej: 0.9103, ROC AUC: 0.9796
+[18:18:56]  At epoch 52
+  batch 47 last_batch 47 loss: 0.31612869621591366
+  batch 15 last_batch 15 loss: 0.3264017105102539
+Epoch 52 | default threshold:
+  Train - Acc: 0.9177, Eff: 0.9590, Rej: 0.9169, ROC AUC: 0.9814
+  Val   - Acc: 0.9157, Eff: 0.9587, Rej: 0.9148, ROC AUC: 0.9813
+[18:19:12]  At epoch 53
+  batch 47 last_batch 47 loss: 0.3038698609205002
+  batch 15 last_batch 15 loss: 0.3256837288538615
+Epoch 53 | default threshold:
+  Train - Acc: 0.9220, Eff: 0.9589, Rej: 0.9213, ROC AUC: 0.9826
+  Val   - Acc: 0.9181, Eff: 0.9567, Rej: 0.9174, ROC AUC: 0.9813
+[18:19:28]  At epoch 54
+  batch 47 last_batch 47 loss: 0.30273785996944347
+  batch 15 last_batch 15 loss: 0.3233785092830658
+Epoch 54 | default threshold:
+  Train - Acc: 0.9192, Eff: 0.9621, Rej: 0.9183, ROC AUC: 0.9827
+  Val   - Acc: 0.9194, Eff: 0.9553, Rej: 0.9186, ROC AUC: 0.9816
+[18:19:44]  At epoch 55
+  batch 47 last_batch 47 loss: 0.29068056890305055
+  batch 15 last_batch 15 loss: 0.32279306252797446
+Epoch 55 | default threshold:
+  Train - Acc: 0.9237, Eff: 0.9637, Rej: 0.9230, ROC AUC: 0.9836
+  Val   - Acc: 0.9191, Eff: 0.9543, Rej: 0.9184, ROC AUC: 0.9817
+[18:20:01]  At epoch 56
+  batch 47 last_batch 47 loss: 0.29316755780514253
+  batch 15 last_batch 15 loss: 0.3219679077466329
+Epoch 56 | default threshold:
+  Train - Acc: 0.9242, Eff: 0.9628, Rej: 0.9234, ROC AUC: 0.9838
+  Val   - Acc: 0.9130, Eff: 0.9630, Rej: 0.9121, ROC AUC: 0.9817
+[18:20:17]  At epoch 57
+  batch 47 last_batch 47 loss: 0.28993958425014577
+  batch 15 last_batch 15 loss: 0.32583616971969603
+No improvement in validation loss. Patience: 1/100
+Epoch 57 | default threshold:
+  Train - Acc: 0.9234, Eff: 0.9641, Rej: 0.9226, ROC AUC: 0.9836
+  Val   - Acc: 0.9163, Eff: 0.9550, Rej: 0.9155, ROC AUC: 0.9814
+[18:20:33]  At epoch 58
+  batch 47 last_batch 47 loss: 0.2939981925994792
+  batch 15 last_batch 15 loss: 0.31997435887654624
+Epoch 58 | default threshold:
+  Train - Acc: 0.9231, Eff: 0.9622, Rej: 0.9223, ROC AUC: 0.9834
+  Val   - Acc: 0.9165, Eff: 0.9593, Rej: 0.9156, ROC AUC: 0.9820
+[18:20:49]  At epoch 59
+  batch 47 last_batch 47 loss: 0.2936759267715698
+  batch 15 last_batch 15 loss: 0.3288651208082835
+No improvement in validation loss. Patience: 1/100
+Epoch 59 | default threshold:
+  Train - Acc: 0.9235, Eff: 0.9626, Rej: 0.9227, ROC AUC: 0.9838
+  Val   - Acc: 0.9204, Eff: 0.9503, Rej: 0.9198, ROC AUC: 0.9814
+Model weights restored to best epoch 58
+Training finished. Saving model in Final_neutrals_8block_50+10_epochs_message_passing_BCE.pt
+Checkpoint saved to outputs/Final_neutrals_8block_50+10_epochs_message_passing_BCE/Final_neutrals_8block_50+10_epochs_message_passing_BCE.pt
+Saving config file as txt file

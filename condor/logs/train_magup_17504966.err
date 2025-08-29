@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 5, in <module>
+    from wmpgnn.datasets.data_handler import DataHandler
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/data_handler.py", line 38
+    files_target_tr = (files_target_tr_1 + files_target_tr_2)[:evt_max_train]files_input_vl = sorted(glob.glob(f'{data_path}/validation_dataset/input_*'), key=natural_sort_key)[:evt_max_val]
+                                                                             ^^^^^^^^^^^^^^
+SyntaxError: invalid syntax

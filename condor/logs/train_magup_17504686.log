@@ -1,0 +1,53 @@
+000 (17504686.000.000) 06/04 11:43:57 Job submitted from host: <137.138.76.70:9618?addrs=137.138.76.70-9618+[2001-1458-d00-1c--49]-9618&alias=bigbird11.cern.ch&noUDP&sock=schedd_4988_ee7c>
+...
+040 (17504686.000.000) 06/04 11:45:05 Started transferring input files
+	Transferring to host: <128.142.241.88:9618?addrs=128.142.241.88-9618+[2001-1458-301-ce--100-183]-9618&alias=b9g47n2314.cern.ch&noUDP&sock=slot1_1_17886_0e10_13490>
+...
+040 (17504686.000.000) 06/04 11:45:05 Finished transferring input files
+...
+001 (17504686.000.000) 06/04 11:45:06 Job executing on host: <128.142.241.88:9618?addrs=128.142.241.88-9618+[2001-1458-301-ce--100-183]-9618&alias=b9g47n2314.cern.ch&noUDP&sock=startd_17228_8db3>
+	SlotName: slot1_1@b9g47n2314.cern.ch
+	AvailableGPUs = { GPUs_GPU_3d41bc53,GPUs_GPU_87fbff5c,GPUs_GPU_6f3c1fe7 }
+	CondorScratchDir = "/pool/condor/dir_2206530"
+	Cpus = 3
+	Disk = 2049
+	GPUs = 3
+	GPUs_GPU_3d41bc53 = [ GlobalMemoryMb = 32494; MaxSupportedVersion = 12040; DriverVersion = 12.4; ComputeUnits = 80; ECCEnabled = true; DeviceUuid = "3d41bc53-1e61-dbf2-2a1c-0eafae9e0a08"; DeviceName = "Tesla V100-PCIE-32GB"; CoresPerCU = 64; ClockMhz = 1380.0; DevicePciBusId = "0000:07:00.0"; Capability = 7.0; Id = "GPU-3d41bc53" ]
+	GPUs_GPU_6f3c1fe7 = [ GlobalMemoryMb = 32494; MaxSupportedVersion = 12040; DriverVersion = 12.4; ComputeUnits = 80; ECCEnabled = true; DeviceUuid = "6f3c1fe7-a575-204d-1479-163ce2216a41"; DeviceName = "Tesla V100-PCIE-32GB"; CoresPerCU = 64; ClockMhz = 1380.0; DevicePciBusId = "0000:09:00.0"; Capability = 7.0; Id = "GPU-6f3c1fe7" ]
+	GPUs_GPU_87fbff5c = [ GlobalMemoryMb = 32494; MaxSupportedVersion = 12040; DriverVersion = 12.4; ComputeUnits = 80; ECCEnabled = true; DeviceUuid = "87fbff5c-ea15-4fbe-be76-ca4230812939"; DeviceName = "Tesla V100-PCIE-32GB"; CoresPerCU = 64; ClockMhz = 1380.0; DevicePciBusId = "0000:08:00.0"; Capability = 7.0; Id = "GPU-87fbff5c" ]
+	Memory = 9000
+...
+006 (17504686.000.000) 06/04 11:45:19 Image size of job updated: 7004
+	7  -  MemoryUsage of job (MB)
+	7004  -  ResidentSetSize of job (KB)
+...
+006 (17504686.000.000) 06/04 11:50:19 Image size of job updated: 438448
+	429  -  MemoryUsage of job (MB)
+	438448  -  ResidentSetSize of job (KB)
+...
+006 (17504686.000.000) 06/04 11:51:36 Image size of job updated: 448380
+	429  -  MemoryUsage of job (MB)
+	439204  -  ResidentSetSize of job (KB)
+...
+040 (17504686.000.000) 06/04 11:51:36 Started transferring output files
+...
+040 (17504686.000.000) 06/04 11:51:36 Finished transferring output files
+...
+005 (17504686.000.000) 06/04 11:51:36 Job terminated.
+	(1) Normal termination (return value 1)
+		Usr 0 00:01:11, Sys 0 00:00:10  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:01:11, Sys 0 00:00:10  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	7872  -  Run Bytes Sent By Job
+	543  -  Run Bytes Received By Job
+	7872  -  Total Bytes Sent By Job
+	543  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated Assigned
+	   Cpus                 :                 3         3 
+	   Disk (KB)            :       29        1      2049 
+	   Gpus (Average)       :                 3         3 "GPU-3d41bc53,GPU-87fbff5c,GPU-6f3c1fe7"
+	   Memory (MB)          :      429     9000      9000 
+
+	Job terminated of its own accord at 2025-06-04T09:51:36Z with exit-code 1.
+...

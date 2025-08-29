@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 46, in <module>
+    data_loader = DataHandler(config_loader)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/data_handler.py", line 94, in __init__
+    self.train_dataset = CustomNeutralsHeteroDataset(files_input_tr, files_target_tr, performance_mode=performance_mode, config_loader=self.config_loader, split="train", sizes=[size_tr_up, size_tr_down])
+UnboundLocalError: local variable 'size_tr_up' referenced before assignment

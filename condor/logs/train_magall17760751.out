@@ -1,0 +1,165 @@
+Wed Aug 13 15:21:00 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.51.03              Driver Version: 575.51.03      CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100S-PCIE-32GB          Off |   00000000:07:00.0 Off |                    0 |
+| N/A   35C    P0             25W /  250W |       4MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Loading Config
+Loading Dataset neutrals
+Using 160000 events for training
+Using 21486 events for validation
+Creating neutrals dataset...
+Data loader created
+Loading preprocessed graphs for split train
+Loaded 135899 graphs from cache in 1600 files (in 552.08s).
+Loading preprocessed graphs for split val
+Loaded 18255 graphs from cache in 215 files (in 76.08s).
+Initializing model neutral_heterognn
+Training model
+Amount signal: 173774, 0.019726854570554887
+Amount bkg: 8635233, 0.9802731454294451
+Amount total: 8809007
+Weights :tensor([ 0.5101, 25.3462])
+Use logits False
+Checkpoint path: outputs/Final_neutrals_magall_4block_40+5_epochs_message_passing_BCE/
+Running 40 epochs with learning rate 0.001
+[15:38:12]  At epoch 0
+  batch 6371 last_batch 6371 loss: 1.3020213883369576
+  batch 1140 last_batch 1140 loss: 1.196489172337348
+Epoch 0 | default threshold:
+  Train - Acc: 0.7833, Eff: 0.3499, Rej: 0.7920, ROC AUC: 0.6202
+  Val   - Acc: 0.6172, Eff: 0.7836, Rej: 0.6139, ROC AUC: 0.7781
+[16:05:46]  At epoch 1
+  batch 6371 last_batch 6371 loss: 1.0926233599650357
+  batch 1140 last_batch 1140 loss: 1.0679518857023171
+Epoch 1 | default threshold:
+  Train - Acc: 0.7056, Eff: 0.7161, Rej: 0.7054, ROC AUC: 0.7870
+  Val   - Acc: 0.6730, Eff: 0.7660, Rej: 0.6711, ROC AUC: 0.7997
+[16:30:27]  At epoch 2
+  batch 6371 last_batch 6371 loss: 1.0778769789217706
+  batch 1140 last_batch 1140 loss: 1.0645263390582904
+Epoch 2 | default threshold:
+  Train - Acc: 0.7096, Eff: 0.7214, Rej: 0.7093, ROC AUC: 0.7932
+  Val   - Acc: 0.7091, Eff: 0.7322, Rej: 0.7086, ROC AUC: 0.7993
+[16:56:02]  At epoch 3
+  batch 6371 last_batch 6371 loss: 1.0718648038971763
+  batch 1140 last_batch 1140 loss: 1.0680689904773444
+No improvement in validation loss. Patience: 1/6
+Epoch 3 | default threshold:
+  Train - Acc: 0.7096, Eff: 0.7236, Rej: 0.7094, ROC AUC: 0.7952
+  Val   - Acc: 0.6685, Eff: 0.7713, Rej: 0.6664, ROC AUC: 0.8006
+[17:22:10]  At epoch 4
+  batch 6371 last_batch 6371 loss: 1.0664689044641038
+  batch 1140 last_batch 1140 loss: 1.0632980010488577
+Epoch 4 | default threshold:
+  Train - Acc: 0.7067, Eff: 0.7294, Rej: 0.7062, ROC AUC: 0.7968
+  Val   - Acc: 0.7519, Eff: 0.6835, Rej: 0.7532, ROC AUC: 0.8006
+[17:48:34]  At epoch 5
+  batch 6371 last_batch 6371 loss: 1.065828481390008
+  batch 1140 last_batch 1140 loss: 1.0633526840230876
+No improvement in validation loss. Patience: 1/6
+Epoch 5 | default threshold:
+  Train - Acc: 0.7069, Eff: 0.7304, Rej: 0.7064, ROC AUC: 0.7976
+  Val   - Acc: 0.6870, Eff: 0.7531, Rej: 0.6857, ROC AUC: 0.7996
+[18:15:36]  At epoch 6
+  batch 6371 last_batch 6371 loss: 1.0604575368434102
+  batch 1140 last_batch 1140 loss: 1.0592235646749797
+Epoch 6 | default threshold:
+  Train - Acc: 0.7117, Eff: 0.7278, Rej: 0.7114, ROC AUC: 0.7990
+  Val   - Acc: 0.6844, Eff: 0.7593, Rej: 0.6829, ROC AUC: 0.8021
+[18:42:37]  At epoch 7
+  batch 6371 last_batch 6371 loss: 1.0606348523164053
+  batch 1140 last_batch 1140 loss: 1.059852771068874
+No improvement in validation loss. Patience: 1/6
+Epoch 7 | default threshold:
+  Train - Acc: 0.7086, Eff: 0.7310, Rej: 0.7081, ROC AUC: 0.7991
+  Val   - Acc: 0.7278, Eff: 0.7113, Rej: 0.7281, ROC AUC: 0.8010
+[19:10:04]  At epoch 8
+  batch 6371 last_batch 6371 loss: 1.066433505928885
+  batch 1140 last_batch 1140 loss: 1.0597865743595256
+No improvement in validation loss. Patience: 2/6
+Epoch 8 | default threshold:
+  Train - Acc: 0.7119, Eff: 0.7261, Rej: 0.7116, ROC AUC: 0.7977
+  Val   - Acc: 0.7436, Eff: 0.6970, Rej: 0.7446, ROC AUC: 0.8028
+[19:37:15]  At epoch 9
+  batch 6371 last_batch 6371 loss: 1.0593012542332423
+  batch 1140 last_batch 1140 loss: 1.0713138525946098
+No improvement in validation loss. Patience: 3/6
+Epoch 9 | default threshold:
+  Train - Acc: 0.7113, Eff: 0.7290, Rej: 0.7109, ROC AUC: 0.7998
+  Val   - Acc: 0.6833, Eff: 0.7520, Rej: 0.6820, ROC AUC: 0.7986
+[20:04:41]  At epoch 10
+  batch 6371 last_batch 6371 loss: 1.0608533599316428
+  batch 1140 last_batch 1140 loss: 1.0618862129094309
+No improvement in validation loss. Patience: 4/6
+Epoch 10 | default threshold:
+  Train - Acc: 0.7100, Eff: 0.7318, Rej: 0.7096, ROC AUC: 0.8002
+  Val   - Acc: 0.7321, Eff: 0.7066, Rej: 0.7326, ROC AUC: 0.8000
+[20:32:25]  At epoch 11
+  batch 6371 last_batch 6371 loss: 1.059562184610054
+  batch 1140 last_batch 1140 loss: 1.060738640291649
+No improvement in validation loss. Patience: 5/6
+Epoch 11 | default threshold:
+  Train - Acc: 0.7079, Eff: 0.7334, Rej: 0.7074, ROC AUC: 0.8005
+  Val   - Acc: 0.6760, Eff: 0.7633, Rej: 0.6743, ROC AUC: 0.8014
+[21:00:07]  At epoch 12
+  batch 6371 last_batch 6371 loss: 1.0581030690525937
+  batch 1140 last_batch 1140 loss: 1.066178433884654
+No improvement in validation loss. Patience: 6/6
+Epoch 12 | default threshold:
+  Train - Acc: 0.7117, Eff: 0.7294, Rej: 0.7114, ROC AUC: 0.8004
+  Val   - Acc: 0.6597, Eff: 0.7753, Rej: 0.6574, ROC AUC: 0.7985
+Saving checkpoint at epoch 12
+Checkpoint saved to outputs/Final_neutrals_magall_4block_40+5_epochs_message_passing_BCE/checkpoint_12.pt
+Early stopping at epoch 12. Best epoch was 6 with val_loss=1.0592
+Model weights restored to best epoch 6
+Running 5 epochs with learning rate 0.0001
+[21:27:42]  At epoch 13
+  batch 6371 last_batch 6371 loss: 1.049835890087148
+  batch 1140 last_batch 1140 loss: 1.0479518026636359
+Epoch 13 | default threshold:
+  Train - Acc: 0.7123, Eff: 0.7338, Rej: 0.7119, ROC AUC: 0.8039
+  Val   - Acc: 0.7105, Eff: 0.7382, Rej: 0.7099, ROC AUC: 0.8050
+[21:55:24]  At epoch 14
+  batch 6371 last_batch 6371 loss: 1.0494681204381346
+  batch 1140 last_batch 1140 loss: 1.048088512713449
+No improvement in validation loss. Patience: 1/100
+Epoch 14 | default threshold:
+  Train - Acc: 0.7117, Eff: 0.7340, Rej: 0.7113, ROC AUC: 0.8039
+  Val   - Acc: 0.7208, Eff: 0.7270, Rej: 0.7207, ROC AUC: 0.8050
+[22:22:50]  At epoch 15
+  batch 6371 last_batch 6371 loss: 1.0462073591398755
+  batch 1140 last_batch 1140 loss: 1.0473492482775135
+Epoch 15 | default threshold:
+  Train - Acc: 0.7128, Eff: 0.7357, Rej: 0.7123, ROC AUC: 0.8053
+  Val   - Acc: 0.7197, Eff: 0.7286, Rej: 0.7196, ROC AUC: 0.8053
+[22:50:07]  At epoch 16
+  batch 6371 last_batch 6371 loss: 1.0462376805961722
+  batch 1140 last_batch 1140 loss: 1.046891345998697
+Epoch 16 | default threshold:
+  Train - Acc: 0.7117, Eff: 0.7366, Rej: 0.7112, ROC AUC: 0.8052
+  Val   - Acc: 0.7093, Eff: 0.7407, Rej: 0.7086, ROC AUC: 0.8054
+[23:17:19]  At epoch 17
+  batch 6371 last_batch 6371 loss: 1.0471567688987835
+  batch 1140 last_batch 1140 loss: 1.0466232760433565
+Epoch 17 | default threshold:
+  Train - Acc: 0.7115, Eff: 0.7358, Rej: 0.7110, ROC AUC: 0.8047
+  Val   - Acc: 0.7140, Eff: 0.7346, Rej: 0.7135, ROC AUC: 0.8055
+Model weights restored to best epoch 17
+Training finished. Saving model in Final_neutrals_magall_4block_40+5_epochs_message_passing_BCE.pt
+Checkpoint saved to outputs/Final_neutrals_magall_4block_40+5_epochs_message_passing_BCE/Final_neutrals_magall_4block_40+5_epochs_message_passing_BCE.pt
+Saving config file as txt file

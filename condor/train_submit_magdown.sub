@@ -1,0 +1,23 @@
+universe          = vanilla
+executable        = run_train_magdown.sh
+arguments         = 
+output            = logs_magdown/train$(ClusterId).out
+error             = logs_magdown/train$(ClusterId).err
+log               = logs_magdown/train$(ClusterId).log
+
+# Temps maximum
++MaxRuntime       = 120000
+
+# Demande de ressources
+request_gpus      = 1
+request_memory    = 10000MB
+request_cpus      = 1
+# requirements = regexp("A100", TARGET.GPUs_DeviceName)
+
+# Environnement nécessaire
++JobFlavour       = "tomorrow"
+
+# Transfert d'environnement utilisateur
+getenv            = True
+
+queue

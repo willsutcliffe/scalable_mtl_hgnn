@@ -1,0 +1,45 @@
+000 (17761004.000.000) 08/13 17:00:47 Job submitted from host: <137.138.76.70:9618?addrs=137.138.76.70-9618+[2001-1458-d00-1c--49]-9618&alias=bigbird11.cern.ch&noUDP&sock=schedd_590795_cee9>
+...
+040 (17761004.000.000) 08/13 17:31:22 Started transferring input files
+	Transferring to host: <188.185.190.71:9618?addrs=188.185.190.71-9618+[2001-1458-d03-b--100-2d]-9618&alias=b9pgpun011.cern.ch&noUDP&sock=slot1_1_9702_afc4_49403>
+...
+040 (17761004.000.000) 08/13 17:31:22 Finished transferring input files
+...
+001 (17761004.000.000) 08/13 17:31:23 Job executing on host: <188.185.190.71:9618?addrs=188.185.190.71-9618+[2001-1458-d03-b--100-2d]-9618&alias=b9pgpun011.cern.ch&noUDP&sock=startd_9639_2178>
+	SlotName: slot1_1@b9pgpun011.cern.ch
+	AvailableGPUs = { GPUs_GPU_14e708cb }
+	CondorScratchDir = "/pool/condor/dir_3490184"
+	Cpus = 4
+	Disk = 2048
+	GPUs = 1
+	GPUs_GPU_14e708cb = [ GlobalMemoryMb = 95320; MaxSupportedVersion = 12090; DriverVersion = 12.9; ComputeUnits = 132; ECCEnabled = true; DeviceUuid = "14e708cb-6ef7-5f24-9bfe-09d11508a72e"; DeviceName = "NVIDIA H100 NVL"; CoresPerCU = 128; ClockMhz = 1785.0; DevicePciBusId = "0000:06:00.0"; Capability = 9.0; Id = "GPU-14e708cb" ]
+	Memory = 12000
+...
+006 (17761004.000.000) 08/13 17:31:32 Image size of job updated: 34580
+	5  -  MemoryUsage of job (MB)
+	4172  -  ResidentSetSize of job (KB)
+...
+006 (17761004.000.000) 08/13 17:34:18 Image size of job updated: 344516
+	5  -  MemoryUsage of job (MB)
+	4172  -  ResidentSetSize of job (KB)
+...
+040 (17761004.000.000) 08/13 17:34:18 Started transferring output files
+...
+040 (17761004.000.000) 08/13 17:34:18 Finished transferring output files
+...
+004 (17761004.000.000) 08/13 17:34:18 Job was evicted.
+	(0) CPU times
+		Usr 0 00:00:04, Sys 0 00:00:03  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	6932  -  Run Bytes Sent By Job
+	551  -  Run Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated Assigned
+	   Cpus                 :     0.01        4         4 
+	   Disk (KB)            :    37           1      2048 
+	   Gpus (Average)       :     0           1         1 "GPU-14e708cb"
+	   GpusMemory (MB)      :   600                       
+	   Memory (MB)          :     5       12000     12000 
+...
+009 (17761004.000.000) 08/13 17:34:18 Job was aborted.
+	via condor_rm (by user ebornand)
+...

@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 74, in <module>
+    trainer = NeutralsHeteroGNNTrainer(config_loader, model, train_loader, val_loader, add_bce=add_bce, threshold=threshold)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/trainers/neutrals_hetero_gnn_trainer.py", line 14, in __init__
+    super().__init__(config, model, train_loader, val_loader)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/trainers/neutrals_trainer.py", line 41, in __init__
+    self.epoch_metrics_df = pd.DataFrame()
+NameError: name 'pd' is not defined. Did you mean: 'id'?

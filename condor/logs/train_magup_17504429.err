@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 48, in <module>
+    data_loader.load_data()
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/data_handler.py", line 58, in load_data
+    self.dataset_vl = self.val_dataset.get()
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/neutrals_hetero_graph_dataset.py", line 222, in get
+    cval[:, 3] + nval[:, 3],                                # sum_pt
+NameError: name 'cval' is not defined. Did you mean: 'cvals'?

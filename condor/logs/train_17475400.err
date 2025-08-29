@@ -1,0 +1,53 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/_jit_internal.py:872: UserWarning: Unable to retrieve source for @torch.jit._overload function: <function coalesce at 0x145857df16c0>.
+  warnings.warn(
+/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/_jit_internal.py:872: UserWarning: Unable to retrieve source for @torch.jit._overload function: <function coalesce at 0x145857c24280>.
+  warnings.warn(
+/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/_jit_internal.py:872: UserWarning: Unable to retrieve source for @torch.jit._overload function: <function coalesce at 0x145857c243a0>.
+  warnings.warn(
+/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/_jit_internal.py:872: UserWarning: Unable to retrieve source for @torch.jit._overload function: <function coalesce at 0x145857c24430>.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 5, in <module>
+    from wmpgnn.datasets.data_handler import DataHandler
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/data_handler.py", line 1, in <module>
+    from wmpgnn.datasets.graph_dataset import CustomDataset
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/graph_dataset.py", line 3, in <module>
+    from torch_geometric.data import Dataset, Data
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch_geometric/__init__.py", line 17, in <module>
+    import torch_geometric.data
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch_geometric/data/__init__.py", line 61, in <module>
+    from torch_geometric.loader import NeighborSampler
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch_geometric/loader/__init__.py", line 4, in <module>
+    from .node_loader import NodeLoader
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch_geometric/loader/node_loader.py", line 8, in <module>
+    from torch_geometric.loader.mixin import (
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch_geometric/loader/mixin.py", line 9, in <module>
+    import psutil
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/psutil/__init__.py", line 95, in <module>
+    from . import _pslinux as _psplatform
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/psutil/_pslinux.py", line 27, in <module>
+    from . import _psutil_posix as cext_posix
+ImportError: /eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/psutil/_psutil_posix.abi3.so: cannot read file data: Input/output error

@@ -1,0 +1,23 @@
+universe          = vanilla
+executable        = run_train.sh
+arguments         = 
+output            = logs/train_magall$(ClusterId).out
+error             = logs/train_magall$(ClusterId).err
+log               = logs/train_magall$(ClusterId).log
+
+# Temps maximum
++MaxRuntime       = 120000
+
+# Demande de ressources
+request_gpus      = 1
+request_memory    = 10000MB
+request_cpus      = 1
+# requirements = regexp("A100", TARGET.GPUs_DeviceName)
+
+# Environnement nécessaire
++JobFlavour       = "tomorrow"
+
+# Transfert d'environnement utilisateur
+getenv            = True
+
+queue

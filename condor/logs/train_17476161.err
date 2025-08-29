@@ -1,0 +1,38 @@
+/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/_jit_internal.py:872: UserWarning: Unable to retrieve source for @torch.jit._overload function: <function coalesce at 0x15343261c4c0>.
+  warnings.warn(
+/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/_jit_internal.py:872: UserWarning: Unable to retrieve source for @torch.jit._overload function: <function coalesce at 0x15343261f010>.
+  warnings.warn(
+/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/_jit_internal.py:872: UserWarning: Unable to retrieve source for @torch.jit._overload function: <function coalesce at 0x15343261f130>.
+  warnings.warn(
+/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/_jit_internal.py:872: UserWarning: Unable to retrieve source for @torch.jit._overload function: <function coalesce at 0x15343261f1c0>.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 5, in <module>
+    from wmpgnn.datasets.data_handler import DataHandler
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/data_handler.py", line 3, in <module>
+    from wmpgnn.datasets.neutrals_hetero_graph_dataset import CustomNeutralsHeteroDataset
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/neutrals_hetero_graph_dataset.py", line 3, in <module>
+    import pandas as pd
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/pandas/__init__.py", line 49, in <module>
+    from pandas.core.api import (
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/pandas/core/api.py", line 47, in <module>
+    from pandas.core.groupby import (
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/pandas/core/groupby/__init__.py", line 1, in <module>
+    from pandas.core.groupby.generic import (
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/pandas/core/groupby/generic.py", line 68, in <module>
+    from pandas.core.frame import DataFrame
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/pandas/core/frame.py", line 149, in <module>
+    from pandas.core.generic import (
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/pandas/core/generic.py", line 193, in <module>
+    from pandas.core.window import (
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 879, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1016, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1074, in get_data
+OSError: [Errno 5] Input/output error

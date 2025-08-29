@@ -50,6 +50,7 @@ pip install scikit-learn dm-tree torch_geometric==2.6.1 uncertainties numpy pand
 The list of required packages are avalaible in the file `environment.yml` 
 
 ## Training
+The HGNN can be trained and validated with this framework. You can use both simplified PYTHIA simulation or full MC simulation (for both magup or magdown polarities, or combined). You can choose to save the processed graphs and be able to load them in a later training in order to spare computing time. You can tune the parameters of the HGNN model and of the training. A option allows to balance the class (signal and background), by discarding random events in the majoritarian class. An early stopping condition with patience counter is used to stop th training when the validation loss function is not improving enough along a few epochs, according to the selected criterion.
 
 ### Config file
 A config file must be filled with the parameters. 
@@ -78,6 +79,8 @@ They are generated with the script `lhcbdfei/data_handling/input_formatting/cach
 You need to specify the path to these files in the config file in `dataset.data_dir`
 They must be stored in two folders named `training_dataset/` and `validation_dataset/`.
 
+During the training of the HGNN, the data loading step process the datasets into graphs, if the corresponding option is activated, it is possible to store these processed graphs in pytorch format (.pt). To do so, set the parameter `save_graphs` to `True` in the `config_file` (see below). It is then possible to train the HGNN again directy using these graphs, instead of the numpay arrays input files, by setting the parameter `load_graphs` to `True` in the `config_file`. As the graph generation step is time consuming, this option is advantageous for the developpement. The graphs formats files will be stored in the same directory as your numpay array files, in a subfolder named `graphs` (or `graphs_nedges` if you activated edges between neutral particles).
+
 ### Train script
 To train you model, call from the root folder (`./weighterd_MP_gnn/`) the following command (can be with another config file name): 
 
@@ -86,6 +89,22 @@ python -m scripts.train config_file.yaml
 ```
 
 All outputs files and figures can be found in `./weighterd_MP_gnn/outputs/`
+
+Different thresholds are used to compute the performance metrics:
+-The default threshold 0.5
+-A fixed signal efficiency 90% threshold 
+-A fixed signal efficiency 99% threshold 
+-An optimised threshold wrt the FOM S/sqrt(S+B)
+
+Different informations are saved:
+-The model (HGNN) in pytorch format (.pt)
+-The parameter configuration
+-All the performance metrics and confusion matrix for all epochs and all type of neutral particles
+-Plots of the FOM optimisation and TPR against thresholds for the relevant epochs
+-Plots of the ROC curve and of the predicition spectra for the relevant epochs.
+-Plot of the loss function (train and val) along the training
+-Plots of the different performance metrics (signal efficiency, background rejection, accuracy, balanced accuracy, precisions) for each thresholds along the epochs (and for each type of neutral particles separetely).
+
 
 #### Remark  
 You need GPUs to run the framework in this state. On lxplus, you can access some GPU nodes with :

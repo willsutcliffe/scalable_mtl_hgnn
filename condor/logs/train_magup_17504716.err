@@ -1,0 +1,14 @@
+/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/torch/cuda/__init__.py:704: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 94, in <module>
+    trainer.train(epochs = epochs, learning_rate = learning_rate,
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/trainers/neutrals_hetero_gnn_trainer.py", line 290, in train
+    train_metrics = self.eval_one_epoch(train=True)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/trainers/neutrals_hetero_gnn_trainer.py", line 253, in eval_one_epoch
+    del data
+UnboundLocalError: local variable 'data' referenced before assignment

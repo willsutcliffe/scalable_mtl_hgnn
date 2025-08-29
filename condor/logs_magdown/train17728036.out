@@ -1,0 +1,37 @@
+Tue Aug  5 11:15:13 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.51.03              Driver Version: 575.51.03      CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 NVL                Off |   00000000:AE:00.0 Off |                    0 |
+| N/A   39C    P0             60W /  400W |      36MiB /  95830MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Loading Config
+Loading Dataset neutrals
+Using 79500 events for training
+Using 10754 events for validation
+0
+creating custom datasets...
+Data loader created
+0
+Generating graphs from scratch...
+Discarding random background neutral particles to have balanced class
+Processed 0 events in 0.00s, avg 0.00s/event
+0
+Generating graphs from scratch...
+Discarding random background neutral particles to have balanced class
+Processed 0 events in 0.00s, avg 0.00s/event
+Initializing model neutral_heterognn
+Training model

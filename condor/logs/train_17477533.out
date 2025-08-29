@@ -1,0 +1,66 @@
+Loading Config
+Loading Dataset neutrals
+Using 100 events for training
+Using 100 events for validation
+creating custom datasets...
+Data loader created
+Loading preprocessed graphs for split train
+Loaded 82 graphs from cache in 1 files (in 0.15s).
+Loading preprocessed graphs for split val
+Loaded 85 graphs from cache in 1 files (in 0.11s).
+Loading preprocessed graphs for split test
+Loaded 0 graphs from cache in 0 files (in 0.00s).
+Initializing model neutral_heterognn
+Training model
+Weights :tensor([ 0.5107, 23.9611])
+Use logits False
+Checkpoint path: outputs/Final_neutrals_2block_2_epochs_message_passing_BCE/
+Running 2 epochs with learning rate 0.001
+[10:12:05]  At epoch 0
+  batch 2 last_batch 2 loss: 1.3858382105827332
+  batch 2 last_batch 2 loss: 1.3164225816726685
+Train Loss: 1.385838
+Val Loss: 1.316423
+Train Acc: 0.021580345928668976 +/- 0.005010857246816158
+Val Acc: 0.018639372661709785 +/- 0.005391484592109919
+Train Eff: 1.0 +/- 0.0
+Val Eff: 1.0 +/- 0.0
+Train Rej: 0.0013469827827066183 +/- 0.0019049212569370866
+Val Rej: 0.0 +/- 0.0
+[10:12:07]  At epoch 1
+  batch 2 last_batch 2 loss: 1.356467068195343
+  batch 2 last_batch 2 loss: 1.310303270816803
+Train Loss: 1.356467
+Val Loss: 1.310303
+Train Acc: 0.020254086703062057 +/- 0.006886471528559923
+Val Acc: 0.018639372661709785 +/- 0.005391484592109919
+Train Eff: 1.0 +/- 0.0
+Val Eff: 1.0 +/- 0.0
+Train Rej: 0.0 +/- 0.0
+Val Rej: 0.0 +/- 0.0
+Running 2 epochs with learning rate 0.0001
+[10:12:07]  At epoch 2
+  batch 2 last_batch 2 loss: 1.3524242043495178
+  batch 2 last_batch 2 loss: 1.3095957040786743
+Train Loss: 1.352424
+Val Loss: 1.309596
+Train Acc: 0.020254086703062057 +/- 0.006886471528559923
+Val Acc: 0.018639372661709785 +/- 0.005391484592109919
+Train Eff: 1.0 +/- 0.0
+Val Eff: 1.0 +/- 0.0
+Train Rej: 0.0 +/- 0.0
+Val Rej: 0.0 +/- 0.0
+[10:12:07]  At epoch 3
+  batch 2 last_batch 2 loss: 1.3517239093780518
+  batch 2 last_batch 2 loss: 1.3088940978050232
+Train Loss: 1.351724
+Val Loss: 1.308894
+Train Acc: 0.020254086703062057 +/- 0.006886471528559923
+Val Acc: 0.018639372661709785 +/- 0.005391484592109919
+Train Eff: 1.0 +/- 0.0
+Val Eff: 1.0 +/- 0.0
+Train Rej: 0.0 +/- 0.0
+Val Rej: 0.0 +/- 0.0
+Training finished. Saving model in Final_neutrals_2block_2_epochs_message_passing_BCE.pt
+Checkpoint saved to outputs/Final_neutrals_2block_2_epochs_message_passing_BCE/Final_neutrals_2block_2_epochs_message_passing_BCE.pt
+Saving config file as txt file

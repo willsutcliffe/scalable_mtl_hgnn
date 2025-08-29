@@ -1,0 +1,30 @@
+/cvmfs/sft.cern.ch/lcg/views/LCG_103cuda/x86_64-centos9-gcc11-opt/lib/python3.9/site-packages/ipaddress.py:1106: SyntaxWarning: 'str' object is not callable; perhaps you missed a comma?
+  raise TypeError("%s and %s are not of the same version" (a, b))
+/afs/cern.ch/user/e/ebornand/miniconda3/lib/python3.13/site-packages/conda_package_streaming/package_streaming.py:25: UserWarning: zstandard could not be imported. Running without .conda support.
+  warnings.warn("zstandard could not be imported. Running without .conda support.")
+/afs/cern.ch/user/e/ebornand/miniconda3/lib/python3.13/site-packages/conda_package_handling/api.py:29: UserWarning: Install zstandard Python bindings for .conda support
+  _warnings.warn("Install zstandard Python bindings for .conda support")
+Error while loading conda entry point: conda-anaconda-tos (cannot import name 'ConfigDict' from 'pydantic' (/cvmfs/sft.cern.ch/lcg/views/LCG_103cuda/x86_64-centos9-gcc11-opt/lib/python3.9/site-packages/pydantic/__init__.py))
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 5, in <module>
+    from wmpgnn.datasets.data_handler import DataHandler
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/data_handler.py", line 1, in <module>
+    from wmpgnn.datasets.graph_dataset import CustomDataset
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/graph_dataset.py", line 1, in <module>
+    import torch
+  File "/cvmfs/sft.cern.ch/lcg/views/LCG_103cuda/x86_64-centos9-gcc11-opt/lib/python3.9/site-packages/torch/__init__.py", line 235, in <module>
+    raise ImportError(textwrap.dedent('''
+ImportError: Failed to load PyTorch C extensions:
+    It appears that PyTorch has loaded the `torch/_C` folder
+    of the PyTorch repository rather than the C extensions which
+    are expected in the `torch._C` namespace. This can occur when
+    using the `install` workflow. e.g.
+        $ python setup.py install && python -c "import torch"
+
+    This error can generally be solved using the `develop` workflow
+        $ python setup.py develop && python -c "import torch"  # This should succeed
+    or by running Python from a different directory.

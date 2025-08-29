@@ -1,0 +1,419 @@
+Thu Jun  5 13:48:46 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 570.133.20             Driver Version: 570.133.20     CUDA Version: 12.8     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100L-1-12C             On  |   00000000:06:00.0 Off |                   On |
+| N/A   N/A    P0            N/A  /  N/A  |       1MiB /  12288MiB |     N/A      Default |
+|                                         |                        |              Enabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| MIG devices:                                                                            |
++------------------+----------------------------------+-----------+-----------------------+
+| GPU  GI  CI  MIG |                     Memory-Usage |        Vol|        Shared         |
+|      ID  ID  Dev |                       BAR1-Usage | SM     Unc| CE ENC  DEC  OFA  JPG |
+|                  |                                  |        ECC|                       |
+|==================+==================================+===========+=======================|
+|  0    0   0   0  |               1MiB / 10565MiB    | 16      0 |  1   0    1    0    1 |
+|                  |                 0MiB /  4096MiB  |           |                       |
++------------------+----------------------------------+-----------+-----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Loading Config
+Loading Dataset neutrals
+Using 80000 events for training
+Using 10732 events for validation
+creating custom datasets...
+Data loader created
+Loading preprocessed graphs for split train
+Loaded 68046 graphs from cache in 800 files (in 94.42s).
+Loading preprocessed graphs for split val
+Loaded 9124 graphs from cache in 108 files (in 16.46s).
+Loading preprocessed graphs for split test
+Loaded 0 graphs from cache in 0 files (in 0.00s).
+Initializing model neutral_heterognn
+Training model
+Weights :tensor([ 0.5101, 25.3160])
+Use logits False
+Checkpoint path: outputs/Final_neutrals_magup_8block_50_epochs_message_passing_BCE/
+Running 50 epochs with learning rate 0.001
+[13:53:43]  At epoch 0
+  batch 265 last_batch 265 loss: 1.2616346494206843
+  batch 35 last_batch 35 loss: 1.3314271484102522
+Epoch 0 | Manual threshold:
+  Train - Acc: 0.6344, Eff: 0.6066, Rej: 0.6350
+  Val   - Acc: 0.6602, Eff: 0.6109, Rej: 0.6611
+[13:55:23]  At epoch 1
+  batch 265 last_batch 265 loss: 1.287294443148487
+  batch 35 last_batch 35 loss: 1.2036909443991526
+Epoch 1 | Manual threshold:
+  Train - Acc: 0.6076, Eff: 0.6218, Rej: 0.6073
+  Val   - Acc: 0.5472, Eff: 0.7649, Rej: 0.5429
+[13:56:49]  At epoch 2
+  batch 265 last_batch 265 loss: 1.19228767089124
+  batch 35 last_batch 35 loss: 1.16627071584974
+Epoch 2 | Manual threshold:
+  Train - Acc: 0.6628, Eff: 0.6657, Rej: 0.6627
+  Val   - Acc: 0.7486, Eff: 0.5881, Rej: 0.7517
+[13:58:13]  At epoch 3
+  batch 265 last_batch 265 loss: 1.1547366569627007
+  batch 35 last_batch 35 loss: 1.1435824939182826
+Epoch 3 | Manual threshold:
+  Train - Acc: 0.6741, Eff: 0.6872, Rej: 0.6738
+  Val   - Acc: 0.7502, Eff: 0.6152, Rej: 0.7529
+[13:59:34]  At epoch 4
+  batch 265 last_batch 265 loss: 1.1314767302207227
+  batch 35 last_batch 35 loss: 1.1224565948758807
+Epoch 4 | Manual threshold:
+  Train - Acc: 0.6872, Eff: 0.6943, Rej: 0.6870
+  Val   - Acc: 0.7069, Eff: 0.6815, Rej: 0.7074
+[14:00:55]  At epoch 5
+  batch 265 last_batch 265 loss: 1.1154642869841378
+  batch 35 last_batch 35 loss: 1.1110655784606933
+Epoch 5 | Manual threshold:
+  Train - Acc: 0.6867, Eff: 0.7076, Rej: 0.6862
+  Val   - Acc: 0.7173, Eff: 0.6797, Rej: 0.7180
+[14:02:18]  At epoch 6
+  batch 265 last_batch 265 loss: 1.1028760248760008
+  batch 35 last_batch 35 loss: 1.1026535102299282
+Epoch 6 | Manual threshold:
+  Train - Acc: 0.6909, Eff: 0.7135, Rej: 0.6905
+  Val   - Acc: 0.7352, Eff: 0.6644, Rej: 0.7366
+[14:03:39]  At epoch 7
+  batch 265 last_batch 265 loss: 1.0940843795830348
+  batch 35 last_batch 35 loss: 1.0971985271998814
+Epoch 7 | Manual threshold:
+  Train - Acc: 0.6952, Eff: 0.7165, Rej: 0.6948
+  Val   - Acc: 0.7373, Eff: 0.6676, Rej: 0.7387
+[14:04:59]  At epoch 8
+  batch 265 last_batch 265 loss: 1.088439939157018
+  batch 35 last_batch 35 loss: 1.0906558666910444
+Epoch 8 | Manual threshold:
+  Train - Acc: 0.6989, Eff: 0.7162, Rej: 0.6985
+  Val   - Acc: 0.7181, Eff: 0.6917, Rej: 0.7186
+[14:06:20]  At epoch 9
+  batch 265 last_batch 265 loss: 1.0822328236867798
+  batch 35 last_batch 35 loss: 1.0914573175566538
+Epoch 9 | Manual threshold:
+  Train - Acc: 0.6981, Eff: 0.7227, Rej: 0.6976
+  Val   - Acc: 0.7440, Eff: 0.6637, Rej: 0.7456
+[14:07:42]  At epoch 10
+  batch 265 last_batch 265 loss: 1.0781905999723471
+  batch 35 last_batch 35 loss: 1.083147554738181
+Epoch 10 | Manual threshold:
+  Train - Acc: 0.7007, Eff: 0.7232, Rej: 0.7003
+  Val   - Acc: 0.7199, Eff: 0.6968, Rej: 0.7203
+[14:09:02]  At epoch 11
+  batch 265 last_batch 265 loss: 1.0737995433357526
+  batch 35 last_batch 35 loss: 1.0809529542922973
+Epoch 11 | Manual threshold:
+  Train - Acc: 0.6981, Eff: 0.7284, Rej: 0.6975
+  Val   - Acc: 0.7291, Eff: 0.6881, Rej: 0.7299
+[14:10:23]  At epoch 12
+  batch 265 last_batch 265 loss: 1.0695982292013348
+  batch 35 last_batch 35 loss: 1.079780956677028
+Epoch 12 | Manual threshold:
+  Train - Acc: 0.6997, Eff: 0.7297, Rej: 0.6991
+  Val   - Acc: 0.7126, Eff: 0.7072, Rej: 0.7127
+[14:11:44]  At epoch 13
+  batch 265 last_batch 265 loss: 1.0765833724219844
+  batch 35 last_batch 35 loss: 1.08041068145207
+Epoch 13 | Manual threshold:
+  Train - Acc: 0.7061, Eff: 0.7215, Rej: 0.7057
+  Val   - Acc: 0.7374, Eff: 0.6786, Rej: 0.7385
+[14:13:05]  At epoch 14
+  batch 265 last_batch 265 loss: 1.0679419069919946
+  batch 35 last_batch 35 loss: 1.0814905779702322
+Epoch 14 | Manual threshold:
+  Train - Acc: 0.7031, Eff: 0.7290, Rej: 0.7025
+  Val   - Acc: 0.7578, Eff: 0.6574, Rej: 0.7598
+[14:14:26]  At epoch 15
+  batch 265 last_batch 265 loss: 1.0661387661717974
+  batch 35 last_batch 35 loss: 1.0776680333273752
+Epoch 15 | Manual threshold:
+  Train - Acc: 0.7068, Eff: 0.7260, Rej: 0.7065
+  Val   - Acc: 0.7349, Eff: 0.6865, Rej: 0.7359
+Saving checkpoint at epoch 15
+Checkpoint saved to outputs/Final_neutrals_magup_8block_50_epochs_message_passing_BCE/checkpoint_15.pt
+[14:15:50]  At epoch 16
+  batch 265 last_batch 265 loss: 1.0642459300329101
+  batch 35 last_batch 35 loss: 1.0785996147564478
+Epoch 16 | Manual threshold:
+  Train - Acc: 0.7002, Eff: 0.7332, Rej: 0.6995
+  Val   - Acc: 0.7369, Eff: 0.6812, Rej: 0.7380
+[14:17:13]  At epoch 17
+  batch 265 last_batch 265 loss: 1.0639377627732618
+  batch 35 last_batch 35 loss: 1.0770409737314497
+Epoch 17 | Manual threshold:
+  Train - Acc: 0.7003, Eff: 0.7336, Rej: 0.6996
+  Val   - Acc: 0.7375, Eff: 0.6780, Rej: 0.7387
+[14:18:35]  At epoch 18
+  batch 265 last_batch 265 loss: 1.0604051722670502
+  batch 35 last_batch 35 loss: 1.0807749816349574
+Epoch 18 | Manual threshold:
+  Train - Acc: 0.7038, Eff: 0.7321, Rej: 0.7032
+  Val   - Acc: 0.7638, Eff: 0.6492, Rej: 0.7661
+[14:19:57]  At epoch 19
+  batch 265 last_batch 265 loss: 1.0775745153427123
+  batch 35 last_batch 35 loss: 1.0746366994721548
+Epoch 19 | Manual threshold:
+  Train - Acc: 0.7079, Eff: 0.7211, Rej: 0.7077
+  Val   - Acc: 0.7191, Eff: 0.7027, Rej: 0.7194
+[14:21:18]  At epoch 20
+  batch 265 last_batch 265 loss: 1.067062962954899
+  batch 35 last_batch 35 loss: 1.0733661924089704
+Epoch 20 | Manual threshold:
+  Train - Acc: 0.7088, Eff: 0.7257, Rej: 0.7085
+  Val   - Acc: 0.7139, Eff: 0.7111, Rej: 0.7140
+[14:22:41]  At epoch 21
+  batch 265 last_batch 265 loss: 1.0650352716445923
+  batch 35 last_batch 35 loss: 1.07784526688712
+Epoch 21 | Manual threshold:
+  Train - Acc: 0.7075, Eff: 0.7274, Rej: 0.7071
+  Val   - Acc: 0.7457, Eff: 0.6767, Rej: 0.7471
+[14:24:03]  At epoch 22
+  batch 265 last_batch 265 loss: 1.0614544240933543
+  batch 35 last_batch 35 loss: 1.0778105906077793
+Epoch 22 | Manual threshold:
+  Train - Acc: 0.7064, Eff: 0.7290, Rej: 0.7060
+  Val   - Acc: 0.7228, Eff: 0.7009, Rej: 0.7232
+[14:25:26]  At epoch 23
+  batch 265 last_batch 265 loss: 1.0601388971760588
+  batch 35 last_batch 35 loss: 1.07698735169002
+Epoch 23 | Manual threshold:
+  Train - Acc: 0.7089, Eff: 0.7267, Rej: 0.7085
+  Val   - Acc: 0.7403, Eff: 0.6806, Rej: 0.7415
+[14:26:46]  At epoch 24
+  batch 265 last_batch 265 loss: 1.057562745517155
+  batch 35 last_batch 35 loss: 1.0813458800315856
+Epoch 24 | Manual threshold:
+  Train - Acc: 0.7084, Eff: 0.7287, Rej: 0.7080
+  Val   - Acc: 0.7150, Eff: 0.7068, Rej: 0.7151
+[14:28:08]  At epoch 25
+  batch 265 last_batch 265 loss: 1.058971202598428
+  batch 35 last_batch 35 loss: 1.0791937725884573
+Epoch 25 | Manual threshold:
+  Train - Acc: 0.7033, Eff: 0.7346, Rej: 0.7027
+  Val   - Acc: 0.7110, Eff: 0.7111, Rej: 0.7110
+[14:29:29]  At epoch 26
+  batch 265 last_batch 265 loss: 1.0567767986711467
+  batch 35 last_batch 35 loss: 1.083521820817675
+Epoch 26 | Manual threshold:
+  Train - Acc: 0.7065, Eff: 0.7317, Rej: 0.7060
+  Val   - Acc: 0.7442, Eff: 0.6753, Rej: 0.7455
+[14:30:49]  At epoch 27
+  batch 265 last_batch 265 loss: 1.056393740986878
+  batch 35 last_batch 35 loss: 1.0910930395126344
+Epoch 27 | Manual threshold:
+  Train - Acc: 0.7039, Eff: 0.7355, Rej: 0.7033
+  Val   - Acc: 0.7218, Eff: 0.6997, Rej: 0.7223
+[14:32:10]  At epoch 28
+  batch 265 last_batch 265 loss: 1.0550787026027464
+  batch 35 last_batch 35 loss: 1.0803423234394618
+Epoch 28 | Manual threshold:
+  Train - Acc: 0.7016, Eff: 0.7386, Rej: 0.7008
+  Val   - Acc: 0.7331, Eff: 0.6888, Rej: 0.7340
+[14:33:31]  At epoch 29
+  batch 265 last_batch 265 loss: 1.0558995901413684
+  batch 35 last_batch 35 loss: 1.0858989630426679
+Epoch 29 | Manual threshold:
+  Train - Acc: 0.7067, Eff: 0.7321, Rej: 0.7062
+  Val   - Acc: 0.7365, Eff: 0.6844, Rej: 0.7375
+[14:34:52]  At epoch 30
+  batch 265 last_batch 265 loss: 1.0549610572041206
+  batch 35 last_batch 35 loss: 1.0764622177396501
+Epoch 30 | Manual threshold:
+  Train - Acc: 0.7080, Eff: 0.7322, Rej: 0.7076
+  Val   - Acc: 0.6924, Eff: 0.7320, Rej: 0.6917
+Saving checkpoint at epoch 30
+Checkpoint saved to outputs/Final_neutrals_magup_8block_50_epochs_message_passing_BCE/checkpoint_30.pt
+[14:36:15]  At epoch 31
+  batch 265 last_batch 265 loss: 1.0563753148294845
+  batch 35 last_batch 35 loss: 1.0852917569024223
+Epoch 31 | Manual threshold:
+  Train - Acc: 0.7065, Eff: 0.7319, Rej: 0.7059
+  Val   - Acc: 0.7272, Eff: 0.6935, Rej: 0.7279
+[14:37:38]  At epoch 32
+  batch 265 last_batch 265 loss: 1.0519631840148063
+  batch 35 last_batch 35 loss: 1.0886258448873247
+Epoch 32 | Manual threshold:
+  Train - Acc: 0.7093, Eff: 0.7332, Rej: 0.7088
+  Val   - Acc: 0.7575, Eff: 0.6595, Rej: 0.7595
+[14:38:59]  At epoch 33
+  batch 265 last_batch 265 loss: 1.0541858481910993
+  batch 35 last_batch 35 loss: 1.0824846114431108
+Epoch 33 | Manual threshold:
+  Train - Acc: 0.7059, Eff: 0.7338, Rej: 0.7054
+  Val   - Acc: 0.7189, Eff: 0.7002, Rej: 0.7193
+[14:40:19]  At epoch 34
+  batch 265 last_batch 265 loss: 1.0565487234097606
+  batch 35 last_batch 35 loss: 1.0878096376146589
+Epoch 34 | Manual threshold:
+  Train - Acc: 0.7077, Eff: 0.7311, Rej: 0.7072
+  Val   - Acc: 0.7554, Eff: 0.6536, Rej: 0.7574
+[14:41:39]  At epoch 35
+  batch 265 last_batch 265 loss: 1.0581679398158812
+  batch 35 last_batch 35 loss: 1.0707596489361355
+Epoch 35 | Manual threshold:
+  Train - Acc: 0.7050, Eff: 0.7330, Rej: 0.7044
+  Val   - Acc: 0.7033, Eff: 0.7214, Rej: 0.7029
+[14:42:59]  At epoch 36
+  batch 265 last_batch 265 loss: 1.0620972680595686
+  batch 35 last_batch 35 loss: 1.0741687757628304
+Epoch 36 | Manual threshold:
+  Train - Acc: 0.7080, Eff: 0.7277, Rej: 0.7076
+  Val   - Acc: 0.7230, Eff: 0.7026, Rej: 0.7234
+[14:44:20]  At epoch 37
+  batch 265 last_batch 265 loss: 1.0565112662765215
+  batch 35 last_batch 35 loss: 1.0759703176362174
+Epoch 37 | Manual threshold:
+  Train - Acc: 0.7051, Eff: 0.7348, Rej: 0.7045
+  Val   - Acc: 0.7030, Eff: 0.7201, Rej: 0.7026
+[14:45:40]  At epoch 38
+  batch 265 last_batch 265 loss: 1.054503629342565
+  batch 35 last_batch 35 loss: 1.0754197086606707
+Epoch 38 | Manual threshold:
+  Train - Acc: 0.7010, Eff: 0.7384, Rej: 0.7002
+  Val   - Acc: 0.7065, Eff: 0.7235, Rej: 0.7062
+[14:47:01]  At epoch 39
+  batch 265 last_batch 265 loss: 1.0551167265424188
+  batch 35 last_batch 35 loss: 1.0818709322384426
+Epoch 39 | Manual threshold:
+  Train - Acc: 0.7027, Eff: 0.7374, Rej: 0.7020
+  Val   - Acc: 0.7448, Eff: 0.6794, Rej: 0.7461
+[14:48:23]  At epoch 40
+  batch 265 last_batch 265 loss: 1.0540443825271895
+  batch 35 last_batch 35 loss: 1.0717051999909537
+Epoch 40 | Manual threshold:
+  Train - Acc: 0.7053, Eff: 0.7354, Rej: 0.7047
+  Val   - Acc: 0.7054, Eff: 0.7208, Rej: 0.7051
+[14:49:45]  At epoch 41
+  batch 265 last_batch 265 loss: 1.055101930645277
+  batch 35 last_batch 35 loss: 1.0772022230284555
+Epoch 41 | Manual threshold:
+  Train - Acc: 0.7062, Eff: 0.7348, Rej: 0.7056
+  Val   - Acc: 0.6994, Eff: 0.7275, Rej: 0.6988
+[14:51:05]  At epoch 42
+  batch 265 last_batch 265 loss: 1.0568944609390114
+  batch 35 last_batch 35 loss: 1.082568381513868
+Epoch 42 | Manual threshold:
+  Train - Acc: 0.7054, Eff: 0.7328, Rej: 0.7049
+  Val   - Acc: 0.6816, Eff: 0.7434, Rej: 0.6804
+[14:52:27]  At epoch 43
+  batch 265 last_batch 265 loss: 1.0561628114502386
+  batch 35 last_batch 35 loss: 1.0813672287123544
+Epoch 43 | Manual threshold:
+  Train - Acc: 0.7062, Eff: 0.7327, Rej: 0.7057
+  Val   - Acc: 0.7083, Eff: 0.7177, Rej: 0.7081
+[14:53:48]  At epoch 44
+  batch 265 last_batch 265 loss: 1.0584801660393768
+  batch 35 last_batch 35 loss: 1.0835509504590715
+Epoch 44 | Manual threshold:
+  Train - Acc: 0.7045, Eff: 0.7351, Rej: 0.7039
+  Val   - Acc: 0.7003, Eff: 0.7247, Rej: 0.6998
+[14:55:11]  At epoch 45
+  batch 265 last_batch 265 loss: 1.05921297973057
+  batch 35 last_batch 35 loss: 1.0755872981888908
+Epoch 45 | Manual threshold:
+  Train - Acc: 0.7051, Eff: 0.7326, Rej: 0.7046
+  Val   - Acc: 0.6938, Eff: 0.7333, Rej: 0.6930
+Saving checkpoint at epoch 45
+Checkpoint saved to outputs/Final_neutrals_magup_8block_50_epochs_message_passing_BCE/checkpoint_45.pt
+[14:56:38]  At epoch 46
+  batch 265 last_batch 265 loss: 1.0564403675637155
+  batch 35 last_batch 35 loss: 1.0867439082690649
+Epoch 46 | Manual threshold:
+  Train - Acc: 0.7080, Eff: 0.7312, Rej: 0.7075
+  Val   - Acc: 0.7137, Eff: 0.7115, Rej: 0.7137
+[14:58:02]  At epoch 47
+  batch 265 last_batch 265 loss: 1.0548811150047015
+  batch 35 last_batch 35 loss: 1.0849702954292297
+Epoch 47 | Manual threshold:
+  Train - Acc: 0.7046, Eff: 0.7371, Rej: 0.7040
+  Val   - Acc: 0.6822, Eff: 0.7407, Rej: 0.6811
+[14:59:23]  At epoch 48
+  batch 265 last_batch 265 loss: 1.054150588107559
+  batch 35 last_batch 35 loss: 1.0812813486371722
+Epoch 48 | Manual threshold:
+  Train - Acc: 0.7039, Eff: 0.7372, Rej: 0.7033
+  Val   - Acc: 0.6773, Eff: 0.7491, Rej: 0.6759
+[15:00:44]  At epoch 49
+  batch 265 last_batch 265 loss: 1.0535554903858113
+  batch 35 last_batch 35 loss: 1.0768166593142918
+Epoch 49 | Manual threshold:
+  Train - Acc: 0.7039, Eff: 0.7379, Rej: 0.7032
+  Val   - Acc: 0.6749, Eff: 0.7537, Rej: 0.6733
+Running 10 epochs with learning rate 0.0001
+[15:02:05]  At epoch 50
+  batch 265 last_batch 265 loss: 1.036185466793348
+  batch 35 last_batch 35 loss: 1.070140358379909
+Epoch 50 | Manual threshold:
+  Train - Acc: 0.7091, Eff: 0.7422, Rej: 0.7084
+  Val   - Acc: 0.7165, Eff: 0.7138, Rej: 0.7166
+[15:03:26]  At epoch 51
+  batch 265 last_batch 265 loss: 1.030042854794916
+  batch 35 last_batch 35 loss: 1.0742771574429104
+Epoch 51 | Manual threshold:
+  Train - Acc: 0.7095, Eff: 0.7455, Rej: 0.7088
+  Val   - Acc: 0.7180, Eff: 0.7099, Rej: 0.7182
+[15:04:47]  At epoch 52
+  batch 265 last_batch 265 loss: 1.0261126799403497
+  batch 35 last_batch 35 loss: 1.082124148096357
+Epoch 52 | Manual threshold:
+  Train - Acc: 0.7077, Eff: 0.7494, Rej: 0.7068
+  Val   - Acc: 0.7239, Eff: 0.7042, Rej: 0.7243
+[15:06:08]  At epoch 53
+  batch 265 last_batch 265 loss: 1.0251288090112074
+  batch 35 last_batch 35 loss: 1.0831106271062578
+Epoch 53 | Manual threshold:
+  Train - Acc: 0.7063, Eff: 0.7510, Rej: 0.7054
+  Val   - Acc: 0.7138, Eff: 0.7101, Rej: 0.7138
+[15:07:29]  At epoch 54
+  batch 265 last_batch 265 loss: 1.0223068822104975
+  batch 35 last_batch 35 loss: 1.089731992994036
+Epoch 54 | Manual threshold:
+  Train - Acc: 0.7060, Eff: 0.7525, Rej: 0.7051
+  Val   - Acc: 0.7163, Eff: 0.7092, Rej: 0.7164
+[15:08:51]  At epoch 55
+  batch 265 last_batch 265 loss: 1.0187170172637363
+  batch 35 last_batch 35 loss: 1.0956217306000846
+Epoch 55 | Manual threshold:
+  Train - Acc: 0.7048, Eff: 0.7552, Rej: 0.7038
+  Val   - Acc: 0.7129, Eff: 0.7146, Rej: 0.7128
+[15:10:11]  At epoch 56
+  batch 265 last_batch 265 loss: 1.0170062573450915
+  batch 35 last_batch 35 loss: 1.1005578994750977
+Epoch 56 | Manual threshold:
+  Train - Acc: 0.7041, Eff: 0.7570, Rej: 0.7030
+  Val   - Acc: 0.7197, Eff: 0.7061, Rej: 0.7200
+[15:11:32]  At epoch 57
+  batch 265 last_batch 265 loss: 1.0149550820296664
+  batch 35 last_batch 35 loss: 1.104898042338235
+Epoch 57 | Manual threshold:
+  Train - Acc: 0.7043, Eff: 0.7578, Rej: 0.7032
+  Val   - Acc: 0.7157, Eff: 0.7088, Rej: 0.7158
+[15:12:53]  At epoch 58
+  batch 265 last_batch 265 loss: 1.0115484626788014
+  batch 35 last_batch 35 loss: 1.1159321887152536
+Epoch 58 | Manual threshold:
+  Train - Acc: 0.7019, Eff: 0.7612, Rej: 0.7008
+  Val   - Acc: 0.7062, Eff: 0.7191, Rej: 0.7059
+[15:14:15]  At epoch 59
+  batch 265 last_batch 265 loss: 1.0121924881665212
+  batch 35 last_batch 35 loss: 1.123523007120405
+Epoch 59 | Manual threshold:
+  Train - Acc: 0.7012, Eff: 0.7618, Rej: 0.6999
+  Val   - Acc: 0.7065, Eff: 0.7131, Rej: 0.7064
+Training finished. Saving model in Final_neutrals_magup_8block_50_epochs_message_passing_BCE.pt
+Checkpoint saved to outputs/Final_neutrals_magup_8block_50_epochs_message_passing_BCE/Final_neutrals_magup_8block_50_epochs_message_passing_BCE.pt
+Saving config file as txt file

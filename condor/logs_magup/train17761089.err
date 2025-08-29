@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 51, in <module>
+    data_loader.load_data()
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/data_handler.py", line 155, in load_data
+    self.dataset_tr = self.train_dataset.get()
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/neutrals_hetero_graph_dataset.py", line 260, in get
+    features = pd.DataFrame(graph['nodes'], columns=col_names)
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/pandas/core/frame.py", line 827, in __init__
+    mgr = ndarray_to_mgr(
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/pandas/core/internals/construction.py", line 336, in ndarray_to_mgr
+    _check_values_indices_shape_match(values, index, columns)
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/site-packages/pandas/core/internals/construction.py", line 420, in _check_values_indices_shape_match
+    raise ValueError(f"Shape of passed values is {passed}, indices imply {implied}")
+ValueError: Shape of passed values is (71, 12), indices imply (71, 11)

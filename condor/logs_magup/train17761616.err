@@ -1,0 +1,1 @@
+/pool/condor/dir_1027488/run_train_magup.sh: line 16:    83 Bus error               (core dumped) python -m scripts.train neutrals_hgnn_run3_magup.yaml

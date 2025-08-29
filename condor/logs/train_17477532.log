@@ -1,0 +1,44 @@
+000 (17477532.000.000) 05/28 09:31:02 Job submitted from host: <137.138.76.70:9618?addrs=137.138.76.70-9618+[2001-1458-d00-1c--49]-9618&alias=bigbird11.cern.ch&noUDP&sock=schedd_4988_ee7c>
+...
+040 (17477532.000.000) 05/28 09:32:56 Started transferring input files
+	Transferring to host: <128.142.241.90:9618?addrs=128.142.241.90-9618+[2001-1458-301-ce--100-1cf]-9618&alias=b9g47n5843.cern.ch&noUDP&sock=slot1_1_2219_3c73_10785>
+...
+040 (17477532.000.000) 05/28 09:32:56 Finished transferring input files
+...
+001 (17477532.000.000) 05/28 09:32:57 Job executing on host: <128.142.241.90:9618?addrs=128.142.241.90-9618+[2001-1458-301-ce--100-1cf]-9618&alias=b9g47n5843.cern.ch&noUDP&sock=startd_1904_9069>
+	SlotName: slot1_1@b9g47n5843.cern.ch
+	AvailableGPUs = { GPUs_GPU_d93dc087 }
+	CondorScratchDir = "/pool/condor/dir_2197403"
+	Cpus = 1
+	Disk = 2048
+	GPUs = 1
+	GPUs_GPU_d93dc087 = [ GlobalMemoryMb = 32494; MaxSupportedVersion = 12040; DriverVersion = 12.4; ComputeUnits = 80; ECCEnabled = true; DeviceUuid = "d93dc087-0f06-a7ee-241e-d0afdf77a74e"; DeviceName = "Tesla V100-PCIE-32GB"; CoresPerCU = 64; ClockMhz = 1380.0; DevicePciBusId = "0000:07:00.0"; Capability = 7.0; Id = "GPU-d93dc087" ]
+	Memory = 3000
+...
+006 (17477532.000.000) 05/28 09:33:11 Image size of job updated: 4844
+	5  -  MemoryUsage of job (MB)
+	4844  -  ResidentSetSize of job (KB)
+...
+006 (17477532.000.000) 05/28 09:38:12 Image size of job updated: 364164
+	356  -  MemoryUsage of job (MB)
+	364164  -  ResidentSetSize of job (KB)
+...
+006 (17477532.000.000) 05/28 09:43:13 Image size of job updated: 2031532
+	1984  -  MemoryUsage of job (MB)
+	2031532  -  ResidentSetSize of job (KB)
+...
+006 (17477532.000.000) 05/28 09:48:13 Image size of job updated: 2855092
+	2789  -  MemoryUsage of job (MB)
+	2855092  -  ResidentSetSize of job (KB)
+...
+006 (17477532.000.000) 05/28 09:53:13 Image size of job updated: 3675992
+	2789  -  MemoryUsage of job (MB)
+	2855092  -  ResidentSetSize of job (KB)
+...
+040 (17477532.000.000) 05/28 09:53:13 Started transferring output files
+...
+040 (17477532.000.000) 05/28 09:53:13 Finished transferring output files
+...
+009 (17477532.000.000) 05/28 09:53:13 Job was aborted.
+	Job removed by SYSTEM_PERIODIC_REMOVE due to wall time exceeded allowed max.
+...

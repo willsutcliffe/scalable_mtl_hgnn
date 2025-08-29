@@ -2,8 +2,8 @@ import uproot
 import pandas as pd
 
 # --- Paramètres ---
-input_root_file = "/eos/user/e/ebornand/DFEI/FullMC//P_and_R/magdown/Event_data_particles_bquark_Run3_inclusiveb_magdown_beautiful_ancestors_90754events_allbkgtracks_allevents.root"
-output_excel_file = "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/csv_outputs/Particules.csv"
+input_root_file = "/eos/user/e/ebornand/DFEI/PYTHIA/BtoKSpimumu/P_and_R/Event_data_particles_bquark_Bu_KSpimumu_nu7_6_2000_4999_5000events_allbkgtracks_events_4900_to_4999.root"
+output_excel_file = "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/csv_outputs/Particules_Bu_KSpimumu.csv"
 
 tree_name = "Particles"
 

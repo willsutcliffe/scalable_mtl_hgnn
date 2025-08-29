@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/eos/user/e/ebornand/envs/conda_envs/envs/dfeiGPUpy310/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/scripts/train.py", line 48, in <module>
+    data_loader.load_data()
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/data_handler.py", line 118, in load_data
+    self.dataset_tr = self.train_dataset.get()
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/neutrals_hetero_graph_dataset.py", line 357, in get
+    cache_file = get_cache_file(polarity, i, min((i + chunk_size), total_events) - 1)
+  File "/afs/cern.ch/user/e/ebornand/DFEI_HGNN/weighted_MP_gnn/wmpgnn/datasets/neutrals_hetero_graph_dataset.py", line 113, in get_cache_file
+    subdir = "graphs_nedges" if ("neutrals_neutrals" in self.config_loader.get("model.edges_type")) else subdir
+TypeError: argument of type 'NoneType' is not iterable

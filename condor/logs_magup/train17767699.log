@@ -1,0 +1,96 @@
+000 (17767699.000.000) 08/18 12:23:44 Job submitted from host: <137.138.76.70:9618?addrs=137.138.76.70-9618+[2001-1458-d00-1c--49]-9618&alias=bigbird11.cern.ch&noUDP&sock=schedd_590795_cee9>
+...
+040 (17767699.000.000) 08/18 12:31:08 Started transferring input files
+	Transferring to host: <128.142.241.120:9618?addrs=128.142.241.120-9618+[2001-1458-301-ce--100-ec]-9618&alias=b9g47n4050.cern.ch&noUDP&sock=slot1_1_3825442_b461_4647>
+...
+040 (17767699.000.000) 08/18 12:31:08 Finished transferring input files
+...
+001 (17767699.000.000) 08/18 12:31:09 Job executing on host: <128.142.241.120:9618?addrs=128.142.241.120-9618+[2001-1458-301-ce--100-ec]-9618&alias=b9g47n4050.cern.ch&noUDP&sock=startd_3825400_cb9c>
+	SlotName: slot1_1@b9g47n4050.cern.ch
+	AvailableGPUs = { GPUs_GPU_bf3fdde8 }
+	CondorScratchDir = "/pool/condor/dir_790435"
+	Cpus = 4
+	Disk = 2048
+	GPUs = 1
+	GPUs_GPU_bf3fdde8 = [ GlobalMemoryMb = 32494; MaxSupportedVersion = 12090; DriverVersion = 12.9; ComputeUnits = 80; ECCEnabled = true; DeviceUuid = "bf3fdde8-927e-09f9-6ee7-d9a1ad55128e"; DeviceName = "Tesla V100-PCIE-32GB"; CoresPerCU = 64; ClockMhz = 1380.0; DevicePciBusId = "0000:07:00.0"; Capability = 7.0; Id = "GPU-bf3fdde8" ]
+	Memory = 12000
+...
+006 (17767699.000.000) 08/18 12:31:22 Image size of job updated: 26508
+	26  -  MemoryUsage of job (MB)
+	26508  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 12:36:22 Image size of job updated: 533376
+	478  -  MemoryUsage of job (MB)
+	488600  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 12:41:23 Image size of job updated: 604668
+	585  -  MemoryUsage of job (MB)
+	599016  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 12:46:23 Image size of job updated: 712524
+	687  -  MemoryUsage of job (MB)
+	703012  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 12:51:23 Image size of job updated: 824640
+	801  -  MemoryUsage of job (MB)
+	819864  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 12:56:24 Image size of job updated: 922372
+	869  -  MemoryUsage of job (MB)
+	889232  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 13:01:25 Image size of job updated: 1090448
+	977  -  MemoryUsage of job (MB)
+	999572  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 13:06:25 Image size of job updated: 1147844
+	1087  -  MemoryUsage of job (MB)
+	1112404  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 13:11:25 Image size of job updated: 1227288
+	1173  -  MemoryUsage of job (MB)
+	1200180  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 13:16:26 Image size of job updated: 1329148
+	1298  -  MemoryUsage of job (MB)
+	1329148  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 13:21:26 Image size of job updated: 1435976
+	1371  -  MemoryUsage of job (MB)
+	1403904  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 13:26:26 Image size of job updated: 1534676
+	1476  -  MemoryUsage of job (MB)
+	1510708  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 13:31:27 Image size of job updated: 1647660
+	1574  -  MemoryUsage of job (MB)
+	1611124  -  ResidentSetSize of job (KB)
+...
+006 (17767699.000.000) 08/18 13:34:16 Image size of job updated: 2208648
+	1574  -  MemoryUsage of job (MB)
+	1611124  -  ResidentSetSize of job (KB)
+...
+040 (17767699.000.000) 08/18 13:34:16 Started transferring output files
+...
+040 (17767699.000.000) 08/18 13:34:16 Finished transferring output files
+...
+005 (17767699.000.000) 08/18 13:34:16 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:38:40, Sys 0 00:02:33  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:38:40, Sys 0 00:02:33  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	32022  -  Run Bytes Sent By Job
+	549  -  Run Bytes Received By Job
+	32022  -  Total Bytes Sent By Job
+	549  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated Assigned
+	   Cpus                 :     0.67        4         4 
+	   Disk (KB)            :    62           1      2048 
+	   Gpus (Average)       :     0           1         1 "GPU-bf3fdde8"
+	   GpusMemory (MB)      :   278                       
+	   Memory (MB)          :  1574       12000     12000 
+
+	Job terminated of its own accord at 2025-08-18T11:34:16Z with exit-code 0.
+...

@@ -1,0 +1,647 @@
+Tue Jun 10 14:23:58 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.57.08              Driver Version: 575.57.08      CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100S-PCIE-32GB          Off |   00000000:07:00.0 Off |                    0 |
+| N/A   41C    P0             28W /  250W |       4MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Loading Config
+Loading Dataset neutrals
+Using 160000 events for training
+Using 21486 events for validation
+creating custom datasets...
+Data loader created
+Loading preprocessed graphs for split train
+Loaded 135899 graphs from cache in 1595 files (in 210.34s).
+Loading preprocessed graphs for split val
+Loaded 18255 graphs from cache in 215 files (in 26.77s).
+Loading preprocessed graphs for split test
+Loaded 0 graphs from cache in 0 files (in 0.00s).
+Initializing model neutral_heterognn
+Training model
+Weights :tensor([ 0.5101, 25.3401])
+Use logits False
+Checkpoint path: outputs/Final_neutrals_magall_4block_100_epochs_message_passing_BCE/
+Running 100 epochs with learning rate 0.0001
+[14:32:09]  At epoch 0
+  batch 266 last_batch 266 loss: 1.380565477044959
+  batch 71 last_batch 71 loss: 1.35729082537369
+Epoch 0 | Manual threshold:
+  Train - Acc: 0.8055, Eff: 0.1842, Rej: 0.8180
+  Val   - Acc: 0.0200, Eff: 0.9997, Rej: 0.0004
+[14:33:08]  At epoch 1
+  batch 266 last_batch 266 loss: 1.3506497220885485
+  batch 71 last_batch 71 loss: 1.312132180576593
+Epoch 1 | Manual threshold:
+  Train - Acc: 0.4517, Eff: 0.6847, Rej: 0.4470
+  Val   - Acc: 0.5464, Eff: 0.6563, Rej: 0.5442
+[14:33:58]  At epoch 2
+  batch 266 last_batch 266 loss: 1.196312456426764
+  batch 71 last_batch 71 loss: 1.0932990396526499
+Epoch 2 | Manual threshold:
+  Train - Acc: 0.6535, Eff: 0.6696, Rej: 0.6532
+  Val   - Acc: 0.7022, Eff: 0.7154, Rej: 0.7020
+[14:34:49]  At epoch 3
+  batch 266 last_batch 266 loss: 1.080836436354128
+  batch 71 last_batch 71 loss: 1.0744909484621505
+Epoch 3 | Manual threshold:
+  Train - Acc: 0.7026, Eff: 0.7213, Rej: 0.7022
+  Val   - Acc: 0.7165, Eff: 0.7114, Rej: 0.7166
+[14:35:39]  At epoch 4
+  batch 266 last_batch 266 loss: 1.0719219161603684
+  batch 71 last_batch 71 loss: 1.0691378292903093
+Epoch 4 | Manual threshold:
+  Train - Acc: 0.7066, Eff: 0.7206, Rej: 0.7063
+  Val   - Acc: 0.6771, Eff: 0.7550, Rej: 0.6756
+[14:36:29]  At epoch 5
+  batch 266 last_batch 266 loss: 1.0684696559171032
+  batch 71 last_batch 71 loss: 1.0872163294066846
+Epoch 5 | Manual threshold:
+  Train - Acc: 0.7068, Eff: 0.7248, Rej: 0.7065
+  Val   - Acc: 0.7844, Eff: 0.6296, Rej: 0.7875
+[14:37:19]  At epoch 6
+  batch 266 last_batch 266 loss: 1.069497843882195
+  batch 71 last_batch 71 loss: 1.0617598211261587
+Epoch 6 | Manual threshold:
+  Train - Acc: 0.7101, Eff: 0.7198, Rej: 0.7099
+  Val   - Acc: 0.6938, Eff: 0.7411, Rej: 0.6929
+[14:38:09]  At epoch 7
+  batch 266 last_batch 266 loss: 1.063976515280573
+  batch 71 last_batch 71 loss: 1.058840294119338
+Epoch 7 | Manual threshold:
+  Train - Acc: 0.7094, Eff: 0.7241, Rej: 0.7091
+  Val   - Acc: 0.7234, Eff: 0.7116, Rej: 0.7237
+[14:39:00]  At epoch 8
+  batch 266 last_batch 266 loss: 1.0660365788560164
+  batch 71 last_batch 71 loss: 1.0591667680673196
+Epoch 8 | Manual threshold:
+  Train - Acc: 0.7103, Eff: 0.7229, Rej: 0.7100
+  Val   - Acc: 0.6663, Eff: 0.7703, Rej: 0.6643
+[14:39:50]  At epoch 9
+  batch 266 last_batch 266 loss: 1.0597707978764872
+  batch 71 last_batch 71 loss: 1.0581582096261037
+Epoch 9 | Manual threshold:
+  Train - Acc: 0.7090, Eff: 0.7274, Rej: 0.7086
+  Val   - Acc: 0.7158, Eff: 0.7227, Rej: 0.7156
+[14:40:44]  At epoch 10
+  batch 266 last_batch 266 loss: 1.0594626575484312
+  batch 71 last_batch 71 loss: 1.056868122497075
+Epoch 10 | Manual threshold:
+  Train - Acc: 0.7104, Eff: 0.7283, Rej: 0.7101
+  Val   - Acc: 0.6734, Eff: 0.7635, Rej: 0.6716
+[14:41:34]  At epoch 11
+  batch 266 last_batch 266 loss: 1.0563463028660394
+  batch 71 last_batch 71 loss: 1.0576074517948526
+Epoch 11 | Manual threshold:
+  Train - Acc: 0.7121, Eff: 0.7261, Rej: 0.7119
+  Val   - Acc: 0.7172, Eff: 0.7206, Rej: 0.7171
+[14:42:25]  At epoch 12
+  batch 266 last_batch 266 loss: 1.0580613492126751
+  batch 71 last_batch 71 loss: 1.054686961879193
+Epoch 12 | Manual threshold:
+  Train - Acc: 0.7103, Eff: 0.7274, Rej: 0.7099
+  Val   - Acc: 0.7312, Eff: 0.7068, Rej: 0.7317
+[14:43:15]  At epoch 13
+  batch 266 last_batch 266 loss: 1.0570065423958284
+  batch 71 last_batch 71 loss: 1.0555000355545903
+Epoch 13 | Manual threshold:
+  Train - Acc: 0.7090, Eff: 0.7315, Rej: 0.7085
+  Val   - Acc: 0.7287, Eff: 0.7077, Rej: 0.7291
+[14:44:05]  At epoch 14
+  batch 266 last_batch 266 loss: 1.055959961916271
+  batch 71 last_batch 71 loss: 1.0555215352018115
+Epoch 14 | Manual threshold:
+  Train - Acc: 0.7100, Eff: 0.7289, Rej: 0.7096
+  Val   - Acc: 0.7229, Eff: 0.7152, Rej: 0.7231
+[14:44:56]  At epoch 15
+  batch 266 last_batch 266 loss: 1.0566675788477848
+  batch 71 last_batch 71 loss: 1.0582269530900767
+Epoch 15 | Manual threshold:
+  Train - Acc: 0.7092, Eff: 0.7305, Rej: 0.7088
+  Val   - Acc: 0.6624, Eff: 0.7748, Rej: 0.6602
+[14:45:46]  At epoch 16
+  batch 266 last_batch 266 loss: 1.0576566565305667
+  batch 71 last_batch 71 loss: 1.0542465725415189
+Epoch 16 | Manual threshold:
+  Train - Acc: 0.7113, Eff: 0.7282, Rej: 0.7109
+  Val   - Acc: 0.6960, Eff: 0.7432, Rej: 0.6950
+[14:46:37]  At epoch 17
+  batch 266 last_batch 266 loss: 1.0550591307027
+  batch 71 last_batch 71 loss: 1.0549621313390598
+Epoch 17 | Manual threshold:
+  Train - Acc: 0.7104, Eff: 0.7303, Rej: 0.7100
+  Val   - Acc: 0.7271, Eff: 0.7102, Rej: 0.7274
+[14:47:27]  At epoch 18
+  batch 266 last_batch 266 loss: 1.0572910503785413
+  batch 71 last_batch 71 loss: 1.05299917493068
+Epoch 18 | Manual threshold:
+  Train - Acc: 0.7082, Eff: 0.7320, Rej: 0.7077
+  Val   - Acc: 0.6994, Eff: 0.7411, Rej: 0.6986
+[14:48:17]  At epoch 19
+  batch 266 last_batch 266 loss: 1.0535179208543963
+  batch 71 last_batch 71 loss: 1.0556196755086873
+Epoch 19 | Manual threshold:
+  Train - Acc: 0.7112, Eff: 0.7307, Rej: 0.7108
+  Val   - Acc: 0.7527, Eff: 0.6842, Rej: 0.7541
+[14:49:07]  At epoch 20
+  batch 266 last_batch 266 loss: 1.0541680598617496
+  batch 71 last_batch 71 loss: 1.058631655196069
+Epoch 20 | Manual threshold:
+  Train - Acc: 0.7078, Eff: 0.7324, Rej: 0.7073
+  Val   - Acc: 0.7035, Eff: 0.7339, Rej: 0.7029
+[14:49:58]  At epoch 21
+  batch 266 last_batch 266 loss: 1.0545296565930646
+  batch 71 last_batch 71 loss: 1.0555392915094401
+Epoch 21 | Manual threshold:
+  Train - Acc: 0.7096, Eff: 0.7329, Rej: 0.7091
+  Val   - Acc: 0.6700, Eff: 0.7703, Rej: 0.6680
+[14:50:48]  At epoch 22
+  batch 266 last_batch 266 loss: 1.055901551157012
+  batch 71 last_batch 71 loss: 1.0596577088597794
+Epoch 22 | Manual threshold:
+  Train - Acc: 0.7096, Eff: 0.7318, Rej: 0.7091
+  Val   - Acc: 0.7443, Eff: 0.6931, Rej: 0.7453
+[14:51:38]  At epoch 23
+  batch 266 last_batch 266 loss: 1.0530141804899489
+  batch 71 last_batch 71 loss: 1.0624226961337344
+Epoch 23 | Manual threshold:
+  Train - Acc: 0.7096, Eff: 0.7322, Rej: 0.7092
+  Val   - Acc: 0.7672, Eff: 0.6605, Rej: 0.7694
+[14:52:28]  At epoch 24
+  batch 266 last_batch 266 loss: 1.0539339534322123
+  batch 71 last_batch 71 loss: 1.0542480030529935
+Epoch 24 | Manual threshold:
+  Train - Acc: 0.7106, Eff: 0.7323, Rej: 0.7101
+  Val   - Acc: 0.6862, Eff: 0.7531, Rej: 0.6848
+[14:53:19]  At epoch 25
+  batch 266 last_batch 266 loss: 1.0507495259880124
+  batch 71 last_batch 71 loss: 1.0571512495967703
+Epoch 25 | Manual threshold:
+  Train - Acc: 0.7110, Eff: 0.7316, Rej: 0.7106
+  Val   - Acc: 0.6802, Eff: 0.7599, Rej: 0.6786
+[14:54:09]  At epoch 26
+  batch 266 last_batch 266 loss: 1.0504509784225236
+  batch 71 last_batch 71 loss: 1.0522705946170108
+Epoch 26 | Manual threshold:
+  Train - Acc: 0.7124, Eff: 0.7294, Rej: 0.7120
+  Val   - Acc: 0.6919, Eff: 0.7503, Rej: 0.6907
+[14:54:59]  At epoch 27
+  batch 266 last_batch 266 loss: 1.0514534967286246
+  batch 71 last_batch 71 loss: 1.0546211239317773
+Epoch 27 | Manual threshold:
+  Train - Acc: 0.7115, Eff: 0.7308, Rej: 0.7111
+  Val   - Acc: 0.7340, Eff: 0.7042, Rej: 0.7346
+[14:55:49]  At epoch 28
+  batch 266 last_batch 266 loss: 1.0500263412644093
+  batch 71 last_batch 71 loss: 1.0563284847098338
+Epoch 28 | Manual threshold:
+  Train - Acc: 0.7127, Eff: 0.7305, Rej: 0.7124
+  Val   - Acc: 0.7282, Eff: 0.7107, Rej: 0.7286
+[14:56:39]  At epoch 29
+  batch 266 last_batch 266 loss: 1.049032258584087
+  batch 71 last_batch 71 loss: 1.0572866344116103
+Epoch 29 | Manual threshold:
+  Train - Acc: 0.7115, Eff: 0.7322, Rej: 0.7110
+  Val   - Acc: 0.6609, Eff: 0.7793, Rej: 0.6585
+[14:57:30]  At epoch 30
+  batch 266 last_batch 266 loss: 1.0519973680489045
+  batch 71 last_batch 71 loss: 1.0543717725176207
+Epoch 30 | Manual threshold:
+  Train - Acc: 0.7123, Eff: 0.7333, Rej: 0.7119
+  Val   - Acc: 0.7319, Eff: 0.7069, Rej: 0.7324
+Saving checkpoint at epoch 30
+Checkpoint saved to outputs/Final_neutrals_magall_4block_100_epochs_message_passing_BCE/checkpoint_30.pt
+[14:58:24]  At epoch 31
+  batch 266 last_batch 266 loss: 1.0515177507597702
+  batch 71 last_batch 71 loss: 1.0543799920820853
+Epoch 31 | Manual threshold:
+  Train - Acc: 0.7122, Eff: 0.7295, Rej: 0.7119
+  Val   - Acc: 0.7247, Eff: 0.7139, Rej: 0.7249
+[14:59:14]  At epoch 32
+  batch 266 last_batch 266 loss: 1.052751577662346
+  batch 71 last_batch 71 loss: 1.0521683247996048
+Epoch 32 | Manual threshold:
+  Train - Acc: 0.7083, Eff: 0.7344, Rej: 0.7078
+  Val   - Acc: 0.7295, Eff: 0.7122, Rej: 0.7298
+[15:00:03]  At epoch 33
+  batch 266 last_batch 266 loss: 1.048001407008422
+  batch 71 last_batch 71 loss: 1.055603735883471
+Epoch 33 | Manual threshold:
+  Train - Acc: 0.7119, Eff: 0.7319, Rej: 0.7115
+  Val   - Acc: 0.7129, Eff: 0.7268, Rej: 0.7126
+[15:00:53]  At epoch 34
+  batch 266 last_batch 266 loss: 1.0500051471075618
+  batch 71 last_batch 71 loss: 1.0555537477345533
+Epoch 34 | Manual threshold:
+  Train - Acc: 0.7098, Eff: 0.7332, Rej: 0.7094
+  Val   - Acc: 0.6711, Eff: 0.7673, Rej: 0.6692
+[15:01:43]  At epoch 35
+  batch 266 last_batch 266 loss: 1.0517686867624296
+  batch 71 last_batch 71 loss: 1.0522471145844796
+Epoch 35 | Manual threshold:
+  Train - Acc: 0.7072, Eff: 0.7373, Rej: 0.7066
+  Val   - Acc: 0.6946, Eff: 0.7482, Rej: 0.6935
+[15:02:32]  At epoch 36
+  batch 266 last_batch 266 loss: 1.0486940504016733
+  batch 71 last_batch 71 loss: 1.0552026016611449
+Epoch 36 | Manual threshold:
+  Train - Acc: 0.7119, Eff: 0.7318, Rej: 0.7115
+  Val   - Acc: 0.7505, Eff: 0.6869, Rej: 0.7518
+[15:03:22]  At epoch 37
+  batch 266 last_batch 266 loss: 1.0458821750673137
+  batch 71 last_batch 71 loss: 1.0545672237033574
+Epoch 37 | Manual threshold:
+  Train - Acc: 0.7135, Eff: 0.7312, Rej: 0.7131
+  Val   - Acc: 0.7158, Eff: 0.7250, Rej: 0.7156
+[15:04:11]  At epoch 38
+  batch 266 last_batch 266 loss: 1.0446717566565464
+  batch 71 last_batch 71 loss: 1.0561470003195212
+Epoch 38 | Manual threshold:
+  Train - Acc: 0.7122, Eff: 0.7334, Rej: 0.7117
+  Val   - Acc: 0.6964, Eff: 0.7433, Rej: 0.6955
+[15:05:02]  At epoch 39
+  batch 266 last_batch 266 loss: 1.0467872131139713
+  batch 71 last_batch 71 loss: 1.0545723001721878
+Epoch 39 | Manual threshold:
+  Train - Acc: 0.7115, Eff: 0.7347, Rej: 0.7110
+  Val   - Acc: 0.7468, Eff: 0.6914, Rej: 0.7479
+[15:05:53]  At epoch 40
+  batch 266 last_batch 266 loss: 1.0446950741728445
+  batch 71 last_batch 71 loss: 1.0536349869110215
+Epoch 40 | Manual threshold:
+  Train - Acc: 0.7109, Eff: 0.7341, Rej: 0.7104
+  Val   - Acc: 0.7185, Eff: 0.7220, Rej: 0.7185
+[15:06:43]  At epoch 41
+  batch 266 last_batch 266 loss: 1.042634406036004
+  batch 71 last_batch 71 loss: 1.0538184197855667
+Epoch 41 | Manual threshold:
+  Train - Acc: 0.7129, Eff: 0.7355, Rej: 0.7125
+  Val   - Acc: 0.7162, Eff: 0.7222, Rej: 0.7161
+[15:07:33]  At epoch 42
+  batch 266 last_batch 266 loss: 1.0474358039691036
+  batch 71 last_batch 71 loss: 1.0526070997748576
+Epoch 42 | Manual threshold:
+  Train - Acc: 0.7099, Eff: 0.7361, Rej: 0.7094
+  Val   - Acc: 0.6790, Eff: 0.7635, Rej: 0.6773
+[15:08:22]  At epoch 43
+  batch 266 last_batch 266 loss: 1.0464176663330622
+  batch 71 last_batch 71 loss: 1.0564770992373076
+Epoch 43 | Manual threshold:
+  Train - Acc: 0.7104, Eff: 0.7351, Rej: 0.7099
+  Val   - Acc: 0.7483, Eff: 0.6899, Rej: 0.7495
+[15:09:12]  At epoch 44
+  batch 266 last_batch 266 loss: 1.0454429867572355
+  batch 71 last_batch 71 loss: 1.0549193528336538
+Epoch 44 | Manual threshold:
+  Train - Acc: 0.7100, Eff: 0.7365, Rej: 0.7095
+  Val   - Acc: 0.7013, Eff: 0.7388, Rej: 0.7006
+[15:10:02]  At epoch 45
+  batch 266 last_batch 266 loss: 1.0452453285679781
+  batch 71 last_batch 71 loss: 1.055048709184351
+Epoch 45 | Manual threshold:
+  Train - Acc: 0.7107, Eff: 0.7388, Rej: 0.7101
+  Val   - Acc: 0.7040, Eff: 0.7346, Rej: 0.7034
+[15:10:52]  At epoch 46
+  batch 266 last_batch 266 loss: 1.0452379286289215
+  batch 71 last_batch 71 loss: 1.0559695690450535
+Epoch 46 | Manual threshold:
+  Train - Acc: 0.7113, Eff: 0.7369, Rej: 0.7108
+  Val   - Acc: 0.6772, Eff: 0.7645, Rej: 0.6754
+[15:11:41]  At epoch 47
+  batch 266 last_batch 266 loss: 1.042237629119615
+  batch 71 last_batch 71 loss: 1.0549387965403811
+Epoch 47 | Manual threshold:
+  Train - Acc: 0.7086, Eff: 0.7410, Rej: 0.7080
+  Val   - Acc: 0.6930, Eff: 0.7493, Rej: 0.6919
+[15:12:31]  At epoch 48
+  batch 266 last_batch 266 loss: 1.0460218211313836
+  batch 71 last_batch 71 loss: 1.0557065186366228
+Epoch 48 | Manual threshold:
+  Train - Acc: 0.7092, Eff: 0.7382, Rej: 0.7086
+  Val   - Acc: 0.7067, Eff: 0.7315, Rej: 0.7062
+[15:13:21]  At epoch 49
+  batch 266 last_batch 266 loss: 1.039547653350615
+  batch 71 last_batch 71 loss: 1.0533758788041665
+Epoch 49 | Manual threshold:
+  Train - Acc: 0.7115, Eff: 0.7363, Rej: 0.7110
+  Val   - Acc: 0.7053, Eff: 0.7368, Rej: 0.7047
+[15:14:11]  At epoch 50
+  batch 266 last_batch 266 loss: 1.0405350880963462
+  batch 71 last_batch 71 loss: 1.0537365364356779
+Epoch 50 | Manual threshold:
+  Train - Acc: 0.7108, Eff: 0.7388, Rej: 0.7103
+  Val   - Acc: 0.7006, Eff: 0.7427, Rej: 0.6998
+[15:15:04]  At epoch 51
+  batch 266 last_batch 266 loss: 1.044047879097157
+  batch 71 last_batch 71 loss: 1.0575108914308144
+Epoch 51 | Manual threshold:
+  Train - Acc: 0.7099, Eff: 0.7389, Rej: 0.7093
+  Val   - Acc: 0.7267, Eff: 0.7137, Rej: 0.7269
+[15:15:54]  At epoch 52
+  batch 266 last_batch 266 loss: 1.0430325321236948
+  batch 71 last_batch 71 loss: 1.0570072934661112
+Epoch 52 | Manual threshold:
+  Train - Acc: 0.7090, Eff: 0.7405, Rej: 0.7084
+  Val   - Acc: 0.7132, Eff: 0.7264, Rej: 0.7130
+[15:16:44]  At epoch 53
+  batch 266 last_batch 266 loss: 1.0398953516680496
+  batch 71 last_batch 71 loss: 1.05768981617941
+Epoch 53 | Manual threshold:
+  Train - Acc: 0.7089, Eff: 0.7412, Rej: 0.7082
+  Val   - Acc: 0.6882, Eff: 0.7515, Rej: 0.6870
+[15:17:34]  At epoch 54
+  batch 266 last_batch 266 loss: 1.0373864631007488
+  batch 71 last_batch 71 loss: 1.058548478173538
+Epoch 54 | Manual threshold:
+  Train - Acc: 0.7097, Eff: 0.7435, Rej: 0.7091
+  Val   - Acc: 0.7143, Eff: 0.7281, Rej: 0.7140
+[15:18:23]  At epoch 55
+  batch 266 last_batch 266 loss: 1.0405798534253485
+  batch 71 last_batch 71 loss: 1.0591263418466272
+Epoch 55 | Manual threshold:
+  Train - Acc: 0.7070, Eff: 0.7444, Rej: 0.7062
+  Val   - Acc: 0.7316, Eff: 0.7058, Rej: 0.7321
+[15:19:14]  At epoch 56
+  batch 266 last_batch 266 loss: 1.0400435590654387
+  batch 71 last_batch 71 loss: 1.055722370953627
+Epoch 56 | Manual threshold:
+  Train - Acc: 0.7100, Eff: 0.7415, Rej: 0.7094
+  Val   - Acc: 0.7046, Eff: 0.7368, Rej: 0.7039
+[15:20:04]  At epoch 57
+  batch 266 last_batch 266 loss: 1.0366186401001494
+  batch 71 last_batch 71 loss: 1.0621031732626365
+Epoch 57 | Manual threshold:
+  Train - Acc: 0.7112, Eff: 0.7412, Rej: 0.7106
+  Val   - Acc: 0.6830, Eff: 0.7588, Rej: 0.6815
+[15:20:54]  At epoch 58
+  batch 266 last_batch 266 loss: 1.0380213155334157
+  batch 71 last_batch 71 loss: 1.0573634001570689
+Epoch 58 | Manual threshold:
+  Train - Acc: 0.7085, Eff: 0.7447, Rej: 0.7078
+  Val   - Acc: 0.7157, Eff: 0.7246, Rej: 0.7155
+[15:21:43]  At epoch 59
+  batch 266 last_batch 266 loss: 1.0352544838324524
+  batch 71 last_batch 71 loss: 1.0610922155245928
+Epoch 59 | Manual threshold:
+  Train - Acc: 0.7124, Eff: 0.7417, Rej: 0.7118
+  Val   - Acc: 0.7318, Eff: 0.7100, Rej: 0.7323
+[15:22:33]  At epoch 60
+  batch 266 last_batch 266 loss: 1.0345175609104615
+  batch 71 last_batch 71 loss: 1.055161714553833
+Epoch 60 | Manual threshold:
+  Train - Acc: 0.7113, Eff: 0.7433, Rej: 0.7106
+  Val   - Acc: 0.7090, Eff: 0.7333, Rej: 0.7085
+Saving checkpoint at epoch 60
+Checkpoint saved to outputs/Final_neutrals_magall_4block_100_epochs_message_passing_BCE/checkpoint_60.pt
+[15:23:24]  At epoch 61
+  batch 266 last_batch 266 loss: 1.0336889351220955
+  batch 71 last_batch 71 loss: 1.0591052560739114
+Epoch 61 | Manual threshold:
+  Train - Acc: 0.7092, Eff: 0.7454, Rej: 0.7085
+  Val   - Acc: 0.7110, Eff: 0.7306, Rej: 0.7106
+[15:24:14]  At epoch 62
+  batch 266 last_batch 266 loss: 1.0344855774165993
+  batch 71 last_batch 71 loss: 1.0619615433921277
+Epoch 62 | Manual threshold:
+  Train - Acc: 0.7103, Eff: 0.7455, Rej: 0.7096
+  Val   - Acc: 0.6800, Eff: 0.7609, Rej: 0.6783
+[15:25:04]  At epoch 63
+  batch 266 last_batch 266 loss: 1.029615488043405
+  batch 71 last_batch 71 loss: 1.063858235386056
+Epoch 63 | Manual threshold:
+  Train - Acc: 0.7125, Eff: 0.7444, Rej: 0.7118
+  Val   - Acc: 0.7342, Eff: 0.7026, Rej: 0.7349
+[15:25:54]  At epoch 64
+  batch 266 last_batch 266 loss: 1.0324481284259854
+  batch 71 last_batch 71 loss: 1.067545771598816
+Epoch 64 | Manual threshold:
+  Train - Acc: 0.7084, Eff: 0.7456, Rej: 0.7076
+  Val   - Acc: 0.7425, Eff: 0.6933, Rej: 0.7435
+[15:26:44]  At epoch 65
+  batch 266 last_batch 266 loss: 1.0335315360610646
+  batch 71 last_batch 71 loss: 1.0651115481282625
+Epoch 65 | Manual threshold:
+  Train - Acc: 0.7085, Eff: 0.7465, Rej: 0.7077
+  Val   - Acc: 0.7313, Eff: 0.7066, Rej: 0.7318
+[15:27:33]  At epoch 66
+  batch 266 last_batch 266 loss: 1.0280265238948334
+  batch 71 last_batch 71 loss: 1.065226240057341
+Epoch 66 | Manual threshold:
+  Train - Acc: 0.7099, Eff: 0.7469, Rej: 0.7091
+  Val   - Acc: 0.7210, Eff: 0.7206, Rej: 0.7210
+[15:28:23]  At epoch 67
+  batch 266 last_batch 266 loss: 1.0312194199042213
+  batch 71 last_batch 71 loss: 1.0646083749515909
+Epoch 67 | Manual threshold:
+  Train - Acc: 0.7065, Eff: 0.7502, Rej: 0.7056
+  Val   - Acc: 0.6876, Eff: 0.7513, Rej: 0.6863
+[15:29:13]  At epoch 68
+  batch 266 last_batch 266 loss: 1.0285846918149102
+  batch 71 last_batch 71 loss: 1.0670341513526271
+Epoch 68 | Manual threshold:
+  Train - Acc: 0.7062, Eff: 0.7525, Rej: 0.7053
+  Val   - Acc: 0.6823, Eff: 0.7542, Rej: 0.6808
+[15:30:03]  At epoch 69
+  batch 266 last_batch 266 loss: 1.0266721441333455
+  batch 71 last_batch 71 loss: 1.0763919479410413
+Epoch 69 | Manual threshold:
+  Train - Acc: 0.7078, Eff: 0.7495, Rej: 0.7069
+  Val   - Acc: 0.7375, Eff: 0.6967, Rej: 0.7384
+[15:30:53]  At epoch 70
+  batch 266 last_batch 266 loss: 1.0257499926072313
+  batch 71 last_batch 71 loss: 1.063436399043446
+Epoch 70 | Manual threshold:
+  Train - Acc: 0.7093, Eff: 0.7476, Rej: 0.7086
+  Val   - Acc: 0.6986, Eff: 0.7421, Rej: 0.6977
+[15:31:46]  At epoch 71
+  batch 266 last_batch 266 loss: 1.0224663124496776
+  batch 71 last_batch 71 loss: 1.072742525960358
+Epoch 71 | Manual threshold:
+  Train - Acc: 0.7070, Eff: 0.7518, Rej: 0.7061
+  Val   - Acc: 0.7078, Eff: 0.7312, Rej: 0.7073
+[15:32:36]  At epoch 72
+  batch 266 last_batch 266 loss: 1.023122719355992
+  batch 71 last_batch 71 loss: 1.076622488633008
+Epoch 72 | Manual threshold:
+  Train - Acc: 0.7080, Eff: 0.7514, Rej: 0.7071
+  Val   - Acc: 0.7210, Eff: 0.7194, Rej: 0.7210
+[15:33:26]  At epoch 73
+  batch 266 last_batch 266 loss: 1.020064182523498
+  batch 71 last_batch 71 loss: 1.070191223016927
+Epoch 73 | Manual threshold:
+  Train - Acc: 0.7073, Eff: 0.7538, Rej: 0.7063
+  Val   - Acc: 0.7064, Eff: 0.7308, Rej: 0.7059
+[15:34:16]  At epoch 74
+  batch 266 last_batch 266 loss: 1.0177244927201952
+  batch 71 last_batch 71 loss: 1.0792438371080748
+Epoch 74 | Manual threshold:
+  Train - Acc: 0.7084, Eff: 0.7535, Rej: 0.7075
+  Val   - Acc: 0.7065, Eff: 0.7310, Rej: 0.7060
+[15:35:06]  At epoch 75
+  batch 266 last_batch 266 loss: 1.0198262887341636
+  batch 71 last_batch 71 loss: 1.0804288899394827
+Epoch 75 | Manual threshold:
+  Train - Acc: 0.7068, Eff: 0.7565, Rej: 0.7058
+  Val   - Acc: 0.7236, Eff: 0.7105, Rej: 0.7239
+[15:35:56]  At epoch 76
+  batch 266 last_batch 266 loss: 1.0159253211397874
+  batch 71 last_batch 71 loss: 1.0782588518841165
+Epoch 76 | Manual threshold:
+  Train - Acc: 0.7050, Eff: 0.7594, Rej: 0.7039
+  Val   - Acc: 0.6970, Eff: 0.7388, Rej: 0.6962
+[15:36:46]  At epoch 77
+  batch 266 last_batch 266 loss: 1.0157444669788045
+  batch 71 last_batch 71 loss: 1.0941270052547185
+Epoch 77 | Manual threshold:
+  Train - Acc: 0.7029, Eff: 0.7611, Rej: 0.7017
+  Val   - Acc: 0.7302, Eff: 0.7043, Rej: 0.7307
+[15:37:36]  At epoch 78
+  batch 266 last_batch 266 loss: 1.0129019311048035
+  batch 71 last_batch 71 loss: 1.0896760745787284
+Epoch 78 | Manual threshold:
+  Train - Acc: 0.7042, Eff: 0.7603, Rej: 0.7031
+  Val   - Acc: 0.6874, Eff: 0.7499, Rej: 0.6861
+[15:38:26]  At epoch 79
+  batch 266 last_batch 266 loss: 1.009732286732896
+  batch 71 last_batch 71 loss: 1.0973248876316446
+Epoch 79 | Manual threshold:
+  Train - Acc: 0.7041, Eff: 0.7622, Rej: 0.7030
+  Val   - Acc: 0.6933, Eff: 0.7385, Rej: 0.6924
+[15:39:16]  At epoch 80
+  batch 266 last_batch 266 loss: 1.009603177022217
+  batch 71 last_batch 71 loss: 1.0924960853348316
+Epoch 80 | Manual threshold:
+  Train - Acc: 0.7046, Eff: 0.7616, Rej: 0.7035
+  Val   - Acc: 0.7133, Eff: 0.7205, Rej: 0.7132
+[15:40:06]  At epoch 81
+  batch 266 last_batch 266 loss: 1.007583515088361
+  batch 71 last_batch 71 loss: 1.0898617841828038
+Epoch 81 | Manual threshold:
+  Train - Acc: 0.7054, Eff: 0.7612, Rej: 0.7043
+  Val   - Acc: 0.6931, Eff: 0.7413, Rej: 0.6921
+[15:40:57]  At epoch 82
+  batch 266 last_batch 266 loss: 1.004552583273192
+  batch 71 last_batch 71 loss: 1.0914080739021301
+Epoch 82 | Manual threshold:
+  Train - Acc: 0.7044, Eff: 0.7664, Rej: 0.7032
+  Val   - Acc: 0.7137, Eff: 0.7190, Rej: 0.7136
+[15:41:47]  At epoch 83
+  batch 266 last_batch 266 loss: 1.0030214952346974
+  batch 71 last_batch 71 loss: 1.1002833154839529
+Epoch 83 | Manual threshold:
+  Train - Acc: 0.7026, Eff: 0.7687, Rej: 0.7013
+  Val   - Acc: 0.7000, Eff: 0.7357, Rej: 0.6993
+[15:42:37]  At epoch 84
+  batch 266 last_batch 266 loss: 1.0040691925170726
+  batch 71 last_batch 71 loss: 1.1157351874969375
+Epoch 84 | Manual threshold:
+  Train - Acc: 0.6992, Eff: 0.7717, Rej: 0.6978
+  Val   - Acc: 0.7156, Eff: 0.7180, Rej: 0.7156
+[15:43:27]  At epoch 85
+  batch 266 last_batch 266 loss: 1.000701259401508
+  batch 71 last_batch 71 loss: 1.1112675129527776
+Epoch 85 | Manual threshold:
+  Train - Acc: 0.6987, Eff: 0.7728, Rej: 0.6972
+  Val   - Acc: 0.7208, Eff: 0.7106, Rej: 0.7210
+[15:44:17]  At epoch 86
+  batch 266 last_batch 266 loss: 0.998008071928096
+  batch 71 last_batch 71 loss: 1.1067558627733043
+Epoch 86 | Manual threshold:
+  Train - Acc: 0.7007, Eff: 0.7714, Rej: 0.6993
+  Val   - Acc: 0.6793, Eff: 0.7491, Rej: 0.6779
+[15:45:07]  At epoch 87
+  batch 266 last_batch 266 loss: 0.9956672214027634
+  batch 71 last_batch 71 loss: 1.127529283644448
+Epoch 87 | Manual threshold:
+  Train - Acc: 0.6985, Eff: 0.7756, Rej: 0.6969
+  Val   - Acc: 0.7003, Eff: 0.7292, Rej: 0.6997
+[15:45:56]  At epoch 88
+  batch 266 last_batch 266 loss: 0.9906889493752243
+  batch 71 last_batch 71 loss: 1.15789889617705
+Epoch 88 | Manual threshold:
+  Train - Acc: 0.7018, Eff: 0.7761, Rej: 0.7003
+  Val   - Acc: 0.7202, Eff: 0.7081, Rej: 0.7204
+[15:46:46]  At epoch 89
+  batch 266 last_batch 266 loss: 0.9903852162056399
+  batch 71 last_batch 71 loss: 1.1349908550020675
+Epoch 89 | Manual threshold:
+  Train - Acc: 0.6994, Eff: 0.7774, Rej: 0.6978
+  Val   - Acc: 0.7136, Eff: 0.7152, Rej: 0.7136
+[15:47:36]  At epoch 90
+  batch 266 last_batch 266 loss: 0.9853179394302511
+  batch 71 last_batch 71 loss: 1.1345971805948607
+Epoch 90 | Manual threshold:
+  Train - Acc: 0.6993, Eff: 0.7781, Rej: 0.6978
+  Val   - Acc: 0.7091, Eff: 0.7187, Rej: 0.7089
+Saving checkpoint at epoch 90
+Checkpoint saved to outputs/Final_neutrals_magall_4block_100_epochs_message_passing_BCE/checkpoint_90.pt
+[15:48:27]  At epoch 91
+  batch 266 last_batch 266 loss: 0.985116873244594
+  batch 71 last_batch 71 loss: 1.1326120210365511
+Epoch 91 | Manual threshold:
+  Train - Acc: 0.6960, Eff: 0.7836, Rej: 0.6943
+  Val   - Acc: 0.6647, Eff: 0.7598, Rej: 0.6628
+[15:49:21]  At epoch 92
+  batch 266 last_batch 266 loss: 0.9810096260748411
+  batch 71 last_batch 71 loss: 1.1424378559622965
+Epoch 92 | Manual threshold:
+  Train - Acc: 0.6978, Eff: 0.7834, Rej: 0.6961
+  Val   - Acc: 0.7182, Eff: 0.7097, Rej: 0.7184
+[15:50:12]  At epoch 93
+  batch 266 last_batch 266 loss: 0.9822205105670413
+  batch 71 last_batch 71 loss: 1.1755088349463234
+Epoch 93 | Manual threshold:
+  Train - Acc: 0.6957, Eff: 0.7864, Rej: 0.6938
+  Val   - Acc: 0.6934, Eff: 0.7295, Rej: 0.6927
+[15:51:02]  At epoch 94
+  batch 266 last_batch 266 loss: 0.9771571620962674
+  batch 71 last_batch 71 loss: 1.154549798495333
+Epoch 94 | Manual threshold:
+  Train - Acc: 0.6975, Eff: 0.7854, Rej: 0.6957
+  Val   - Acc: 0.7009, Eff: 0.7235, Rej: 0.7005
+[15:51:52]  At epoch 95
+  batch 266 last_batch 266 loss: 0.9767378221328994
+  batch 71 last_batch 71 loss: 1.1464360532626299
+Epoch 95 | Manual threshold:
+  Train - Acc: 0.6940, Eff: 0.7883, Rej: 0.6921
+  Val   - Acc: 0.6701, Eff: 0.7564, Rej: 0.6684
+[15:52:42]  At epoch 96
+  batch 266 last_batch 266 loss: 0.9702814817428589
+  batch 71 last_batch 71 loss: 1.164617336971659
+Epoch 96 | Manual threshold:
+  Train - Acc: 0.6990, Eff: 0.7869, Rej: 0.6973
+  Val   - Acc: 0.6782, Eff: 0.7467, Rej: 0.6769
+[15:53:33]  At epoch 97
+  batch 266 last_batch 266 loss: 0.9733568519577944
+  batch 71 last_batch 71 loss: 1.1632636634396836
+Epoch 97 | Manual threshold:
+  Train - Acc: 0.6925, Eff: 0.7948, Rej: 0.6904
+  Val   - Acc: 0.6748, Eff: 0.7432, Rej: 0.6734
+[15:54:23]  At epoch 98
+  batch 266 last_batch 266 loss: 0.9731052213145378
+  batch 71 last_batch 71 loss: 1.1790589228482313
+Epoch 98 | Manual threshold:
+  Train - Acc: 0.6904, Eff: 0.7959, Rej: 0.6883
+  Val   - Acc: 0.7414, Eff: 0.6783, Rej: 0.7426
+[15:55:13]  At epoch 99
+  batch 266 last_batch 266 loss: 0.967454570352583
+  batch 71 last_batch 71 loss: 1.1898447913183292
+Epoch 99 | Manual threshold:
+  Train - Acc: 0.6935, Eff: 0.7970, Rej: 0.6914
+  Val   - Acc: 0.7023, Eff: 0.7173, Rej: 0.7020
+Training finished. Saving model in Final_neutrals_magall_4block_100_epochs_message_passing_BCE.pt
+Checkpoint saved to outputs/Final_neutrals_magall_4block_100_epochs_message_passing_BCE/Final_neutrals_magall_4block_100_epochs_message_passing_BCE.pt
+Saving config file as txt file
