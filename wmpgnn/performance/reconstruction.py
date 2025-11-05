@@ -202,10 +202,17 @@ def reco_event(graph, event, config, signal, sig_df, evt_df, ft_des):
 
             # Get origin B id
             indices = [particle_keys.index(x) for x in tc['node_keys']]
-            signal_LCA_id = true_LCA[true_LCA['senders'].isin(indices) | true_LCA['receivers'].isin(indices)][
-                "LCA_id"]
+            signal_LCA_id = true_LCA[true_LCA['senders'].isin(indices) | true_LCA['receivers'].isin(indices)]["LCA_id"]
             values, counts = np.unique(signal_LCA_id, return_counts=True)
-            sig_dict["B_id"] = values[np.argmax(counts)]
+            max_indices = np.where(counts == counts.max())[0]
+            if len(max_indices) == 1:
+                sig_dict["B_id"] = values[max_indices[0]]
+            else:
+                candidate_lca_ids = values[max_indices]
+                candidates_df = true_LCA[true_LCA['LCA_id'].isin(candidate_lca_ids)]
+                max_chain_per_lca = candidates_df.groupby('LCA_id')['TrueFullChainLCA'].max()
+                sig_dict["B_id"] = max_chain_per_lca.idxmax()
+
             sig_df = sig_df._append(sig_dict, ignore_index=True)
 
         # temp stuff
