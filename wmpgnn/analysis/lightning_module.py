@@ -233,17 +233,6 @@ class HGNNLightningModule(L.LightningModule):
             for i in range(len(self.model.dfei_model._blocks)):
                 plot_weights(self.tst_log[f"sig_edges_score_{i}"], self.tst_log[f"bkg_edges_score_{i}"],
                              [f"NN_edges_{i}", "sig", "bkg"], self.version, channel=self.signal)
-        # Removing heavy hadron daughters of B since they are classified as signal (Ds in Bs->Dspi for example)
-        if self.signal.startswith("Bs"):
-            sig_id = 531
-        elif self.signal.startswith("Bd"):
-            sig_id = 511
-        else:
-            ValueError("Currently undefined")
-        sig_selbool = self.sig_df["SigMatch"] == 1
-        sig_id_selbool = np.abs(self.sig_df["B_id"]) != sig_id
-        self.sig_df = self.sig_df[~(sig_selbool * sig_id_selbool)]
-
         if self.config["LCA"]:
             obtain_reco_accuracy(self.sig_df, self.version, self.signal)
         if self.config["FT"]:
