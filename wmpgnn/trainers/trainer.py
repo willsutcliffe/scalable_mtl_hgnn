@@ -4,9 +4,6 @@ import matplotlib.pyplot as plt
 import os
 from wmpgnn.util.functions import NOW
 
-
-
-
 class Trainer(ABC):
     """
     Abstract base class for model training loops.
@@ -129,6 +126,10 @@ class Trainer(ABC):
     @abstractmethod
     def load_checkpoint(self, file_path=None):
         pass
+    
+    @abstractmethod
+    def save_metrics_plots(self, output_folder=None):
+        pass
 
     def get_history(self):
         """Returns the training and validation history of the model's metrics"""
@@ -177,6 +178,8 @@ class Trainer(ABC):
         self.bce_nodes_val_loss   = history['bce_nodes_val_loss']
         self.bce_edges_train_loss = history['bce_edges_train_loss']
         self.bce_edges_val_loss   = history['bce_edges_val_loss']
+        self.bce_pvs_train_loss     = history['bce_pvs_train_loss']
+        self.bce_pvs_val_loss     = history['bce_pvs_val_loss']
     
     def save_dataframe(self, file_name):
         """
@@ -189,6 +192,44 @@ class Trainer(ABC):
         """
         pass
 
+    def plot_losses(self, file_name="losses.png", show=True):
+        """
+        Plot and optionally display training vs. validation losses separately.
+
+        Args:
+            file_name (str): File path for saving the figure.
+            show (bool): If True, display the plot with plt.show().
+        """
+        
+        fig,axes = plt.subplots(2,2,figsize=(16,9))
+        axes = axes.flatten()
+        losses = {
+            'ce_loss': (self.ce_train_loss,self.ce_val_loss),
+            'bce_pvs_loss' : (self.bce_pvs_train_loss,self.bce_pvs_val_loss),
+            'bce_nodes_loss' : (self.bce_nodes_train_loss,self.bce_nodes_val_loss),
+            'bce_edges_loss' : (self.bce_edges_train_loss,self.bce_edges_val_loss),
+        }
+        
+        i=0
+        for label,(tr_loss, vl_loss) in losses.items():
+            ax=axes[i]
+            
+            ax.plot(tr_loss, label="Train Loss")
+            ax.plot(vl_loss, label="Validation Loss")
+
+            ax.set_xlabel('epoch')
+            ax.set_ylabel(label.replace("_"," "))
+            ax.grid()
+            ax.set_yscale('log')
+            ax.legend()
+            i += 1
+            
+        plt.tight_layout()
+        if show:
+            plt.show()
+        plt.savefig(file_name)
+        plt.close(fig)
+
     def plot_loss(self, file_name="loss.png", show=True):
         """
         Plot and optionally display training vs. validation loss.
@@ -197,28 +238,26 @@ class Trainer(ABC):
             file_name (str): File path for saving the figure.
             show (bool): If True, display the plot with plt.show().
         """
-        import matplotlib.pyplot as plt
-        import os
+        fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+        
+        ax.plot(self.train_loss, label="Train Loss")
+        ax.plot(self.val_loss, label="Validation Loss")
 
-        plt.plot(self.train_loss, label="Train Loss")
-        plt.plot(self.val_loss, label="Validation Loss")
-
-        plt.xlabel('epoch')
-        plt.ylabel('Cross Entropy Loss')
-        plt.grid()
-        plt.yscale('log')
-
-        plt.legend()
+        ax.set_xlabel('epoch')
+        ax.set_ylabel('Cross Entropy Loss')
+        ax.grid()
+        ax.set_yscale('log')
+        ax.legend()
+        
+        plt.tight_layout()
         if show:
             plt.show()
         plt.savefig(file_name)
+        plt.close(fig)
 
     def plot_accuracy(self, file_name="acc.png", show=True):
         """
         Plot per‐class accuracy for training and validation.
-
-        Assumes exactly 4 classes (indices 0–3). Adjust slicing logic
-        if you have a different number of classes.
 
         Args:
             file_name (str): File path for saving the figure.
@@ -267,6 +306,7 @@ class Trainer(ABC):
         if show:
             plt.show()
         plt.savefig(file_name)
+        plt.close(fig)
 
     def plot_efficiency(self, file_name="eff.png", show=True):
 
@@ -312,9 +352,9 @@ class Trainer(ABC):
         if show:
             plt.show()
         plt.savefig(file_name)
+        plt.close(fig)
     
     def plot_rejection(self, file_name="rej.png", show=True):
-
         class_rej_vl = {f"class{i}_rej_vl" : [] for i in range(self.LCA_classes)}
         class_rej_vl_err = {f"class{i}_rej_vl_err" : [] for i in range(self.LCA_classes)}
         
@@ -357,3 +397,4 @@ class Trainer(ABC):
         if show:
             plt.show()
         plt.savefig(file_name)
+        plt.close(fig)

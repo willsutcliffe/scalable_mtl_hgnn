@@ -1,28 +1,25 @@
 import sys,os
-sys.path.append(os.getcwd())
-
-
-
+hgnnroot = os.getcwd()
+sys.path.append(hgnnroot) #path to the scalable_mtl_hgnn repository root
 
 from wmpgnn.configs.config_loader import ConfigLoader
 from wmpgnn.datasets.data_handler import DataHandler
 from wmpgnn.model.model_loader import ModelLoader
 from wmpgnn.trainers.gnn_trainer import GNNTrainer
 from wmpgnn.trainers.hetero_gnn_trainer import HeteroGNNTrainer
+from wmpgnn.util.functions import flatten_dict
 import argparse
 import glob
 
-
-
-def flatten_dict(d, parent_key='', sep='_'):
-    items = []
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
+from yaml import safe_load
+archive_of_paths = "../lhcbdfei/examles/archive_of_paths.yaml"
+with open(archive_of_paths, 'r') as f:
+    ArchivePaths = safe_load(f)
+    home = ArchivePaths.get("home", ".")
+    if home != ".":
+        for key in ArchivePaths:
+            if key != "home":
+                ArchivePaths[key] = home+ArchivePaths[key]
 
 def GetWarmstartFile(checkpoint_path, name_query="checkpoint*"):
     """Search for the latest saved file in the given path."""
@@ -40,7 +37,7 @@ args = parser.parse_args()
 
 # load config files with ConfigLoader class
 print("Loading Config")
-config_loader = ConfigLoader(f"config_files/{args.config}", environment_prefix="DL")
+config_loader = ConfigLoader(f"{hgnnroot}/wmpgnn/config_files/{args.config}", environment_prefix="DL")
 
 # Set random seed for reproducibility
 seed = config_loader.get("training.random_seed", None)  # Default to None if not specified
@@ -77,7 +74,7 @@ model_file = config_loader.get("training.model_file")
 flatten_config = flatten_dict(config_loader.config)
 model_file = model_file.format(**flatten_config)
 # folder for the model and other outputs
-output_folder = f"outputs/{model_file.replace('.pt','')}/"
+output_folder = f"{ArchivePaths['train']}/outputs/{model_file.replace('.pt','')}/"
 os.makedirs(output_folder, exist_ok=True)
 
 model_file = config_loader.get("training.model_file")
@@ -85,12 +82,13 @@ model_file = config_loader.get("training.model_file")
 flatten_config = flatten_dict(config_loader.config)
 model_file = model_file.format(**flatten_config)
 # folder for the model and other outputs
-output_folder = f"outputs/{model_file.replace('.pt','')}/"
+output_folder = f"{ArchivePaths['train']}/outputs/{model_file.replace('.pt','')}/"
 os.makedirs(output_folder, exist_ok=True)
 
 # initialized GNNTrainer or HeteroGNNTrainer
 print("Training model")
 add_bce = config_loader.get('loss.add_bce')
+add_pv = config_loader.get('loss.add_pv')
 if config_loader.get('dataset.data_type') == "homogeneous":
     trainer = GNNTrainer(config_loader, model, train_loader, val_loader, add_bce = add_bce)
 elif config_loader.get('dataset.data_type') == "heterogeneous":
@@ -119,6 +117,11 @@ dropped_lr_epochs = config_loader.get('training.dropped_lr_epochs')
 print(f"Running {epochs} epochs with learning rate {learning_rate}")
 save_checkpoint = config_loader.get('training.save_checkpoint')
 
+# dump the model state and configuration to a file
+dump_file = output_folder+"trainer_dump.txt"
+trainer.dump(dump_file)
+print(f"Dumped trainer state to {dump_file}")
+
 if config_loader.get("training.train"):
     print("Training model")
     trainer.train(epochs = epochs, learning_rate = learning_rate,
@@ -139,7 +142,7 @@ flatten_config = flatten_dict(config_loader.config)
 model_file = model_file.format(**flatten_config)
 
 # folder for the model and other outputs
-output_folder = f"outputs/{model_file.replace('.pt','')}/"
+output_folder = f"{ArchivePaths['train']}/outputs/{model_file.replace('.pt','')}/"
 os.makedirs(output_folder, exist_ok=True)
 
 print(f"Training finished. Saving model in {model_file}")
@@ -149,6 +152,7 @@ csv_file = model_file.replace(".pt", ".csv")
 trainer.save_dataframe(output_folder+csv_file)
 
 # make plots
+print("Making plots..")
 plot_name = model_file.replace(".pt", "_loss.png")
 trainer.plot_loss(output_folder+plot_name, show=False)
 
@@ -161,3 +165,4 @@ trainer.plot_efficiency(output_folder+plot_name, show=False)
 plot_name = model_file.replace(".pt", "_rej.png")
 trainer.plot_rejection(output_folder+plot_name, show=False)
 
+print("All done.")

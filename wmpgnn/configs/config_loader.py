@@ -21,9 +21,19 @@ class ConfigLoader:
         self.config_path = config_path
         self.environment_prefix = environment_prefix
         self.config = self._load_config()
+    
+    def __str__(self):
+        # Customize the string representation of the object
+        representation = "Configuration YAML:\n"
+        for key, value in self.config.items():
+                representation+=f" {key}:\n"
+                for sub_key, sub_value in value.items():
+                    representation += f"  {sub_key}={sub_value}\n"
+        return representation
 
     def _load_config(self) -> dict:
         """Load the YAML configuration file."""
+        
         if not os.path.exists(self.config_path):
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
 
@@ -102,7 +112,7 @@ class ConfigLoader:
                 return default
         return value
 
-    def sett(self, key: str, value):
+    def set(self, key: str, value):
         """
         Set a value in the configuration.
 
@@ -121,6 +131,16 @@ class ConfigLoader:
     def reload(self):
         """Reload the configuration from the YAML file."""
         self.config = self._load_config()
+    
+    def dump(self):
+        """Print config dictionary"""
+        for key, value in self.config.items():
+            print(k)
+            if isinstance(value,dict):
+                for v in value:
+                    print("\t\t",v)
+            else:
+                print("\t",value)
     
     def print(self, file_name: str):
         """print the configuration dict to text file"""

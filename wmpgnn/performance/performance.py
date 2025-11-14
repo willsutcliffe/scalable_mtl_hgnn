@@ -3,7 +3,7 @@ from IPython.core.completer import not_found
 from wmpgnn.performance.reconstruction import reconstruct_decay, make_decay_dict
 from wmpgnn.performance.reconstruction import particle_name, flatten, match_decays
 from wmpgnn.util.functions import init_plot_style
-from wmpgnn.util.functions import acc_four_class
+from wmpgnn.util.functions import acc_four_class, acc_n_class
 from wmpgnn.model.model_loader import ModelLoader
 from wmpgnn.datasets.data_handler import DataHandler
 import pandas as pd
@@ -86,6 +86,7 @@ class Performance:
         try:
             self.model.load_state_dict(torch.load(model_weights, weights_only=True)['model_state_dict'])
         except KeyError: 
+            print("NOT MY MODEL")
             self.model.load_state_dict(torch.load(model_weights, weights_only=True))
         self.model.eval()
         self.name = config.get("inference.name")
@@ -97,7 +98,7 @@ class Performance:
         plt.rcParams.update(init_plot_style())
 
 
-    def evaluate_hetero_lca_accuracy(self, prune_layer=3, bdt_pruned_data=False, batch_size=8):
+    def evaluate_hetero_lca_accuracy(self, prune_layer=3, bdt_pruned_data=False, batch_size=8, nLCA=4):
         """
         Evaluates the Link Classification Accuracy (LCA) for a heterogeneous GNN model.
 
@@ -123,8 +124,12 @@ class Performance:
         """
         self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
         acc_one_epoch = []
-
-        for i, data in enumerate(self.dataset):
+        
+        for i, data in enumerate(self.dataset): # TODO: fix loop to account for empty events
+            # TEMP: 
+            #if i==0: print("---TEMP!---: removing associated IP feature 11 from tracks")
+            #data['tracks'].x = torch.cat((data['tracks'].x[:, :11], data['tracks'].x[:, 12:]), dim=1)
+            # END TEMP
             data.to('cuda')
             label0 = data[('tracks', 'to', 'tracks')].y.argmax(dim=1)
             y0 = data[('tracks', 'to', 'tracks')].y
@@ -146,18 +151,18 @@ class Performance:
                     bdt_pruned_edges = torch.ones_like(data.old_y).cuda()
                     bdt_pruned_edges[:, 1:] = 0
                     edge_full = torch.concat([bdt_pruned_edges, answers])
-                    acc_one_batch = acc_four_class(edge_full, y_full.argmax(dim=1))
+                    acc_one_batch = acc_n_class(edge_full, y_full.argmax(dim=1), n_class=nLCA)
                 else:
-                    acc_one_batch = acc_four_class(answers, label0)
+                    acc_one_batch = acc_n_class(answers, label0, n_class=nLCA)
             else:
                 if bdt_pruned_data:
                     y_full = torch.concat([data.old_y, data[('tracks', 'to', 'tracks')].y])
                     bdt_pruned_edges = torch.ones_like(data.old_y).cuda()
                     bdt_pruned_edges[:, 1:] = 0
                     edge_full = torch.concat([bdt_pruned_edges, outputs[('tracks', 'to', 'tracks')].edges])
-                    acc_one_batch = acc_four_class(edge_full, y_full.argmax(dim=1))
+                    acc_one_batch = acc_n_class(edge_full, y_full.argmax(dim=1), n_class=nLCA)
                 else:
-                    acc_one_batch = acc_four_class(outputs[('tracks', 'to', 'tracks')].edges, label)
+                    acc_one_batch = acc_n_class(outputs[('tracks', 'to', 'tracks')].edges, label, n_class=nLCA)
             acc_one_epoch.append(acc_one_batch)
         acc_one_epoch = torch.stack(acc_one_epoch)
         return acc_one_epoch.nanmean(dim=0)
@@ -218,18 +223,18 @@ class Performance:
                     bdt_pruned_edges = torch.ones_like(vdata.old_y).cuda()
                     bdt_pruned_edges[:, 1:] = 0
                     edge_full = torch.concat([bdt_pruned_edges, answers])
-                    acc_one_batch = acc_four_class(edge_full, y_full.argmax(dim=1))
+                    acc_one_batch = acc_n_class(edge_full, y_full.argmax(dim=1))
                 else:
-                    acc_one_batch = acc_four_class(answers, label0)
+                    acc_one_batch = acc_n_class(answers, label0)
             else:
                 if bdt_pruned_data:
                     y_full = torch.concat([vdata.old_y, vdata.y])
                     bdt_pruned_edges = torch.ones_like(vdata.old_y).cuda()
                     bdt_pruned_edges[:, 1:] = 0
                     edge_full = torch.concat([bdt_pruned_edges, outputs.edges])
-                    acc_one_batch = acc_four_class(edge_full, y_full.argmax(dim=1))
+                    acc_one_batch = acc_n_class(edge_full, y_full.argmax(dim=1))
                 else:
-                    acc_one_batch = acc_four_class(outputs.edges, label)
+                    acc_one_batch = acc_n_class(outputs.edges, label)
             acc_one_epoch.append(acc_one_batch)
 
         acc_one_epoch = torch.stack(acc_one_epoch)
@@ -464,11 +469,12 @@ class Performance:
         associated = []
         empty_tracks_counter = 0
         for i, data in enumerate(self.dataset):
+
             data.to('cuda')
 
             outputs = self.model(data)
             data = outputs
-            PVlabel = torch.tensor(data[('tracks', 'to', 'pvs')].y, dtype=torch.float32)
+            PVlabel = data[('tracks', 'to', 'pvs')].y.clone().detach()
 
             if b_tracks:
                 tracks = data[('tracks', 'to', 'tracks')].edge_index[0][data[('tracks', 'to', 'tracks')].y[:, 0] == 0]
@@ -476,7 +482,7 @@ class Performance:
                 tracks = data[('tracks', 'to', 'tracks')].edge_index[0]
             unique_tracks = torch.unique(tracks)
             correctly_associated = 0
-
+            
             for j in unique_tracks:
                 index = (data[('tracks', 'to', 'pvs')].edge_index[0] == j)
                 pv_associated = (torch.argmax(
@@ -531,7 +537,6 @@ class Performance:
         for layer in layers:
             preds[layer] = []
         for j, data in enumerate(self.dataset):
-
             data['graph_globals'] = data['graph_globals'].unsqueeze(1)
             data.receivers = data.receivers - torch.min(data.receivers)
             data.senders = data.senders - torch.min(data.senders)
@@ -560,13 +565,18 @@ class Performance:
             identifier = "edge"
         else:
             identifier = "node"
+        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
         for i in range(len(pred)):
-            plt.hist(pred[i][true==1], bins=100,density=True, label="y=1", histtype="step")
-            plt.hist(pred[i][true==0], bins=100, density=True, label="y=0", histtype="step")
-            plt.legend()
-            plt.xlabel("Weights")
-            plt.savefig(f"{self.results_dir}/{self.name}_{identifier}_{names[i]}_histogram.png", dpi=300)
-            plt.savefig(f"{self.results_dir}/{self.name}_{identifier}_{names[i]}_histogram.pdf", dpi=300)
+            ax.clear()
+            bins=np.linspace(pred[i].min(),pred[i].max(),101)
+            ax.hist(pred[i][true==1], bins=bins,density=True, label="y=1", histtype="step")
+            ax.hist(pred[i][true==0], bins=bins, density=True, label="y=0", histtype="step")
+            ax.legend()
+            ax.set_xlabel("Weights")
+            plt.tight_layout()
+            fig.savefig(f"{self.results_dir}/{self.name}_{identifier}_{names[i]}_histogram.png", dpi=300)
+            fig.savefig(f"{self.results_dir}/{self.name}_{identifier}_{names[i]}_histogram.pdf", dpi=300)
+            
             if show_plots:
                 plt.show()
         if plot_roc:
@@ -577,6 +587,148 @@ class Performance:
 
         return true, pred
 
+    def plot_misclassified_hetero_features(self, layers=[0,7], thr=0.5, batch_size=8, edge_pruning=True, pv_tr_edges = False, show_plots=False):
+        """
+        Plots features of misclassified edges or nodes in a heterogeneous GNN model.
+        
+        Args:
+            layers : list, optional
+                The list of index of the GNN layer to evaluate. Defaults to [0,7].
+            thr : float, optional
+                The threshold value for determining misclassification. Defaults to 0.5.
+            batch_size : int, optional
+                The batch size to use for the test DataLoader. Defaults to 8.
+            edge_pruning : bool, optional
+                If True, evaluates edge pruning; otherwise, evaluates node pruning.
+                Defaults to True.
+            pv_tr_edges : bool, optional
+                If True, evaluates pruning performance specifically for 'tracks' to 'pvs'
+                (Primary Vertex) edges. Defaults to False.
+            show_plots : bool, optional
+                If True, displays the plots generated by this method. Defaults to False.
+        """
+        trues = []
+        self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
+        features = []
+        preds = {}
+        for layer in layers:
+            preds[layer] = []
+        
+        if edge_pruning:
+            features_names = self.config_loader.get("dataset.edges_features")
+            if features_names == []: # temporary fix for pythia dataset not including names in cached graphs
+                features_names = ['FromSameAssociatedPV_reco','theta_reco','trdist_reco','delta_z0_reco']
+        else:
+            features_names = self.config_loader.get("dataset.nodes_features")
+            if features_names == []: # temporary fix for pythia dataset not including names in cached graphs
+                features_names = ['xProd_reco','yProd_reco','zProd_reco','px_reco','py_reco','pz_reco','px_reco_associated','py_reco_associated','pz_reco_associated', 'charge','xPV_reco', 'yPV_reco', 'zPV_reco']
+            
+        for i, data in enumerate(self.dataset):
+            # store features depending on task
+            if edge_pruning:
+                features.append(data['tracks', 'tracks'].edges)
+            else:
+                features.append(data['tracks'].x)
+                
+            data.to('cuda')
+            # TEMP: compute log IP
+            #if i==0: print("---TEMP!---: removing associated IP feature 11 from tracks")
+            #data['tracks'].x = torch.cat((data['tracks'].x[:, :11], data['tracks'].x[:, 12:]), dim=1)
+            # END TEMP
+            outputs = self.model(data)
+            data = outputs
+            label = data[('tracks', 'to', 'tracks')].y.argmax(dim=1)
+            PVlabel = data[('tracks', 'to', 'pvs')].y.clone().detach()
+            num_nodes = data['tracks'].x.shape[0]
+            out = data[('tracks', 'to', 'tracks')].edges.new_zeros(num_nodes,
+                                                                   data[('tracks', 'to', 'tracks')].y.shape[1])
+            node_sum = scatter_add(data[('tracks', 'to', 'tracks')].y, data[('tracks', 'to', 'tracks')].edge_index[0],
+                                   out=out, dim=0)
+            ynodes = (1. * (torch.sum(node_sum[:, 1:], 1) > 0)).unsqueeze(1)
+            yBCE = 1. * (data[('tracks', 'to', 'tracks')].y[:, 0] == 0).unsqueeze(1)
+
+            if edge_pruning:
+                
+                if pv_tr_edges:
+                    trues.append(PVlabel.cpu().detach().numpy())
+                else:
+                    trues.append(yBCE.cpu().detach().numpy())
+                for layer in layers:
+                    if pv_tr_edges:
+                        preds[layer].append(
+                        self.model._blocks[layer].edge_weights[('tracks', 'to', 'pvs')].cpu().detach().numpy())
+                    else:
+                        preds[layer].append(
+                        self.model._blocks[layer].edge_weights[('tracks', 'to', 'tracks')].cpu().detach().numpy())
+            else:
+                trues.append(ynodes.cpu().detach().numpy())
+                for layer in layers:
+                    preds[layer].append(
+                        self.model._blocks[layer].node_weights['tracks'].cpu().detach().numpy())
+        feat = np.concatenate(features)
+        true = np.concatenate(trues)
+        pred = [np.concatenate(preds[i]) for i in layers]
+        names = [f"Layer {i}" for i in layers]
+        if edge_pruning:
+            identifier = "edge"
+            if pv_tr_edges:
+                identifier = "pv_edge"
+        else:
+            identifier = "node"
+        
+        #TODO add axes to show the delta_bin_content for each histogram, going from left to right
+        # need to store bins contents
+        hists = {'y=0': {}, 'y=1': {}}
+        fig,axs = plt.subplots(feat.shape[1], len(pred)+1, figsize=(10*len(pred)+1,5*feat.shape[1])) # layers on columns, features on rows
+        #if identifier == "node":
+        #    feat[:,10] = np.log(feat[:,10]+1e-6) # log for IP
+        for i in range(len(pred)):
+            true_1 = np.squeeze(true == 1,axis=1)
+            true_0 = np.squeeze(true == 0, axis=1)
+            correct_1 = np.squeeze(pred[i][true_1] > thr)
+            correct_0 = np.squeeze(pred[i][true_0] < thr)
+            for f in range(feat.shape[1]):
+                bins = np.linspace(np.min(feat[:,f]), np.max(feat[:,f]), 50)
+                #axs[f,i].hist(feat[true_1][correct_1,f], bins=bins, density=True, label="correct y=1", histtype="step",linewidth=2,color='tab:blue')
+                #axs[f,i].hist(feat[true_1][~correct_1,f], bins=bins, density=True, label="wrong y=1", histtype="stepfilled",alpha=0.5,color='tab:blue')
+                #axs[f,i].hist(feat[true_0][correct_0,f], bins=bins, density=True, label="wrong y=0", histtype="step",linewidth=2,color='tab:orange')
+                #axs[f,i].hist(feat[true_0][~correct_0,f], bins=bins, density=True, label="correct y=0", histtype="stepfilled",alpha=0.5,color='tab:orange')
+                hists['y=1'][(f,i)] = axs[f,i].hist([feat[true_1][~correct_1,f],feat[true_1][correct_1,f]], bins=bins, density=True, label=["wrong y=1","correct y=1"], stacked=True, color=['tab:cyan', 'tab:blue'], hatch='\\', alpha=0.5)
+                hists['y=0'][(f,i)] = axs[f,i].hist([feat[true_0][~correct_0,f],feat[true_0][correct_0,f]], bins=bins, density=True, label=["wrong y=0","correct y=0"], stacked=True, color=['tab:orange','tab:red'], hatch='/',  alpha=0.5)
+                axs[f,i].set_xlabel(f"{identifier} {features_names[f]}")
+                axs[f,i].set_title(f"Layer {layers[i]}")
+        # fill last columns with deltas
+        for f in range(feat.shape[1]):
+            # [0][] bins contents
+            # [1][] = bins edges
+            # delta = [class][(feature, last layer)][0][element of stacked histogram] - [class][(feature, first layer)][0][element of stacked histogram]
+
+            deltas_0_wrong     = hists['y=0'][(f,1)][0][0] - hists['y=0'][(f,0)][0][0]
+            second_0_element_1 = hists['y=0'][(f,1)][0][1] - hists['y=0'][(f,1)][0][0]
+            second_0_element_0 = hists['y=0'][(f,0)][0][1] - hists['y=0'][(f,0)][0][0]
+            deltas_0_correct = second_0_element_1 - second_0_element_0
+            
+            deltas_1_wrong   = hists['y=1'][(f,1)][0][0] - hists['y=1'][(f,0)][0][0]
+            second_1_element_1 = hists['y=1'][(f,1)][0][1] - hists['y=1'][(f,1)][0][0]
+            second_1_element_0 = hists['y=1'][(f,0)][0][1] - hists['y=1'][(f,0)][0][0]
+            deltas_1_correct = second_1_element_1 - second_1_element_0
+            
+            bins = hists['y=0'][(f,0)][1]
+            # bar plot
+            axs[f,2].bar(bins[:-1], deltas_0_wrong,   width=np.diff(bins), label='y=0 wrong',   color='tab:orange', alpha=0.5, hatch='\\')
+            axs[f,2].bar(bins[:-1], deltas_0_correct, width=np.diff(bins), label='y=0 correct', color='tab:red',    alpha=0.5, hatch='/')
+            axs[f,2].bar(bins[:-1], deltas_1_wrong,   width=np.diff(bins), label='y=1 wrong',   color='tab:cyan',   alpha=0.5, hatch='\\')
+            axs[f,2].bar(bins[:-1], deltas_1_correct, width=np.diff(bins), label='y=1 correct', color='tab:blue',   alpha=0.5, hatch='/')
+            axs[f,2].set_xlabel(f"{identifier} {features_names[f]}")
+            axs[f,2].set_title(rf"$\Delta$ L{layers[1]} - L{layers[0]}")
+        for ax in axs.flatten():
+            ax.legend()
+            ax.grid(True)
+            ax.set_yscale('log')
+        plt.tight_layout()
+        plt.savefig(f"{self.results_dir}/{identifier}_features.png", dpi=300)
+        plt.savefig(f"{self.results_dir}/{identifier}_features.pdf", dpi=300)
+            
     def evaluate_hetero_track_pruning_performance(self, layers=[0, 1, 2, 7], batch_size=8,
                                                   edge_pruning=True, plot_roc=False, pv_tr_edges = False,
                                                   show_plots = False):
@@ -612,6 +764,7 @@ class Performance:
                     A list of concatenated predicted weights for each specified layer.
         """
         trues = []
+        LCAs = []
         self.dataset = self.data_loader.get_test_dataloader(batch_size=batch_size)
 
         preds = {}
@@ -622,20 +775,23 @@ class Performance:
             outputs = self.model(data)
             data = outputs
             label = data[('tracks', 'to', 'tracks')].y.argmax(dim=1)
-            PVlabel = torch.tensor(data[('tracks', 'to', 'pvs')].y.clone().detach(), dtype=torch.float32)
+            PVlabel = data[('tracks', 'to', 'pvs')].y.clone().detach()
             num_nodes = data['tracks'].x.shape[0]
             out = data[('tracks', 'to', 'tracks')].edges.new_zeros(num_nodes,
                                                                    data[('tracks', 'to', 'tracks')].y.shape[1])
             node_sum = scatter_add(data[('tracks', 'to', 'tracks')].y, data[('tracks', 'to', 'tracks')].edge_index[0],
                                    out=out, dim=0)
             ynodes = (1. * (torch.sum(node_sum[:, 1:], 1) > 0)).unsqueeze(1)
+            # y=1 in 0th column means LCA is 0
+            # asking ==0 mean yBCE is 0 when LCA is 0 and 1 otherwise
             yBCE = 1. * (data[('tracks', 'to', 'tracks')].y[:, 0] == 0).unsqueeze(1)
-
+            
             if edge_pruning:
                 if pv_tr_edges:
                     trues.append(PVlabel.cpu().detach().numpy())
                 else:
                     trues.append(yBCE.cpu().detach().numpy())
+                    LCAs.append(data[('tracks', 'to', 'tracks')].y.cpu().detach().numpy())
                 for layer in layers:
                     if pv_tr_edges:
                         preds[layer].append(
@@ -648,22 +804,72 @@ class Performance:
                 for layer in layers:
                     preds[layer].append(
                         self.model._blocks[layer].node_weights['tracks'].cpu().detach().numpy())
+
         true = np.concatenate(trues)
+        if len(LCAs)>1:
+            LCA = np.concatenate(LCAs)
         pred = [np.concatenate(preds[i]) for i in layers]
         names = [f"Layer {i}" for i in layers]
         if edge_pruning:
+            fig2,ax2 = plt.subplots(LCA.shape[1],1,figsize=(10, 5*LCA.shape[1])) # compare learning between first and current layer
             identifier = "edge"
             if pv_tr_edges:
                 identifier = "pv_edge"
         else:
             identifier = "node"
+            fig2,ax2 = plt.subplots(1, 2, figsize=(20, 5)) # compare learning between first and current layer
+        fig,ax = plt.subplots(1, 1, figsize=(10, 5))
+        
         for i in range(len(pred)):
-            plt.hist(pred[i][true==1], bins=100,density=True, label="y=1", histtype="step")
-            plt.hist(pred[i][true==0], bins=100, density=True, label="y=0", histtype="step")
-            plt.legend()
-            plt.xlabel("Weights")
-            plt.savefig(f"{self.results_dir}/{identifier}_{names[i]}_histogram.png", dpi=300)
-            plt.savefig(f"{self.results_dir}/{identifier}_{names[i]}_histogram.pdf", dpi=300)
+            ax.clear()
+            bins=np.linspace(pred[i].min(),pred[i].max(),101)
+            #ax.hist([pred[i][true==0],pred[i][true==1]], bins=bins, density=True, label=["y=0","y=1"], histtype="step",stacked=False)
+            #ax.hist(pred[i][true==0], bins=bins, density=True, label="y=0", histtype="step")
+            #ax.hist(pred[i][true==1], bins=bins, density=True, label="y=1", histtype="step")
+            
+            if edge_pruning:
+                # stacked plots for each LCA class
+                stacked_data = [pred[i][LCA[:,lca]==1].squeeze() for lca in range(0,LCA.shape[1])]
+                stacked_data.append(pred[i][LCA.sum(axis=1)==0].squeeze())
+                stacked_labels = [f"true LCA={lca}" for lca in range(0,LCA.shape[1])]
+                stacked_labels.append(f"true LCA ?")
+                ax.hist(stacked_data, bins=bins, density=True, label=stacked_labels, histtype="step", linewidth=2, stacked=False)
+                
+                for j in range(LCA.shape[1]):
+                    ax2[j].clear()
+                for j in range(LCA.shape[1]):
+                    stacked_data_layer0 = [pred[0][LCA[:,lca]==1].squeeze() for lca in range(0,LCA.shape[1])]
+                    stacked_data_layer0.append(pred[0][LCA.sum(axis=1)==0].squeeze())
+                    
+                    ax2[j].hist([stacked_data_layer0[j], stacked_data[j]], bins=bins, density=True, label=[f"Layer {layers[0]}",f"Layer {layers[i]}"], histtype="stepfilled", alpha=0.5,stacked=False)
+                    ax2[j].set_xlabel("Weights")
+                    ax2[j].set_title(f"{identifier}_{names[i]}_LCA={j}")
+                    ax2[j].legend()
+            else:
+                ax.hist([pred[i][true==0],pred[i][true==1]], bins=bins, density=True, label=["y=0","y=1"], histtype="step",stacked=False)
+                
+                ax2[0].clear()
+                ax2[1].clear()
+                for j in range(2):
+                    ax2[j].hist([pred[0][true==j],pred[i][true==j]], bins=bins, density=True, label=[f"Layer {layers[0]}",f"Layer {layers[i]}"], histtype="stepfilled", alpha=0.5,stacked=False)
+                    ax2[j].set_xlabel("Weights")
+                    ax2[j].set_title(f"{identifier}_{names[i]}_y={j}")
+                    ax2[j].legend()
+            ax.legend()
+            
+            ax.set_xlabel("Weights")
+            ax.set_title(f"{identifier}_{names[i]}")
+            fig.tight_layout()
+            fig.savefig(f"{self.results_dir}/delta_{self.name}_{identifier}_{names[i]}_histogram.png", dpi=300)
+            ax.set_yscale("log")
+            fig.savefig(f"{self.results_dir}/delta_{self.name}_{identifier}_{names[i]}_histogram.pdf", dpi=300)
+            
+            fig2.tight_layout()
+            fig2.savefig(f"{self.results_dir}/delta_{self.name}_{identifier}_{names[i]}_histogram.png", dpi=300)
+            ax2[0].set_yscale("log")
+            ax2[1].set_yscale("log")
+            fig2.savefig(f"{self.results_dir}/delta_{self.name}_{identifier}_{names[i]}_histogram.pdf", dpi=300)
+            
             if show_plots:
                 plt.show()
         if plot_roc:
@@ -727,7 +933,7 @@ class Performance:
             plt.show()
 
     def evaluate_reco_performance(self, event_max=-1, plot_perfect_decaychains=2,
-                                  pruning_cut=0, ref_signal = None):
+                                  pruning_cut=0, layer_indx=7, ref_signal = None):
         self.dataset = self.data_loader.get_test_dataloader(batch_size=1)
         """
             Evaluates the full reconstruction performance of the model, including decay chain
@@ -747,8 +953,10 @@ class Performance:
                     If 0, no plots are generated. Defaults to 2.
                 pruning_cut : float, optional
                     A pruning cut value to apply to the model's output (specifically for
-                    layer 7, if applicable) during inference. If 0, no pruning is applied.
+                    layer_indx, if applicable) during inference. If 0, no pruning is applied.
                     Defaults to 0.
+                layer_indx : int, optional
+                    The index of the GNN block (layer) to apply pruning to, if applicable, defaults to 7.
                 ref_signal : list of dict, optional
                     A reference signal definition, typically a list of dictionaries. Each dictionary
                     should contain 'mothers' and 'daughters' keys, with lists of particle names.
@@ -787,15 +995,19 @@ class Performance:
                 vdata.receivers = vdata.receivers - torch.min(vdata.receivers)
                 vdata.senders = vdata.senders - torch.min(vdata.senders)
                 vdata.edgepos = vdata.edgepos - torch.min(vdata.edgepos)
-
+            
+            # TEMP
+            #vdata['tracks'].x = torch.cat((vdata['tracks'].x[:, :11], vdata['tracks'].x[:, 12:]), dim=1)
+            # END TEMP
+            
             if self.cuda:
                 vdata.cuda()
                 self.model.cuda()
                 if pruning_cut > 0:
-                    self.set_pruning(7, pruning_cut)
+                    self.set_pruning(layer_indx, pruning_cut)
             else:
                 if pruning_cut > 0:
-                    self.set_pruning(7, pruning_cut, device="cpu")
+                    self.set_pruning(layer_indx, pruning_cut, device="cpu")
 
             if self.cuda:
                 torch.cuda.synchronize()
@@ -955,15 +1167,17 @@ class Performance:
                                                              'NotFound': none_associated,
                                                              'SigMatch': signal_match},
                                                             ignore_index=True)
-                    if perfect_signal_reconstruction and plot_perfect_decaychains > 0:
+                    if perfect_signal_reconstruction and plot_perfect_decaychains > 0: # TEMP
+                    #if plot_perfect_decaychains > 0:
+                        print("Event ", event, ", plotting decay chain")
                         plt.clf()
                         fix, axs = plt.subplots(2, figsize=(10, 10))
-                        axs[0].set_title('Reco trees in event',
+                        axs[0].set_title(f'Reco trees in event {event}',
                                          fontweight='bold', fontsize=14)
                         particle_keys = list(vdata["final_keys"].numpy())
                         reco_cluster_dict, reco_num_clusters_per_order, _ = reconstruct_decay(
                             reco_LCA, particle_keys, axs[0])
-                        axs[1].set_title('Truth-level trees in event',
+                        axs[1].set_title(f'Truth-level trees in event {event}',
                                          fontweight='bold', fontsize=14)
 
                         particle_keys = list(vdata["truth_part_keys"].numpy())
@@ -1081,10 +1295,10 @@ class Performance:
                 self.event_df.query('NumSelectedParticlesFromHeavyHadronInEvent <  NumParticlesFromHeavyHadronInEvent')) / len(
                 self.event_df)
                 
-        perf_numbers = perf_numbers._append({"Scope": "True b", "Perfect hierarchy": sig_perfect_reco,
+        perf_numbers = perf_numbers._append({"Scope": f"True b ({len(signal_df)})", "Perfect hierarchy": sig_perfect_reco,
                                              "Wrong hierarchy": sig_wrong_hierarchy, "None isolated": sig_none_isolated,
                                              "Part reco": sig_part_reco}, ignore_index=True)
-        perf_numbers = perf_numbers._append({"Scope": "Event", "Perfect hierarchy": event_perfect_reco,
+        perf_numbers = perf_numbers._append({"Scope": f"Event ({len(self.event_df)})", "Perfect hierarchy": event_perfect_reco,
                                              "Wrong hierarchy": event_wrong_hierarchy, "None isolated": event_none_isolated,
                                              "Part reco": event_part_reco},
                                             ignore_index=True)
@@ -1126,10 +1340,10 @@ class Performance:
         self.evaluate_hetero_track_pruning_performance(layers=[0,1,2,7] ,edge_pruning=False)
         node_roc_scores = self.roc_auc_list
 
-        b_track_pv_association, _, _ = self.evaluate_pv_association(b_tracks=True)
-        all_track_pv_association, _, _ = self.evaluate_pv_association(b_tracks=False)
-        print("b track ", b_track_pv_association)
-        print("all track ", all_track_pv_association)
+        b_track_pv_association, b_npvs, b_associated = self.evaluate_pv_association(b_tracks=True)
+        all_track_pv_association, all_track_npvs, all_track_associated = self.evaluate_pv_association(b_tracks=False)
+        print("b track ", b_track_pv_association, b_npvs, b_associated)
+        print("all track ", all_track_pv_association, all_track_npvs, all_track_associated)
 
 
 

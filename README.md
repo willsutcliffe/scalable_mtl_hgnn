@@ -22,8 +22,7 @@ pip install -r requirements.txt
 
 ```bash
 conda env create -n hgnn python=3.11 
-conda activate hgnn
-pip install -r requirements.txt
+conda activate hgnn && pip install -r weighted_MP_gnn/requirements.txt && conda install --channel conda-forge pygraphviz
 ```
 
 Note that for graphviz which is used for the performance you will need to install it:

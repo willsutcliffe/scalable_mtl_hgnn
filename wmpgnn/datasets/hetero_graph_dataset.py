@@ -74,7 +74,8 @@ class CustomHeteroDataset(Dataset):
         self.filenames_target = filenames_target
         self.performance_mode = performance_mode
         self.n_classes = n_classes
-
+        self.nodes_features = []
+        self.edges_features = []
 
     def __len__(self):
         """
@@ -102,6 +103,20 @@ class CustomHeteroDataset(Dataset):
             **kwargs: Arbitrary keyword arguments to update instance attributes
         """
         self.__dict__.update(kwargs)
+        
+    def get_inputs(self):
+        """
+        Return list of input files
+        """
+        
+        return self.filenames_input
+    
+    def get_targets(self):
+        """
+        Return list of target files
+        """
+        
+        return self.filenames_target
 
     def get(self):
         """
@@ -151,14 +166,31 @@ class CustomHeteroDataset(Dataset):
             - Extracts unique reconstructed primary vertices from track data
         """
         data_set = []
+        events_skipped = {
+            'reco_graph_empty':dict(event=[],file=[]),
+            'no_sig_tracks':dict(event=[],file=[]),
+            'no_reco_PVs':dict(event=[],file=[]),
+            'many_reco_PVs':dict(event=[],file=[]),
+            'all_IPs_nan':dict(event=[],file=[]),
+            }
         C = 0
         j = 0
         for i in range(self.__len__()):
             graph = np.load(self.filenames_input[i], allow_pickle=True).item()
-            if graph['nodes'].shape[0]==0:
-                print(f"Empty {i} graph: {self.filenames_input[i]}")
-                continue
             graph_target = np.load(self.filenames_target[i], allow_pickle=True).item()
+            
+            if graph['nodes'].shape[0]==0:
+                #print(f"Empty {i} graph: {self.filenames_input[i]}")
+                events_skipped['reco_graph_empty']['event'].append(i)
+                events_skipped['reco_graph_empty']['file'].append(self.filenames_input[i].split('/')[-1])
+                continue
+                
+            if graph['truth_part_keys'].size==0:
+                #print(f"no signal tracks in {i} graph: {self.filenames_input[i]}")
+                events_skipped['no_sig_tracks']['event'].append(i)
+                events_skipped['no_sig_tracks']['file'].append(self.filenames_input[i].split('/')[-1])
+                continue
+            
             labels = np.array(graph_target["edges"])
             indices = np.unique(graph['receivers'])
             remapping = {a: i for a, i in zip(indices, list(range(0, len(indices))))}
@@ -168,6 +200,7 @@ class CustomHeteroDataset(Dataset):
             receivers = np.array([remapping[x] for x in graph["receivers"]])
             senders = torch.from_numpy(senders).long()
             receivers = torch.from_numpy(receivers).long()
+            
             new_nodes = graph["nodes"][indices]
             new_edges = graph['edges']
             new_nodes = torch.from_numpy(new_nodes)
@@ -178,8 +211,16 @@ class CustomHeteroDataset(Dataset):
             nPVs = recoPVs.shape[0]
             true_nodes_PVs = new_nodes[:, -3:]
             if nPVs == 0:
-                print(f"Number of recoPVs=0 in event {i}: {self.filenames_input[i]}")
+                #print(f"Number of recoPVs=0 in event {i}: {self.filenames_input[i]}")
+                events_skipped['no_reco_PVs']['event'].append(i)
+                events_skipped['no_reco_PVs']['file'].append(self.filenames_input[i].split('/')[-1])
                 continue
+            elif nPVs > 1:
+                pass
+                #events_skipped['many_reco_PVs']['event'].append(i)
+                #events_skipped['many_reco_PVs']['file'].append(self.filenames_input[i].split('/')[-1])
+                #continue
+                
             # print(torch.sum(torch.sum(nodes_PVs == true_nodes_PVs,dim=-1)==3)/nodes_PVs.shape[0])
             y, y_one_hot = find_row_indices(true_nodes_PVs, recoPVs)
 
@@ -193,7 +234,12 @@ class CustomHeteroDataset(Dataset):
                 torch.sum(r ** 2, dim=-1) - torch.sum(P_repeated * r, dim=-1) ** 2 / torch.sum(P_repeated ** 2, dim=-1))
 
             if torch.isnan(IPs).any().item():
-                IPs[torch.isnan(IPs)] = torch.max(IPs[~torch.isnan(IPs)]).item()
+                try:
+                    IPs[torch.isnan(IPs)] = torch.max(IPs[~torch.isnan(IPs)]).item()
+                except RuntimeError:
+                    events_skipped['all_IPs_nan']['event'].append(i)
+                    events_skipped['all_IPs_nan']['file'].append(self.filenames_input[i].split('/')[-1])
+                    continue
 
             permutations = torch.cartesian_prod(torch.arange(true_nodes_PVs.shape[0]), torch.arange(recoPVs.shape[0]))
             data = HeteroData()
@@ -203,9 +249,11 @@ class CustomHeteroDataset(Dataset):
                 nodes_features = graph.get("nodes_features", None)
                 if nodes_features is not None:
                     print(f"Using the following nodes features: {nodes_features[:skip_features]}")
+                    self.nodes_features = nodes_features[:skip_features].tolist()
                 edges_features = graph.get("edges_features", None)
                 if edges_features is not None:
                     print(f"Using the following edges features: {edges_features}")
+                    self.edges_features = edges_features.tolist()
             
             truth_reco_pv = new_nodes[:, skip_features:]
             new_nodes = new_nodes[:, :skip_features]
@@ -217,6 +265,8 @@ class CustomHeteroDataset(Dataset):
             data['globals'].x = torch.hstack(
                 [torch.from_numpy(graph["globals"]), torch.tensor(nPVs, dtype=torch.float32)]).unsqueeze(0)
 
+            #data['info'].Nsig = torch.from_numpy(np.asarray(graph['truth_part_keys'].size)) # TEMP
+            #data['info'].Ntot = torch.from_numpy(np.asarray(graph['nodes'].shape[0])) # TEMP
 
             data['tracks', 'pvs'].edge_index = permutations.T
             data['tracks', 'pvs'].y = y_one_hot.flatten().unsqueeze(-1)
@@ -245,5 +295,7 @@ class CustomHeteroDataset(Dataset):
 
 
             data_set.append(data)
-
+        print("Actual dataset size:",len(data_set))
+        for k in events_skipped.keys():
+            print(f"\t{k}:{len(events_skipped[k]['event'])}")
         return data_set

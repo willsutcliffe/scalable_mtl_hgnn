@@ -5,7 +5,20 @@ from torch import nn
 from torch_scatter import scatter_add
 import numpy as np
 import pandas as pd
+from os.path import dirname, basename
 
+def nanstd(tensor, dim=0):
+    """return std of 2D tensor along dim=dim ignoring nan values"""
+    # TODO: assert tensor dimensions
+    if dim==0:
+        N = tensor.shape[1]
+        return torch.stack([tensor[:,i][~torch.isnan(tensor[:,i])].std() for i in range(N)])
+    elif dim==1:
+        N = tensor.shape[0]
+        return torch.stack([tensor[i,:][~torch.isnan(tensor[i,:])].std() for i in range(N)])
+    else:
+        return None
+    
 class HeteroGNNTrainer(Trainer):
     """
     Trainer for heterogeneous GNNs with multi-task objectives:
@@ -49,11 +62,13 @@ class HeteroGNNTrainer(Trainer):
         super().__init__(config, model, train_loader, val_loader)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
         weights = weight_n_class(self.train_loader, hetero=True, n_class=self.LCA_classes)
+        self.weights = weights
         self.criterion = nn.CrossEntropyLoss(weight=weights)
         pos_weight = hetero_positive_edge_weight(train_loader)
         pos_weight = torch.tensor([pos_weight])
 
         if use_bce_pos_weight:
+            print("Using positive class weights for BCE losses")
             pos_weight = hetero_positive_edge_weight(train_loader)
             pos_weight = torch.tensor([pos_weight])
             self.criterion_bce_edges = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
@@ -66,6 +81,7 @@ class HeteroGNNTrainer(Trainer):
             self.criterion_bce_pvs.cuda()
             self.use_logits = True
         else:
+            print("Using BCE losses without positive class weights")
             self.criterion_bce_edges = nn.BCELoss()
             self.criterion_bce_nodes = nn.BCELoss()
             self.criterion_bce_pvs = nn.BCELoss()
@@ -79,9 +95,9 @@ class HeteroGNNTrainer(Trainer):
         self.model.cuda()
 
         self.add_bce = add_bce
-        self.beta_bce_nodes = 3.1
-        self.beta_bce_edges =  33.2256
-        self.beta_bce_pvs = 1
+        self.beta_bce_nodes = config.get("loss.beta_bce_nodes",default=3.1)
+        self.beta_bce_edges =  config.get("loss.beta_bce_edges",default=33.2256)
+        self.beta_bce_pvs = config.get("loss.beta_bce_pvs",default=1.0)
 
         self.train_pv_acc = []
         self.train_pv_acc_err = []
@@ -102,6 +118,71 @@ class HeteroGNNTrainer(Trainer):
         self.bce_pvs_val_loss = []
         self.add_pv = add_pv
         self.no_lca_task = no_lca_task
+        
+    def dump(self, output_file=None):
+        """
+        Print or dump to YAML dictionary the trainer's state and configuration.
+        
+        Args:
+            output_file (str): If provided, save the output to this file.
+        """
+        import io
+        
+        state = {
+            'config'             : self.config,
+            'model'              : self.model,
+            'train_loader'       : self.train_loader,
+            'val_loader'         : self.val_loader,
+            'LCA_classes'        : self.LCA_classes,
+            'epoch_warmstart'    : self.epoch_warmstart,
+            'early_stopping'     : self.early_stopping,
+            'optimizer'          : self.optimizer,
+            'criterion'          : self.criterion,
+            'criterion_bce_nodes': self.criterion_bce_nodes,
+            'criterion_bce_edges': self.criterion_bce_edges,
+            'criterion_bce_pvs'  : self.criterion_bce_pvs,
+            'use_logits'         : self.use_logits,
+            'add_bce'            : self.add_bce,
+            'add_pv'             : self.add_pv,
+            'no_lca_task'        : self.no_lca_task,
+            'beta_bce_nodes'     : self.beta_bce_nodes,
+            'beta_bce_edges'     : self.beta_bce_edges,
+            'beta_bce_pvs'       : self.beta_bce_pvs,
+        }
+        
+        print("Trainer state:")
+        max_key_length = max(len(key) for key in state.keys())  # Find the longest key for alignment
+        
+        # Capture the printout in a string
+        output = io.StringIO()
+        for key, value in state.items():
+            output.write(f"{key.ljust(max_key_length)} : {value}\n")
+        # Get the string from the StringIO object
+        trainer_state_string = output.getvalue()
+        output.close()
+
+        # Now `trainer_state_string` contains the formatted printout
+        #print(trainer_state_string)
+        try:
+            with open(output_file, 'w') as f:
+                f.write(trainer_state_string)
+            print(f"Trainer state saved to {output_file}")
+        except Exception as e:
+            print(f"Failed to save trainer state to {output_file}: {e}")
+    
+    def save_metrics_plots(self, output_folder:str):
+        """make plots of metrics up to now"""
+        
+        self.plot_loss(output_folder+"loss.png", show=False)
+
+        self.plot_losses(output_folder+"losses.png", show=False)
+
+        self.plot_accuracy(output_folder+"acc.png", show=False)
+
+        self.plot_efficiency(output_folder+"eff.png", show=False)
+
+        self.plot_rejection(output_folder+"rej.png", show=False)
+    
     
     def save_checkpoint(self,file_path:str):
         """Saves the model and optimizer state to a checkpoint file."""
@@ -117,6 +198,8 @@ class HeteroGNNTrainer(Trainer):
         }
         torch.save(checkpoint, file_path)
         print(f"Checkpoint saved to {file_path}")
+        #make metrics plots
+        self.save_metrics_plots(output_folder=dirname(file_path)+'/')
     
     def load_checkpoint(self, file_path=None):
         """Loads the model and optimizer state from a checkpoint file."""
@@ -168,7 +251,7 @@ class HeteroGNNTrainer(Trainer):
     def set_beta_bce_pvs(self, beta):
         """Set scaling factor for PV-association BCE loss."""
         self.beta_BCE_pvs= beta
-
+    
     def eval_one_epoch(self, train=True):
         """
         Evaluate (and train) one epoch over graphs.
@@ -202,7 +285,6 @@ class HeteroGNNTrainer(Trainer):
         else:
             data_loader = self.val_loader
         last_batch = len(data_loader)
-        # print(last_batch)
         for i, data in enumerate(data_loader):
             if train:
                 self.optimizer.zero_grad()
@@ -222,7 +304,8 @@ class HeteroGNNTrainer(Trainer):
             else:
                 loss = torch.tensor(0.).cuda()
             
-            print(f"Batch {i+1}/{last_batch} - Loss: {loss.item():.4f}, CE Loss: {running_ce_loss:.4f}, BCE Edge Loss: {running_bce_edge_loss:.4f}, BCE Node Loss: {running_bce_node_loss:.4f}, BCE PV Loss: {running_bce_pv_loss:.4f}")
+            if i%(int(last_batch/10)+1)==0:
+                print(f"Batch {i+1}/{last_batch}\t- Loss: {loss.item():.4f}, CE Loss: {running_ce_loss:.4f}, BCE Edge Loss: {running_bce_edge_loss:.4f}, BCE Node Loss: {running_bce_node_loss:.4f}, BCE PV Loss: {running_bce_pv_loss:.4f}")
             
                 
             num_nodes = data['tracks'].x.shape[0]
@@ -232,7 +315,7 @@ class HeteroGNNTrainer(Trainer):
                                    out=out, dim=0)
             ynodes = (1. * (torch.sum(node_sum[:, 1:], 1) > 0)).unsqueeze(1)
             y_bce = 1. * (data[('tracks', 'to', 'tracks')].y[:, 0] == 0).unsqueeze(1)
-
+            
             yb = ynodes[data[('tracks', 'to', 'pvs')]['edge_index'][0]] * data[('tracks', 'to', 'pvs')].y
             pv_sum = scatter_add(yb, data[('tracks', 'to', 'pvs')].edge_index[1], dim=0)
             pv_target = 1. * (pv_sum > 0)
@@ -240,29 +323,29 @@ class HeteroGNNTrainer(Trainer):
             for block in self.model._blocks:
                 if self.use_logits:
                     if self.add_pv:
-                        bce_pvs_loss = (self.beta_bce_nodes  * self.criterion_bce_pvs(block.edge_logits[('tracks', 'to', 'pvs')], pv_label))
+                        bce_pvs_loss = (self.beta_bce_pvs  * self.criterion_bce_pvs(block.edge_logits[('tracks', 'to', 'pvs')], pv_label))
                         running_bce_pv_loss += bce_pvs_loss.item()
                         loss +=  bce_pvs_loss
                     if self.add_bce:
                         bce_edges_loss = (self.beta_bce_edges * self.criterion_bce_edges(block.edge_logits[('tracks', 'to', 'tracks')], y_bce))
-                        bce_nodes_loss = (self.beta_bce_pvs  * self.criterion_bce_nodes(block.node_logits['tracks'], ynodes))
+                        bce_nodes_loss = (self.beta_bce_nodes  * self.criterion_bce_nodes(block.node_logits['tracks'], ynodes))
                         running_bce_edge_loss += bce_edges_loss.item()
                         running_bce_node_loss += bce_nodes_loss.item()
                         loss += bce_edges_loss
                         loss += bce_nodes_loss
                 else:
                     if self.add_pv:
-                        bce_pvs_loss = (self.beta_bce_nodes  * self.criterion_bce_pvs(block.edge_weights[('tracks', 'to', 'pvs')], pv_label))
+                        bce_pvs_loss = (self.beta_bce_pvs  * self.criterion_bce_pvs(block.edge_weights[('tracks', 'to', 'pvs')], pv_label))
                         running_bce_pv_loss += bce_pvs_loss.item()
                         loss +=  bce_pvs_loss
                     if self.add_bce:
                         bce_edges_loss = (self.beta_bce_edges * self.criterion_bce_edges(block.edge_weights[('tracks', 'to', 'tracks')], y_bce))
-                        bce_nodes_loss = (self.beta_bce_pvs  * self.criterion_bce_nodes(block.node_weights['tracks'], ynodes))
+                        bce_nodes_loss = (self.beta_bce_nodes  * self.criterion_bce_nodes(block.node_weights['tracks'], ynodes))
                         running_bce_edge_loss += bce_edges_loss.item()
                         running_bce_node_loss += bce_nodes_loss.item()
                         loss += bce_edges_loss
                         loss += bce_nodes_loss
-                    # loss += 1*self.criterionBCEnodes(block.node_logits['pvs'], pv_target)
+                    
             acc_one_batch = acc_n_class(outputs[('tracks', 'to', 'tracks')].edges, label, n_class=data[('tracks', 'to', 'tracks')].y.shape[1])
             acc_one_epoch.append(acc_one_batch)
             eff_one_batch = eff_n_class(outputs[('tracks', 'to', 'tracks')].edges, label, n_class=data[('tracks', 'to', 'tracks')].y.shape[1])
@@ -304,15 +387,15 @@ class HeteroGNNTrainer(Trainer):
             self.bce_edges_val_loss.append(running_bce_edge_loss/last_batch)
             self.bce_nodes_val_loss.append(running_bce_node_loss/last_batch)
             self.bce_pvs_val_loss.append(running_bce_pv_loss/last_batch)
-            
+        
         metrics = {
             'loss': last_loss,
             'acc': acc_one_epoch.nanmean(dim=0),
-            'acc_err': acc_one_epoch.std(dim=0),
+            'acc_err': nanstd(acc_one_epoch,dim=0),
             'eff': eff_one_epoch.nanmean(dim=0),
-            'eff_err': eff_one_epoch.std(dim=0),
+            'eff_err': nanstd(eff_one_epoch,dim=0),
             'rej': rej_one_epoch.nanmean(dim=0),
-            'rej_err': rej_one_epoch.std(dim=0),
+            'rej_err': nanstd(rej_one_epoch,dim=0),
             'pv_acc': pv_acc_one_epoch.nanmean(dim=0).item(),
             'pv_acc_err': pv_acc_one_epoch.std(dim=0).item(),
             'pv_node_acc': pv_node_acc_one_epoch.nanmean(dim=0).item(),
@@ -320,7 +403,6 @@ class HeteroGNNTrainer(Trainer):
             }
 
         return metrics
-        #return last_loss, acc_one_epoch.nanmean(dim=0), pv_acc_one_epoch.nanmean(dim=0).item(), pv_node_acc_one_epoch.nanmean(dim=0)
 
     def train(self, epochs=10, starting_epoch=0, learning_rate=0.001, save_checkpoint=False, checkpoint_path=None,checkpoint_freq=0.3):
         """
@@ -331,7 +413,7 @@ class HeteroGNNTrainer(Trainer):
             starting_epoch (int): Epoch index to start from (for resuming).
             learning_rate (float): Learning rate for Adam optimizer.
         """
-        #self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        
         for epoch in range(starting_epoch, epochs):
             msg(f"At epoch {epoch}")
             self.epochs.append(epoch)
@@ -361,18 +443,40 @@ class HeteroGNNTrainer(Trainer):
             self.val_pv_acc_err.append(val_metrics['pv_acc_err'])
             self.val_node_pv_acc.append(val_metrics['pv_node_acc'])
             self.val_node_pv_acc_err.append(val_metrics['pv_node_acc_err'])
-            print(f"Train Loss: {train_metrics['loss']:03f}")
-            print(f"Val Loss: {val_metrics['loss']:03f}")
-            print(f"Train Acc: {train_metrics['acc']} +/- {train_metrics['acc_err']}")
-            print(f"Val Acc: {val_metrics['acc']} +/- {val_metrics['acc_err']}")
-            print(f"Train Eff: {train_metrics['eff']} +/- {train_metrics['eff_err']}")
-            print(f"Val Eff: {val_metrics['eff']} +/- {val_metrics['eff_err']}")
-            print(f"Train Rej: {train_metrics['rej']} +/- {train_metrics['rej_err']}")
-            print(f"Val Rej: {val_metrics['rej']} +/- {val_metrics['rej_err']}")
-            print(f"Train pv edge Acc: {train_metrics['pv_acc']}")
-            print(f"Val pv edge Acc: {val_metrics['pv_acc']}")
-            print(f"Train B pv edge Acc: {train_metrics['pv_node_acc']}")
-            print(f"Val B pv edge Acc: {val_metrics['pv_node_acc']}")
+            print(f"Loss Train:\t{train_metrics['loss']:03f}")
+            print(f"Loss Val:\t{val_metrics['loss']:03f}")
+            print(f"Acc Train:\t{train_metrics['acc']} +/- {train_metrics['acc_err']}")
+            print(f"Acc Val:\t{val_metrics['acc']} +/- {val_metrics['acc_err']}")
+            print(f"Eff Train:\t{train_metrics['eff']} +/- {train_metrics['eff_err']}")
+            print(f"Eff Val:\t{val_metrics['eff']} +/- {val_metrics['eff_err']}")
+            print(f"Rej Train:\t{train_metrics['rej']} +/- {train_metrics['rej_err']}")
+            print(f"Rej Val:\t{val_metrics['rej']} +/- {val_metrics['rej_err']}")
+            print(f"pv edge Acc Train:\t{train_metrics['pv_acc']}")
+            print(f"pv edge Acc Val:\t{val_metrics['pv_acc']}")
+            print(f"B pv edge Acc Train:\t{train_metrics['pv_node_acc']}")
+            print(f"B pv edge Acc Val:\t{val_metrics['pv_node_acc']}")
+            
+            # adjust weights depending on the class accuracy
+            adapt_weights_on_metric = False# rescale weights on training efficiency
+            if adapt_weights_on_metric:
+                #import pdb; pdb.set_trace()
+                weights = self.weights
+                print("current weights: ",weights)
+            
+                    
+                mask = self.train_eff[-1] != 0.
+                relative_score = torch.ones_like(self.train_eff[-1])
+                relative_score[mask] = torch.max(self.train_eff[-1]) / self.train_eff[-1][mask]
+                # replace 0 with 1 to avoid negletting classes
+                relative_score[relative_score == 0.0] = 1.0
+                
+                print(f"NEW Relative score for weights: {relative_score}")
+                new_weights = weights * relative_score #/ norm_vector)
+                    
+                print(f"New weights: {new_weights}")
+                self.criterion = nn.CrossEntropyLoss(weight=new_weights)
+                self.criterion.to('cuda')
+            
             # checkpoint
             if save_checkpoint:
                 safe_epoch_frac = int(checkpoint_freq*epochs)

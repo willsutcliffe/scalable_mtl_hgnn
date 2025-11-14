@@ -59,6 +59,8 @@ class DataHandler:
         evt_max_train = self.config_loader.get("dataset.evt_max_train")
         evt_max_val = self.config_loader.get("dataset.evt_max_val")
         evt_max_test = self.config_loader.get("dataset.evt_max_test")
+        self.nodes_features = []
+        self.edges_features = []
         
         data_path = self.config_loader.get("dataset.data_dir")
         data_type = self.config_loader.get("dataset.data_type")
@@ -123,7 +125,7 @@ class DataHandler:
             self.test_dataset = CustomHeteroDataset(files_input_tst, files_target_tst, performance_mode=performance_mode, n_classes=LCA_classes)
         else:
             raise Exception(f"Unexpected data type {data_type}. Please use homogeneous or heterogeneous.")
-
+    
     def load_data(self):
         """
         Load the raw data from files into memory or internal representation.
@@ -136,6 +138,9 @@ class DataHandler:
         self.dataset_tr = self.train_dataset.get()
         self.dataset_vl = self.val_dataset.get()
         self.dataset_tst = self.test_dataset.get()
+        # temporary fix for transmit nodes and edges features names in performance evaluation
+        self.config_loader.set("dataset.nodes_features",self.test_dataset.nodes_features)
+        self.config_loader.set("dataset.edges_features",self.test_dataset.edges_features)
 
     def get_train_dataloader(self, batch_size=None):
         """
