@@ -187,6 +187,7 @@ def acc_n_class(pred, label, n_class=4):
     all_label = torch.Tensor(tuple(true_class[i] for i in range(n_class)))
 
     acc = torch.div(correct_preds, all_label)
+    acc = torch.nan_to_num(acc, nan=0.0)
     return acc#, acc_err
     
 
