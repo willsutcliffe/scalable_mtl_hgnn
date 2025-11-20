@@ -246,7 +246,7 @@ def acc_four_class(pred, label):
 def weight_n_class(dataset,hetero=False,n_class=5):
     num_sample = 0
     true_class = {i: 0 for i in range(n_class)}
-    
+    print(dataset)
     for tdata in dataset:
         if hetero:
             y = tdata[('tracks','to','tracks')].y
@@ -254,9 +254,15 @@ def weight_n_class(dataset,hetero=False,n_class=5):
             y = tdata.y
         for i in range(n_class):
             true_class[i] += (y.argmax(dim=1) == i).sum()
+            
         num_sample += len(y)
-        
-    weight_class = {i: num_sample / (n_class * true_class[i]) for i in range(n_class)}
+
+    weight_class = {}
+    for i in range(n_class):
+        if true_class[i] == 0:
+            weight_class[i] = torch.tensor(1)
+        else:
+            weight_class[i] = num_sample / (n_class * true_class[i])
     #weight_class[0] = weight_class[0] / 100.0 # uncomment to reduce weight of class 0
     weight = torch.stack(tuple(weight_class[i] for i in range(n_class)))
 
@@ -264,6 +270,8 @@ def weight_n_class(dataset,hetero=False,n_class=5):
     print("num_sample: ",true_class)
     print("weight: ",weight)
     return weight
+
+
 
 def weight_four_class(dataset,hetero=False):
     """
