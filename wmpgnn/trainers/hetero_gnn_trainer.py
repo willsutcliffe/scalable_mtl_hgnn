@@ -66,6 +66,7 @@ class HeteroGNNTrainer(Trainer):
         self.criterion = nn.CrossEntropyLoss(weight=weights)
         pos_weight = hetero_positive_edge_weight(train_loader)
         pos_weight = torch.tensor([pos_weight])
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if use_bce_pos_weight:
             print("Using positive class weights for BCE losses")
@@ -78,7 +79,7 @@ class HeteroGNNTrainer(Trainer):
             # related to average no. of pvs as for each track one pv is correct
             pos_weight = torch.tensor([6.1118])
             self.criterion_bce_pvs = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-            self.criterion_bce_pvs.cuda()
+            self.criterion_bce_pvs.to(self.device)
             self.use_logits = True
         else:
             print("Using BCE losses without positive class weights")
@@ -88,11 +89,11 @@ class HeteroGNNTrainer(Trainer):
             self.use_logits = False
 
         print("Use logits ", self.use_logits)
-        self.criterion.to('cuda')
-        self.criterion_bce_edges.cuda()
-        self.criterion_bce_edges.cuda()
-        self.criterion_bce_pvs.cuda()
-        self.model.cuda()
+        self.criterion.to(self.device)
+        self.criterion_bce_edges.to(self.device)
+        self.criterion_bce_edges.to(self.device)
+        self.criterion_bce_pvs.to(self.device)
+        self.model.to(self.device)
 
         self.add_bce = add_bce
         self.beta_bce_nodes = config.get("loss.beta_bce_nodes",default=3.1)
@@ -288,7 +289,7 @@ class HeteroGNNTrainer(Trainer):
         for i, data in enumerate(data_loader):
             if train:
                 self.optimizer.zero_grad()
-            data.to('cuda')
+            data.to(self.device)
 
             outputs = self.model(data)
             
@@ -302,7 +303,7 @@ class HeteroGNNTrainer(Trainer):
                 loss = self.criterion(outputs[('tracks', 'to', 'tracks')].edges, label)
                 running_ce_loss += loss.item()
             else:
-                loss = torch.tensor(0.).cuda()
+                loss = torch.tensor(0.).to(self.device)
             
             if i%(int(last_batch/10)+1)==0:
                 print(f"Batch {i+1}/{last_batch}\t- Loss: {loss.item():.4f}, CE Loss: {running_ce_loss:.4f}, BCE Edge Loss: {running_bce_edge_loss:.4f}, BCE Node Loss: {running_bce_node_loss:.4f}, BCE PV Loss: {running_bce_pv_loss:.4f}")
@@ -475,7 +476,7 @@ class HeteroGNNTrainer(Trainer):
                     
                 print(f"New weights: {new_weights}")
                 self.criterion = nn.CrossEntropyLoss(weight=new_weights)
-                self.criterion.to('cuda')
+                self.criterion.to(self.device)
             
             # checkpoint
             if save_checkpoint:

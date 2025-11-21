@@ -188,7 +188,7 @@ class HeteroGraphNetwork(AbstractModule):
         self.edge_prune = False
         self.node_prune = False
         self.prune_by_cut = False
-        self.device = device
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.k_edges = 20
         self.k_nodes = 70
