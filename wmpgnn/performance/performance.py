@@ -130,7 +130,7 @@ class Performance:
             #if i==0: print("---TEMP!---: removing associated IP feature 11 from tracks")
             #data['tracks'].x = torch.cat((data['tracks'].x[:, :11], data['tracks'].x[:, 12:]), dim=1)
             # END TEMP
-            data.to('cuda')
+            data.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
             label0 = data[('tracks', 'to', 'tracks')].y.argmax(dim=1)
             y0 = data[('tracks', 'to', 'tracks')].y
             answers = torch.ones_like(data[('tracks', 'to', 'tracks')].edges).cuda()
@@ -200,7 +200,7 @@ class Performance:
             vdata.receivers = vdata.receivers - torch.min(vdata.receivers)
             vdata.senders = vdata.senders - torch.min(vdata.senders)
             vdata.edgepos = vdata.edgepos - torch.min(vdata.edgepos)
-            vdata.to('cuda')
+            vdata.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
             y0 = vdata.y
             label0 = vdata.y.argmax(dim=1)
             answers = torch.ones_like(vdata.edges).cuda()
@@ -470,7 +470,7 @@ class Performance:
         empty_tracks_counter = 0
         for i, data in enumerate(self.dataset):
 
-            data.to('cuda')
+            data.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
 
             outputs = self.model(data)
             data = outputs
@@ -541,7 +541,7 @@ class Performance:
             data.receivers = data.receivers - torch.min(data.receivers)
             data.senders = data.senders - torch.min(data.senders)
             data.edgepos = data.edgepos - torch.min(data.edgepos)
-            data.to('cuda')
+            data.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
             outputs = self.model(data)
 
             label = data.y.argmax(dim=1)
@@ -630,7 +630,7 @@ class Performance:
             else:
                 features.append(data['tracks'].x)
                 
-            data.to('cuda')
+            data.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
             # TEMP: compute log IP
             #if i==0: print("---TEMP!---: removing associated IP feature 11 from tracks")
             #data['tracks'].x = torch.cat((data['tracks'].x[:, :11], data['tracks'].x[:, 12:]), dim=1)
@@ -771,7 +771,7 @@ class Performance:
         for layer in layers:
             preds[layer] = []
         for i, data in enumerate(self.dataset):
-            data.to('cuda')
+            data.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
             outputs = self.model(data)
             data = outputs
             label = data[('tracks', 'to', 'tracks')].y.argmax(dim=1)
