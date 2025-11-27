@@ -84,7 +84,10 @@ class Performance:
         self.full_graphs = full_graphs
         model_weights = config.get("inference.model_file")
         try:
-            self.model.load_state_dict(torch.load(model_weights, weights_only=True)['model_state_dict'])
+            if torch.cuda.is_available():
+                self.model.load_state_dict(torch.load(model_weights, weights_only=True)['model_state_dict'])
+            else:
+                self.model.load_state_dict(torch.load(model_weights, weights_only=True, map_location=torch.device('cpu'))['model_state_dict'])
         except KeyError: 
             print("NOT MY MODEL")
             self.model.load_state_dict(torch.load(model_weights, weights_only=True))
