@@ -325,6 +325,7 @@ class Performance:
                 The device on which pruning operations should be performed ('cuda' or 'cpu').
                 Defaults to 'cuda'.
         """
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.set_edge_pruning(layer, cut, device=device)
         self.set_node_pruning(layer, cut, device=device)
 
